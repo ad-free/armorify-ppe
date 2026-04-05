@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches-ignore: [release/*]
   pull_request:
-    branches: [main, develop]
+    branches-ignore: [release/*]
 
 jobs:
   lint:
