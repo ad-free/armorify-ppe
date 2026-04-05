@@ -1,0 +1,31 @@
+# requirements.in — production dependencies
+# Compile with: pip-compile requirements.in -o requirements.txt
+
+# ── web framework ─────────────────────────────────────────
+fastapi[standard]>=0.135.3,<0.136
+
+# ── database ──────────────────────────────────────────────
+sqlalchemy[asyncio]>=2.0.36,<3
+asyncpg>=0.30.0,<1
+alembic>=1.14.0,<2
+
+# ── validation & settings ─────────────────────────────────
+pydantic[email]>=2.10.0,<3
+pydantic-settings>=2.7.0,<3
+
+# ── auth ──────────────────────────────────────────────────
+python-jose[cryptography]>=3.3.0,<4
+passlib[bcrypt]>=1.7.4,<2
+
+# ── utilities ─────────────────────────────────────────────
+python-slugify>=8.0.4,<9
+orjson>=3.10.0,<4
+
+# ── linting ───────────────────────────────────────────────
+ruff>=0.15.0,<1
+
+# ── testing ───────────────────────────────────────────────
+pytest>=8.3.0,<9
+pytest-asyncio>=0.25.0,<1
+httpx>=0.28.0,<1
+factory-boy>=3.3.0,<4
