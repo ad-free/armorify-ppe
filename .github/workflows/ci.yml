@@ -39,19 +39,3 @@ jobs:
       - name: Run pre-commit hooks
         run: |
           pre-commit run --all-files --show-diff-on-failure
-
-      - name: Type check with mypy
-        run: |
-          cd backend
-          python -m mypy app --ignore-missing-imports
-
-      - name: Lint with ruff
-        run: |
-          cd backend
-          python -m ruff check app
-          python -m ruff format --check app
-
-      - name: Check import sorting
-        run: |
-          cd backend
-          python -m isort --check-only --diff app
