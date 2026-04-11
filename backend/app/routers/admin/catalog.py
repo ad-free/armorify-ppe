@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from fastapi import APIRouter, HTTPException, Query, status
+
 from app.core.database import DbSession
 from app.crud.base import CRUDBase
 from app.models.product import Category, Product, ProductVariant
@@ -14,13 +16,12 @@ from app.schemas.product import (
     VariantRead,
     VariantUpdate,
 )
-from fastapi import APIRouter, HTTPException, Query, status
 
 router = APIRouter(prefix="/admin/catalog", tags=["admin-catalog"])
 
-category_crud = CRUDBase[Category, CategoryCreate, CategoryUpdate](Category)
-product_crud = CRUDBase[Product, ProductCreate, ProductUpdate](Product)
-variant_crud = CRUDBase[ProductVariant, VariantCreate, VariantUpdate](ProductVariant)
+category_crud = CRUDBase[Category](Category)
+product_crud = CRUDBase[Product](Product)
+variant_crud = CRUDBase[ProductVariant](ProductVariant)
 
 
 @router.get("/categories", response_model=list[CategoryRead])

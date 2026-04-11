@@ -3,8 +3,9 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from app.models.quote import QuoteStatus
 from pydantic import BaseModel
+
+from app.models.quote import QuoteStatus
 
 
 class QuoteRequestBase(BaseModel):

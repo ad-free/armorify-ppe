@@ -3,8 +3,9 @@ from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
-from app.models.user import UserRole, UserStatus
 from pydantic import BaseModel, EmailStr, field_validator
+
+from app.models.user import UserRole, UserStatus
 
 
 class UserBase(BaseModel):
@@ -43,6 +44,7 @@ class UserRead(UserBase):
 
 # ── Auth ──────────────────────────────────────────────────
 
+
 class RegisterRequest(BaseModel):
     firstname: str
     lastname: str
@@ -74,6 +76,7 @@ class RefreshRequest(BaseModel):
 
 
 # ── Address ───────────────────────────────────────────────
+
 
 class AddressBase(BaseModel):
     label: Optional[str] = None

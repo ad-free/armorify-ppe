@@ -1,29 +1,22 @@
 # app/crud/base.py
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Generic, TypeVar
 from uuid import UUID
 
-from app.models.base import Base
+from app.models.base import BaseMixin
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.inspection import inspect
 
-
-class HasModelDump(Protocol):
-    def model_dump(self, **kwargs: Any) -> dict[str, Any]: ...
+ModelType = TypeVar("ModelType", bound=BaseMixin)
 
 
-ModelType = TypeVar("ModelType", bound=Base)
-CreateSchema = TypeVar("CreateSchema", bound=HasModelDump)
-UpdateSchema = TypeVar("UpdateSchema", bound=HasModelDump)
-
-
-class CRUDBase(Generic[ModelType, CreateSchema, UpdateSchema]):
+class CRUDBase(Generic[ModelType]):
     def __init__(self, model: type[ModelType]) -> None:
         self.model = model
 
     async def get(self, db: AsyncSession, id: UUID) -> ModelType | None:
-        result = await db.get(self.model, id)
-        return result
+        return await db.get(self.model, id)
 
     async def get_multi(
         self,
@@ -37,22 +30,20 @@ class CRUDBase(Generic[ModelType, CreateSchema, UpdateSchema]):
             stmt = stmt.where(self.model.is_active.is_(True))
         stmt = stmt.offset(skip).limit(limit)
         result = await db.execute(stmt)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
-    async def create(self, db: AsyncSession, schema: CreateSchema) -> ModelType:
-        data = schema.model_dump()
-        instance = self.model(**data)
+    async def create(self, db: AsyncSession, schema: BaseModel) -> ModelType:
+        instance = self.model(**schema.model_dump())
         db.add(instance)
         await db.commit()
         await db.refresh(instance)
         return instance
 
-    async def update(self, db: AsyncSession, id: UUID, schema: UpdateSchema) -> ModelType | None:
+    async def update(self, db: AsyncSession, id: UUID, schema: BaseModel) -> ModelType | None:
         instance = await self.get(db, id)
         if instance is None:
             return None
-        data = schema.model_dump(exclude_unset=True)
-        for field, value in data.items():
+        for field, value in schema.model_dump(exclude_unset=True).items():
             if hasattr(instance, field):
                 setattr(instance, field, value)
         db.add(instance)
@@ -72,11 +63,13 @@ class CRUDBase(Generic[ModelType, CreateSchema, UpdateSchema]):
                 if hasattr(status_type, "DEACTIVATED"):
                     setattr(instance, "status", status_type.DEACTIVATED)
             else:
-                status_column = inspect(self.model).columns.get("status")
-                if status_column is not None:
-                    status_enum = getattr(status_column.type, "enum_class", None)
-                    if status_enum is not None and hasattr(status_enum, "DEACTIVATED"):
-                        setattr(instance, "status", status_enum.DEACTIVATED)
+                mapper = inspect(type(instance))
+                if mapper is not None:
+                    status_column = mapper.columns.get("status")
+                    if status_column is not None:
+                        status_enum = getattr(status_column.type, "enum_class", None)
+                        if status_enum is not None and hasattr(status_enum, "DEACTIVATED"):
+                            setattr(instance, "status", status_enum.DEACTIVATED)
         db.add(instance)
         await db.commit()
         await db.refresh(instance)

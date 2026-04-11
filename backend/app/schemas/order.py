@@ -4,8 +4,9 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from app.models.order import OrderStatus
 from pydantic import BaseModel
+
+from app.models.order import OrderStatus
 
 
 class OrderBase(BaseModel):

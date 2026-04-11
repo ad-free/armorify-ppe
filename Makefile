@@ -34,8 +34,7 @@ COLOR_YELLOW := \033[0;33m
 COLOR_RED := \033[0;31m
 COLOR_RESET := \033[0m
 
-.PHONY: help venv install dev dev-uvicorn test lint precommit precommit-install \
-backend-install backend-test backend-shell backend-env-check \
+.PHONY: help venv install dev dev-uvicorn test lint backend-install backend-env-check \
 alembic-upgrade alembic-downgrade alembic-revision alembic-revision-empty alembic-history alembic-current
 
 help:
@@ -46,10 +45,7 @@ help:
 	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" dev "$(COLOR_RESET)" "Start backend dev server from repo root"
 	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" dev-uvicorn "$(COLOR_RESET)" "Start backend with uvicorn reload from repo root"
 	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" test "$(COLOR_RESET)" "Run backend tests from repo root"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" backend-shell "$(COLOR_RESET)" "Open a Python shell with backend on PYTHONPATH"
 	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" backend-env-check "$(COLOR_RESET)" "Check whether backend/.dev.env exists"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" precommit-install "$(COLOR_RESET)" "Install Git hooks for pre-commit checks"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" precommit "$(COLOR_RESET)" "Run pre-commit on all files from repo root"
 	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" lint "$(COLOR_RESET)" "Run Ruff against backend app/tests"
 	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" alembic-upgrade "$(COLOR_RESET)" "Apply Alembic migrations to the latest revision"
 	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" alembic-downgrade "$(COLOR_RESET)" "Downgrade the database by revision or step"
@@ -97,27 +93,13 @@ dev-uvicorn: backend-env-check
 	printf "%b" "$(COLOR_YELLOW)Starting backend with uvicorn reload...$(COLOR_RESET)\n"
 	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) $(UVICORN) $(BACKEND_APP) --reload --host 0.0.0.0 --port 8000
 
-backend-shell:
-	printf "%b" "$(COLOR_YELLOW)Opening Python shell with backend on PYTHONPATH...$(COLOR_RESET)\n"
-	PYTHONPATH=$(BACKEND_DIR) $(PYTHON)
-
-precommit-install:
-	printf "%b" "$(COLOR_YELLOW)Installing pre-commit hooks...$(COLOR_RESET)\n"
-	$(PRECOMMIT) install
-
-precommit:
+lint:
 	printf "%b" "$(COLOR_YELLOW)Running pre-commit on all files...$(COLOR_RESET)\n"
 	$(PRECOMMIT) run --all-files
 
-lint:
-	printf "%b" "$(COLOR_YELLOW)Running Ruff on backend...$(COLOR_RESET)\n"
-	PYTHONPATH=$(BACKEND_DIR) $(PYTHON) -m ruff check $(BACKEND_DIR)/app $(BACKEND_DIR)/tests
-
-backend-test:
+test:
 	printf "%b" "$(COLOR_YELLOW)Running backend tests...$(COLOR_RESET)\n"
 	PYTHONPATH=$(BACKEND_DIR) $(PYTEST) -q $(BACKEND_DIR)/tests
-
-test: backend-test
 
 alembic-upgrade: backend-env-check
 	printf "%b" "$(COLOR_YELLOW)Applying Alembic migrations to head...$(COLOR_RESET)\n"

@@ -1,15 +1,22 @@
 # app/routers/auth.py
 from datetime import datetime, timedelta, timezone
 
-from app.core.database import DbSession
-from app.core.deps import CurrentUser
-from app.core.settings import settings
-from app.models.user import User, UserRole, UserStatus
-from app.schemas.user import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse, UserRead
 from fastapi import APIRouter, HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy import select
+
+from app.core.database import DbSession
+from app.core.deps import CurrentUser
+from app.core.settings import settings
+from app.models.user import User, UserRole, UserStatus
+from app.schemas.user import (
+    LoginRequest,
+    RefreshRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserRead,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

@@ -41,9 +41,7 @@ class QuoteRequest(BaseMixin, Base):
     )
     items: Mapped[list["QuoteItem"]] = relationship(back_populates="quote")
 
-    __table_args__ = (
-        Index("ix_quote_requests_user_id", "user_id"),
-    )
+    __table_args__ = (Index("ix_quote_requests_user_id", "user_id"),)
 
 
 class QuoteItem(BaseMixin, Base):

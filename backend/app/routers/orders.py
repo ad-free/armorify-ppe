@@ -1,6 +1,9 @@
 # app/routers/orders.py
-from typing import List
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.order import Order, OrderItem
@@ -12,17 +15,14 @@ from app.schemas.order import (
     OrderRead,
     OrderUpdate,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
-@router.get("/", response_model=List[OrderRead])
-async def list_orders(db: AsyncSession = Depends(get_db)) -> List[Order]:
+@router.get("/", response_model=list[OrderRead])
+async def list_orders(db: AsyncSession = Depends(get_db)) -> list[Order]:
     result = await db.execute(select(Order).where(Order.is_active.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("/", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
@@ -68,10 +68,10 @@ async def soft_delete_order(order_id: UUID, db: AsyncSession = Depends(get_db)) 
     return order
 
 
-@router.get("/items", response_model=List[OrderItemRead])
-async def list_order_items(db: AsyncSession = Depends(get_db)) -> List[OrderItem]:
+@router.get("/items", response_model=list[OrderItemRead])
+async def list_order_items(db: AsyncSession = Depends(get_db)) -> list[OrderItem]:
     result = await db.execute(select(OrderItem).where(OrderItem.is_active.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("/items", response_model=OrderItemRead, status_code=status.HTTP_201_CREATED)
@@ -85,9 +85,7 @@ async def create_order_item(item_in: OrderItemCreate, db: AsyncSession = Depends
 
 @router.put("/items/{item_id}", response_model=OrderItemRead)
 async def update_order_item(
-    item_id: UUID,
-    item_update: OrderItemUpdate,
-    db: AsyncSession = Depends(get_db)
+    item_id: UUID, item_update: OrderItemUpdate, db: AsyncSession = Depends(get_db)
 ) -> OrderItem:
     item = await db.get(OrderItem, item_id)
     if item is None or not item.is_active:

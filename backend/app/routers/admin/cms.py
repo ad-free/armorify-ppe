@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from fastapi import APIRouter, HTTPException, Query, status
+
 from app.core.database import DbSession
 from app.crud.base import CRUDBase
 from app.models.cms import Banner, PageContent
@@ -11,12 +13,11 @@ from app.schemas.cms import (
     PageContentRead,
     PageContentUpdate,
 )
-from fastapi import APIRouter, HTTPException, Query, status
 
 router = APIRouter(prefix="/admin/cms", tags=["admin-cms"])
 
-banner_crud = CRUDBase[Banner, BannerCreate, BannerUpdate](Banner)
-page_crud = CRUDBase[PageContent, PageContentCreate, PageContentUpdate](PageContent)
+banner_crud = CRUDBase[Banner](Banner)
+page_crud = CRUDBase[PageContent](PageContent)
 
 
 @router.get("/banners", response_model=list[BannerRead])

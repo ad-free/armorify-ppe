@@ -1,18 +1,28 @@
 # .pre-commit-config.yaml
 repos:
+  # ── Ruff: lint + auto-fix ──────────────────────────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.0.292
+    rev: v0.9.10
     hooks:
       - id: ruff
+        name: ruff lint
         args:
           - --fix
           - --line-length=120
-          - --show-source
+          - --select=E,F,I,W,UP
         files: ^backend/.*\.py$
         exclude: ^backend/alembic/
 
+      - id: ruff-format
+        name: ruff format
+        args:
+          - --line-length=120
+        files: ^backend/.*\.py$
+        exclude: ^backend/alembic/
+
+  # ── mypy: type checking ────────────────────────────────────────────────────
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.20.0
+    rev: v1.15.0
     hooks:
       - id: mypy
         args:
@@ -20,15 +30,9 @@ repos:
           - --show-error-codes
           - --follow-imports=silent
         additional_dependencies:
-          - mypy==1.20.0
+          - mypy==1.15.0
+          - pydantic>=2.0
+          - sqlalchemy[mypy]>=2.0
+          - types-passlib
         files: ^backend/.*\.py$
         exclude: ^backend/alembic/
-
-  - repo: https://github.com/pycqa/isort
-    rev: 8.0.1
-    hooks:
-      - id: isort
-        args:
-          - --profile
-          - black
-        files: ^backend/.*\.py$

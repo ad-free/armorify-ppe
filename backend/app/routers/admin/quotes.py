@@ -1,11 +1,12 @@
 from uuid import UUID
 
-from app.core.database import DbSession
-from app.models.quote import QuoteRequest, QuoteStatus
-from app.schemas.quote import QuoteRequestRead
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
+
+from app.core.database import DbSession
+from app.models.quote import QuoteRequest, QuoteStatus
+from app.schemas.quote import QuoteRequestRead
 
 router = APIRouter(prefix="/admin/quotes", tags=["admin-quotes"])
 
@@ -18,7 +19,7 @@ class QuoteStatusUpdate(BaseModel):
 async def list_quote_requests(db: DbSession) -> list[QuoteRequest]:
     stmt = select(QuoteRequest).where(QuoteRequest.is_active.is_(True))
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.patch("/requests/{request_id}/status", response_model=QuoteRequestRead)

@@ -1,12 +1,13 @@
 from datetime import datetime
 from uuid import UUID
 
-from app.core.database import DbSession
-from app.models.order import Order, OrderStatus
-from app.schemas.order import OrderRead
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
+
+from app.core.database import DbSession
+from app.models.order import Order, OrderStatus
+from app.schemas.order import OrderRead
 
 router = APIRouter(prefix="/admin/orders", tags=["admin-orders"])
 
@@ -30,7 +31,7 @@ async def list_orders(
     if to_date is not None:
         stmt = stmt.where(Order.created_at <= to_date)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.patch("/{order_id}/status", response_model=OrderRead)

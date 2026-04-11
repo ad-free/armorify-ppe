@@ -1,11 +1,12 @@
 from typing import Any
 from uuid import UUID
 
+from fastapi import APIRouter, HTTPException, Query, status
+from sqlalchemy import and_, or_, select
+
 from app.core.database import DbSession
 from app.models.product import Category, Product, ProductVariant
 from app.schemas.product import CategoryRead, ProductRead, VariantRead
-from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import and_, or_, select
 
 router = APIRouter(prefix="/catalog", tags=["public-catalog"])
 
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/catalog", tags=["public-catalog"])
 async def list_categories(db: DbSession) -> list[Category]:
     stmt = select(Category).where(Category.is_active.is_(True))
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.get("/products", response_model=list[ProductRead])
@@ -34,7 +35,7 @@ async def list_products(
         filters.append(or_(Product.name.ilike(term), Product.description.ilike(term)))
     stmt = select(Product).where(and_(*filters))
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.get("/products/{product_id}", response_model=ProductRead)
@@ -62,4 +63,4 @@ async def list_product_variants(product_id: UUID, db: DbSession) -> list[Product
         ProductVariant.is_active.is_(True),
     )
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())

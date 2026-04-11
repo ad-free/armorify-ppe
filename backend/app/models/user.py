@@ -4,7 +4,17 @@ from enum import Enum as PyEnum
 from typing import Optional
 
 from app.models.base import Base, BaseMixin
-from sqlalchemy import Boolean, CheckConstraint, Date, Enum, ForeignKey, Index, String, Text, text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Date,
+    Enum,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

@@ -1,22 +1,27 @@
 # app/routers/protected/orders.py
 from uuid import UUID
 
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import select
+
 from app.core.database import DbSession
 from app.core.deps import CurrentUser
 from app.models.order import Order, OrderItem, OrderStatus
-from app.schemas.order import OrderCreate, OrderItemCreate, OrderItemRead, OrderItemUpdate, OrderRead, OrderUpdate
-from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
+from app.schemas.order import (
+    OrderCreate,
+    OrderItemCreate,
+    OrderItemRead,
+    OrderItemUpdate,
+    OrderRead,
+)
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
 @router.get("/", response_model=list[OrderRead])
 async def list_my_orders(current_user: CurrentUser, db: DbSession) -> list[Order]:
-    result = await db.execute(
-        select(Order).where(Order.user_id == current_user.id, Order.is_active.is_(True))
-    )
-    return result.scalars().all()
+    result = await db.execute(select(Order).where(Order.user_id == current_user.id, Order.is_active.is_(True)))
+    return list(result.scalars().all())
 
 
 @router.post("/", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
@@ -63,7 +68,9 @@ async def add_order_item(payload: OrderItemCreate, current_user: CurrentUser, db
 
 
 @router.put("/items/{item_id}", response_model=OrderItemRead)
-async def update_order_item(item_id: UUID, payload: OrderItemUpdate, current_user: CurrentUser, db: DbSession) -> OrderItem:
+async def update_order_item(
+    item_id: UUID, payload: OrderItemUpdate, current_user: CurrentUser, db: DbSession
+) -> OrderItem:
     item = await db.get(OrderItem, item_id)
     if item is None or not item.is_active:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order item not found")

@@ -1,5 +1,6 @@
 # app/core/middleware.py
 import json
+from collections.abc import Awaitable, Callable
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -26,14 +27,14 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
 
-    async def dispatch(self, request: Request, call_next: object) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         path = request.url.path
 
         if path in _PUBLIC_PATHS or any(path.startswith(p) for p in _PUBLIC_PREFIXES):
-            return await call_next(request)  # type: ignore[arg-type]
+            return await call_next(request)
 
         if not any(path.startswith(p) for p in _PROTECTED_PREFIXES):
-            return await call_next(request)  # type: ignore[arg-type]
+            return await call_next(request)
 
         authorization = request.headers.get("authorization", "")
         if not authorization.startswith("Bearer "):
@@ -50,4 +51,4 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 media_type="application/json",
             )
         request.state.token = token
-        return await call_next(request)  # type: ignore[arg-type]
+        return await call_next(request)

@@ -1,6 +1,9 @@
 # app/routers/catalog.py
-from typing import List
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.product import Category, Product, ProductVariant
@@ -15,17 +18,14 @@ from app.schemas.product import (
     VariantRead,
     VariantUpdate,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
 
-@router.get("/categories", response_model=List[CategoryRead])
-async def list_categories(db: AsyncSession = Depends(get_db)) -> List[Category]:
+@router.get("/categories", response_model=list[CategoryRead])
+async def list_categories(db: AsyncSession = Depends(get_db)) -> list[Category]:
     result = await db.execute(select(Category).where(Category.is_active.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("/categories", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
@@ -39,9 +39,7 @@ async def create_category(category_in: CategoryCreate, db: AsyncSession = Depend
 
 @router.put("/categories/{category_id}", response_model=CategoryRead)
 async def update_category(
-    category_id: UUID,
-    category_update: CategoryUpdate,
-    db: AsyncSession = Depends(get_db)
+    category_id: UUID, category_update: CategoryUpdate, db: AsyncSession = Depends(get_db)
 ) -> Category:
     category = await db.get(Category, category_id)
     if category is None or not category.is_active:
@@ -67,10 +65,10 @@ async def soft_delete_category(category_id: UUID, db: AsyncSession = Depends(get
     return category
 
 
-@router.get("/products", response_model=List[ProductRead])
-async def list_products(db: AsyncSession = Depends(get_db)) -> List[Product]:
+@router.get("/products", response_model=list[ProductRead])
+async def list_products(db: AsyncSession = Depends(get_db)) -> list[Product]:
     result = await db.execute(select(Product).where(Product.is_active.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("/products", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
@@ -84,9 +82,7 @@ async def create_product(product_in: ProductCreate, db: AsyncSession = Depends(g
 
 @router.put("/products/{product_id}", response_model=ProductRead)
 async def update_product(
-    product_id: UUID,
-    product_update: ProductUpdate,
-    db: AsyncSession = Depends(get_db)
+    product_id: UUID, product_update: ProductUpdate, db: AsyncSession = Depends(get_db)
 ) -> Product:
     product = await db.get(Product, product_id)
     if product is None or not product.is_active:
@@ -112,10 +108,10 @@ async def soft_delete_product(product_id: UUID, db: AsyncSession = Depends(get_d
     return product
 
 
-@router.get("/variants", response_model=List[VariantRead])
-async def list_variants(db: AsyncSession = Depends(get_db)) -> List[ProductVariant]:
+@router.get("/variants", response_model=list[VariantRead])
+async def list_variants(db: AsyncSession = Depends(get_db)) -> list[ProductVariant]:
     result = await db.execute(select(ProductVariant).where(ProductVariant.is_active.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("/variants", response_model=VariantRead, status_code=status.HTTP_201_CREATED)
@@ -129,9 +125,7 @@ async def create_variant(variant_in: VariantCreate, db: AsyncSession = Depends(g
 
 @router.put("/variants/{variant_id}", response_model=VariantRead)
 async def update_variant(
-    variant_id: UUID,
-    variant_update: VariantUpdate,
-    db: AsyncSession = Depends(get_db)
+    variant_id: UUID, variant_update: VariantUpdate, db: AsyncSession = Depends(get_db)
 ) -> ProductVariant:
     variant = await db.get(ProductVariant, variant_id)
     if variant is None or not variant.is_active:
