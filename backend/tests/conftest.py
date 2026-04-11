@@ -1,14 +1,14 @@
+import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
-import sys
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.core.database import get_db
-from app.main import app
-from httpx import ASGITransport, AsyncClient
+from app.core.database import get_db  # noqa: E402
+from app.main import app  # noqa: E402
+from httpx import ASGITransport, AsyncClient  # noqa: E402
 
 
 class _ScalarResult:
