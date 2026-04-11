@@ -4,8 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_ENV_FILE = ".env"
 DEV_ENV_FILE = ".dev.env"
@@ -16,7 +15,7 @@ class Environment(str, Enum):
     PRODUCTION = "production"
 
     @classmethod
-    def from_str(cls, value: Optional[str]) -> "Environment":
+    def from_str(cls, value: str | None = None) -> "Environment":
         if not value:
             return cls.DEVELOPMENT
         normalized = value.strip().lower()
@@ -27,30 +26,6 @@ class Environment(str, Enum):
             "prod": cls.PRODUCTION,
         }
         return alias_map.get(normalized, cls.DEVELOPMENT)
-
-
-class Settings(BaseSettings):
-    database_url: str = Field(..., env="DATABASE_URL")
-    db_schema: str = Field("armorify", env="DB_SCHEMA")
-    app_name: str = Field("Armorify PPE API", env="APP_NAME")
-    debug: bool = Field(False, env="DEBUG")
-    environment: Environment = Field(Environment.DEVELOPMENT, env="ENVIRONMENT")
-    env_file: Optional[str] = Field(None, env="ENV_FILE")
-
-    model_config = {
-        "env_prefix": "",
-        "str_strip_whitespace": True,
-    }
-
-
-class DevSettings(Settings):
-    debug: bool = True
-    environment: Environment = Environment.DEVELOPMENT
-
-
-class ProductionSettings(Settings):
-    debug: bool = False
-    environment: Environment = Environment.PRODUCTION
 
 
 def _resolve_env_file() -> Optional[str]:
@@ -69,12 +44,36 @@ def _resolve_env_file() -> Optional[str]:
     return str(default_path) if default_path.exists() else None
 
 
+_ENV_FILE = _resolve_env_file()
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding="utf-8",
+        str_strip_whitespace=True,
+        extra="ignore",
+    )
+
+    database_url: str = ""
+    db_schema: str = "armorify"
+    app_name: str = "Armorify PPE API"
+    debug: bool = False
+    environment: Environment = Environment.DEVELOPMENT
+    secret_key: str = ""
+    jwt_secret_key: str = ""
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+
+    def model_post_init(self, __context: object) -> None:
+        missing = [f for f in ("database_url", "secret_key", "jwt_secret_key") if not getattr(self, f)]
+        if missing:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing).upper()}")
+
+
 def get_settings() -> Settings:
-    env = Environment.from_str(os.getenv("ENVIRONMENT"))
-    env_file = _resolve_env_file()
-    if env == Environment.PRODUCTION:
-        return ProductionSettings(_env_file=env_file)
-    return DevSettings(_env_file=env_file)
+    return Settings()
 
 
 settings = get_settings()

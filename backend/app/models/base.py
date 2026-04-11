@@ -10,7 +10,7 @@ class BaseMixin:
     id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
-        server_default=text("uuid_generate_v4()"),
+        server_default=text("gen_random_uuid()"),
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
