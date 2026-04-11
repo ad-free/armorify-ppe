@@ -2,10 +2,13 @@
 from app.core.middleware import SecurityMiddleware
 from app.core.settings import settings
 from app.routers import (
-    catalog_router,
-    cms_router,
-    orders_router,
-    quotes_router,
+    admin_catalog_router,
+    admin_cms_router,
+    admin_orders_router,
+    admin_quotes_router,
+    public_catalog_router,
+    public_cms_router,
+    public_orders_router,
     users_router,
 )
 from fastapi import FastAPI, HTTPException, Request
@@ -13,11 +16,14 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI(title=settings.app_name, docs_url="/")
 app.add_middleware(SecurityMiddleware)
-app.include_router(users_router)
-app.include_router(catalog_router)
-app.include_router(orders_router)
-app.include_router(quotes_router)
-app.include_router(cms_router)
+app.include_router(users_router, prefix="/api/v1")
+app.include_router(public_catalog_router, prefix="/api/v1")
+app.include_router(public_orders_router, prefix="/api/v1")
+app.include_router(public_cms_router, prefix="/api/v1")
+app.include_router(admin_catalog_router, prefix="/api/v1")
+app.include_router(admin_orders_router, prefix="/api/v1")
+app.include_router(admin_quotes_router, prefix="/api/v1")
+app.include_router(admin_cms_router, prefix="/api/v1")
 
 
 @app.exception_handler(HTTPException)
@@ -38,4 +44,9 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 @app.get("/")
 async def health_check() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
     return {"status": "ok"}

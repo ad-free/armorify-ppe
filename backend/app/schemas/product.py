@@ -1,4 +1,6 @@
 # app/schemas/product.py
+from datetime import datetime
+from decimal import Decimal
 from typing import Any, Optional
 from uuid import UUID
 
@@ -28,6 +30,8 @@ class CategoryUpdate(BaseModel):
 class CategoryRead(CategoryBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -36,8 +40,8 @@ class ProductBase(BaseModel):
     name: str
     slug: str
     description: Optional[str] = None
-    price: float
-    dealer_price: Optional[float] = None
+    price: Decimal
+    dealer_price: Optional[Decimal] = None
     stock: Optional[int] = 0
     is_featured: Optional[bool] = False
     category_id: UUID
@@ -63,6 +67,8 @@ class ProductUpdate(BaseModel):
 class ProductRead(ProductBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -73,7 +79,7 @@ class VariantBase(BaseModel):
     size: Optional[str] = None
     color: Optional[str] = None
     stock: Optional[int] = 0
-    price_override: Optional[float] = None
+    price_override: Optional[Decimal] = None
 
 
 class VariantCreate(VariantBase):
@@ -91,5 +97,7 @@ class VariantUpdate(BaseModel):
 class VariantRead(VariantBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}

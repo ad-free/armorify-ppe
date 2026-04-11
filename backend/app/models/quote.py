@@ -7,6 +7,8 @@ from sqlalchemy import Enum, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+_enum_values = lambda enum: [e.value for e in enum]  # noqa: E731
+
 
 class QuoteStatus(PyEnum):
     PENDING = "pending"
@@ -28,7 +30,12 @@ class QuoteRequest(BaseMixin, Base):
     contact_phone: Mapped[str] = mapped_column(String(32), nullable=False)
     note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[QuoteStatus] = mapped_column(
-        Enum(QuoteStatus, name="quote_status", native_enum=True),
+        Enum(
+            QuoteStatus,
+            name="quote_status",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
         nullable=False,
         server_default=text("'pending'"),
     )

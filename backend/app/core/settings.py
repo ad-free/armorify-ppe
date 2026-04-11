@@ -31,6 +31,7 @@ class Environment(str, Enum):
 
 class Settings(BaseSettings):
     database_url: str = Field(..., env="DATABASE_URL")
+    db_schema: str = Field("armorify", env="DB_SCHEMA")
     app_name: str = Field("Armorify PPE API", env="APP_NAME")
     debug: bool = Field(False, env="DEBUG")
     environment: Environment = Field(Environment.DEVELOPMENT, env="ENVIRONMENT")

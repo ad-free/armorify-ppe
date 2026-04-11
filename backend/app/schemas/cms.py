@@ -31,6 +31,8 @@ class BannerUpdate(BaseModel):
 class BannerRead(BannerBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -54,5 +56,7 @@ class PageContentUpdate(BaseModel):
 class PageContentRead(PageContentBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}

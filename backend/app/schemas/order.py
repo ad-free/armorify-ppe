@@ -1,4 +1,5 @@
 # app/schemas/order.py
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -8,7 +9,9 @@ from pydantic import BaseModel
 
 
 class OrderBase(BaseModel):
-    user_id: UUID
+    user_id: Optional[UUID] = None
+    order_code: str
+    contact_phone: str
     total_amount: Decimal
     status: Optional[OrderStatus] = OrderStatus.PENDING
 
@@ -25,6 +28,8 @@ class OrderUpdate(BaseModel):
 class OrderRead(OrderBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -51,5 +56,19 @@ class OrderItemUpdate(BaseModel):
 class OrderItemRead(OrderItemBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class GuestOrderItemCreate(BaseModel):
+    product_id: UUID
+    variant_id: Optional[UUID] = None
+    quantity: int
+    unit_price: Decimal
+
+
+class GuestOrderCreate(BaseModel):
+    contact_phone: str
+    items: list[GuestOrderItemCreate]
