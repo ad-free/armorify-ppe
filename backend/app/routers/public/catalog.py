@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.database import DbSession
 from app.models.product import Category, Product, ProductVariant
@@ -34,7 +35,8 @@ async def list_products(
     sort_by: Literal["newest", "price_asc", "price_desc", "featured"] = "newest",
     q: str | None = Query(default=None, min_length=1),
 ) -> PaginatedResponse[ProductRead]:
-    filters: list[Any] = [Product.is_active.is_(True)]
+    filters: list[ColumnElement[bool]] = [Product.is_active.is_(True)]
+
     if category_id is not None:
         filters.append(Product.category_id == category_id)
     if is_featured is not None:
@@ -51,17 +53,19 @@ async def list_products(
         term = f"%{q}%"
         filters.append(or_(Product.name.ilike(term), Product.description.ilike(term)))
 
-    _sort = {
+    _sort_options: dict[str, list[ColumnElement[Any]]] = {
         "newest": [Product.created_at.desc()],
         "price_asc": [Product.price.asc()],
         "price_desc": [Product.price.desc()],
         "featured": [Product.is_featured.desc(), Product.created_at.desc()],
-    }[sort_by]
+    }
+    _sort = _sort_options[sort_by]
 
     base = select(Product).where(and_(*filters))
     total = (await db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
     rows = (await db.execute(base.order_by(*_sort).offset(skip).limit(limit))).scalars().all()
-    return PaginatedResponse(items=list(rows), total=total, skip=skip, limit=limit)
+    product_read_response = [ProductRead.model_validate(row) for row in rows]
+    return PaginatedResponse(items=product_read_response, total=total, skip=skip, limit=limit)
 
 
 @router.get("/products/{product_id}", response_model=ProductRead)

@@ -1,6 +1,5 @@
 # app/schemas/user.py
 from datetime import date, datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, field_validator
@@ -12,9 +11,9 @@ class UserBase(BaseModel):
     firstname: str
     lastname: str
     phone: str
-    email: Optional[str] = None
-    address: Optional[str] = None
-    birthday: Optional[date] = None
+    email: str | None = None
+    address: str | None = None
+    birthday: date | None = None
     role: UserRole = UserRole.CUSTOMER
 
 
@@ -23,13 +22,13 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
-    firstname: Optional[str] = None
-    lastname: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    address: Optional[str] = None
-    birthday: Optional[date] = None
-    role: Optional[UserRole] = None
+    firstname: str | None = None
+    lastname: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    address: str | None = None
+    birthday: date | None = None
+    role: UserRole | None = None
 
 
 class UserRead(UserBase):
@@ -49,7 +48,7 @@ class RegisterRequest(BaseModel):
     firstname: str
     lastname: str
     phone: str
-    email: Optional[EmailStr] = None
+    email: EmailStr | None = None
     password: str
 
     @field_validator("password")
@@ -79,12 +78,12 @@ class RefreshRequest(BaseModel):
 
 
 class AddressBase(BaseModel):
-    label: Optional[str] = None
+    label: str | None = None
     recipient_name: str
     phone: str
     address_line: str
     city: str
-    province: Optional[str] = None
+    province: str | None = None
     is_default: bool = False
 
 
@@ -93,13 +92,13 @@ class AddressCreate(AddressBase):
 
 
 class AddressUpdate(BaseModel):
-    label: Optional[str] = None
-    recipient_name: Optional[str] = None
-    phone: Optional[str] = None
-    address_line: Optional[str] = None
-    city: Optional[str] = None
-    province: Optional[str] = None
-    is_default: Optional[bool] = None
+    label: str | None = None
+    recipient_name: str | None = None
+    phone: str | None = None
+    address_line: str | None = None
+    city: str | None = None
+    province: str | None = None
+    is_default: bool | None = None
 
 
 class AddressRead(AddressBase):

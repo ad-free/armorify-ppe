@@ -1,6 +1,5 @@
 # app/models/cart.py
 from decimal import Decimal
-from typing import Optional
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import ForeignKey, Index, Integer, Numeric
@@ -34,7 +33,7 @@ class CartItem(BaseMixin, Base):
         ForeignKey("products.id", ondelete="CASCADE"),
         nullable=False,
     )
-    variant_id: Mapped[Optional[UUID]] = mapped_column(
+    variant_id: Mapped[UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("product_variants.id", ondelete="CASCADE"),
         nullable=True,

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 class _ReviewBody(BaseModel):
     author_name: str
     rating: int = Field(..., ge=1, le=5)
-    body: Optional[str] = None
+    body: str | None = None
 
 
 class ReviewCreate(_ReviewBody):
@@ -17,15 +17,15 @@ class ReviewCreate(_ReviewBody):
 
 
 class ReviewUpdate(BaseModel):
-    author_name: Optional[str] = None
+    author_name: str | None = None
     rating: Optional[int] = Field(default=None, ge=1, le=5)
-    body: Optional[str] = None
+    body: str | None = None
 
 
 class ReviewRead(_ReviewBody):
     id: UUID
     product_id: UUID
-    user_id: Optional[UUID] = None
+    user_id: UUID | None = None
     is_approved: bool
     is_active: bool
     created_at: datetime

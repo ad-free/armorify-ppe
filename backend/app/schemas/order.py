@@ -10,7 +10,7 @@ from app.models.order import OrderStatus
 
 
 class OrderBase(BaseModel):
-    user_id: Optional[UUID] = None
+    user_id: UUID | None = None
     order_code: str
     contact_phone: str
     total_amount: Decimal
@@ -38,7 +38,7 @@ class OrderRead(OrderBase):
 class OrderItemBase(BaseModel):
     order_id: UUID
     product_id: UUID
-    variant_id: Optional[UUID] = None
+    variant_id: UUID | None = None
     quantity: int
     unit_price: Decimal
 
@@ -48,8 +48,8 @@ class OrderItemCreate(OrderItemBase):
 
 
 class OrderItemUpdate(BaseModel):
-    product_id: Optional[UUID] = None
-    variant_id: Optional[UUID] = None
+    product_id: UUID | None = None
+    variant_id: UUID | None = None
     quantity: Optional[int] = None
     unit_price: Optional[Decimal] = None
 
@@ -65,7 +65,7 @@ class OrderItemRead(OrderItemBase):
 
 class GuestOrderItemCreate(BaseModel):
     product_id: UUID
-    variant_id: Optional[UUID] = None
+    variant_id: UUID | None = None
     quantity: int
     unit_price: Decimal
 

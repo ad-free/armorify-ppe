@@ -1,11 +1,12 @@
 # app/routers/public/related.py
 from uuid import UUID
 
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import and_, select
+
 from app.core.database import DbSession
 from app.models.product import Product
 from app.schemas.product import ProductRead
-from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import and_, select
 
 router = APIRouter(prefix="/api/v1/catalog/products", tags=["public-related"])
 
@@ -26,10 +27,7 @@ async def list_related_products(product_id: UUID, db: DbSession) -> list[Product
         filters.append(Product.brand_id == product.brand_id)
 
     stmt = (
-        select(Product)
-        .where(and_(*filters))
-        .order_by(Product.is_featured.desc(), Product.created_at.desc())
-        .limit(6)
+        select(Product).where(and_(*filters)).order_by(Product.is_featured.desc(), Product.created_at.desc()).limit(6)
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())

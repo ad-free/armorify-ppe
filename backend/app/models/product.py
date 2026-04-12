@@ -1,6 +1,6 @@
 # app/models/product.py
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID as _UUID
 
 from app.models.base import Base, BaseMixin
@@ -24,13 +24,13 @@ class Category(BaseMixin, Base):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    parent_id: Mapped[Optional[UUID]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parent_id: Mapped[_UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("categories.id", ondelete="SET NULL"),
         nullable=True,
     )
-    industry_tags: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
+    industry_tags: Mapped[Any | None] = mapped_column(JSONB, nullable=True)
     products: Mapped[list["Product"]] = relationship(back_populates="category")
 
     __table_args__ = (
@@ -47,9 +47,9 @@ class Product(BaseMixin, Base):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     price: Mapped[Numeric] = mapped_column(Numeric(12, 2), nullable=False)
-    dealer_price: Mapped[Optional[Numeric]] = mapped_column(Numeric(12, 2), nullable=True)
+    dealer_price: Mapped[Numeric | None] = mapped_column(Numeric(12, 2), nullable=True)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     category_id: Mapped[UUID] = mapped_column(
@@ -57,7 +57,7 @@ class Product(BaseMixin, Base):
         ForeignKey("categories.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    specifications: Mapped[Optional[Any]] = mapped_column(
+    specifications: Mapped[Any | None] = mapped_column(
         JSONB,
         nullable=True,
         server_default=text("'{}'::jsonb"),
@@ -107,10 +107,10 @@ class ProductVariant(BaseMixin, Base):
         nullable=False,
     )
     sku: Mapped[str] = mapped_column(String(128), nullable=False)
-    size: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    color: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    size: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    color: Mapped[str | None] = mapped_column(String(64), nullable=True)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    price_override: Mapped[Optional[Numeric]] = mapped_column(Numeric(12, 2), nullable=True)
+    price_override: Mapped[Numeric | None] = mapped_column(Numeric(12, 2), nullable=True)
     product: Mapped[Product] = relationship(back_populates="variants")
 
     __table_args__ = (

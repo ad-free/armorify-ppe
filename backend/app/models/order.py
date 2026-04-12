@@ -1,7 +1,6 @@
 # app/models/order.py
 from decimal import Decimal
 from enum import Enum as PyEnum
-from typing import Optional
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import Enum, ForeignKey, Index, Integer, Numeric, String, text
@@ -22,7 +21,7 @@ class OrderStatus(PyEnum):
 class Order(BaseMixin, Base):
     __tablename__ = "orders"
 
-    user_id: Mapped[Optional[UUID]] = mapped_column(
+    user_id: Mapped[UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=True,
@@ -62,7 +61,7 @@ class OrderItem(BaseMixin, Base):
         ForeignKey("products.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    variant_id: Mapped[Optional[UUID]] = mapped_column(
+    variant_id: Mapped[UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("product_variants.id", ondelete="RESTRICT"),
         nullable=True,

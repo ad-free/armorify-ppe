@@ -2,7 +2,6 @@
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -28,7 +27,7 @@ class Environment(str, Enum):
         return alias_map.get(normalized, cls.DEVELOPMENT)
 
 
-def _resolve_env_file() -> Optional[str]:
+def _resolve_env_file() -> str | None:
     explicit_file = os.getenv("ENV_FILE")
     if explicit_file:
         path = Path(explicit_file).expanduser()

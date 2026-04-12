@@ -1,14 +1,15 @@
 # app/routers/admin/blog.py
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
+
 from app.core.database import DbSession
 from app.core.deps import require_staff
 from app.crud.crud_blog import blog_crud
 from app.models.blog import BlogPost
 from app.schemas.blog import BlogPostCreate, BlogPostRead, BlogPostUpdate
 from app.schemas.common import PaginatedResponse
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
 
 router = APIRouter(
     prefix="/api/v1/admin/blog",
@@ -28,10 +29,9 @@ async def list_posts(
     if not include_inactive:
         base = base.where(BlogPost.is_active.is_(True))
     total = (await db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
-    rows = (
-        await db.execute(base.order_by(BlogPost.created_at.desc()).offset(skip).limit(limit))
-    ).scalars().all()
-    return PaginatedResponse(items=list(rows), total=total, skip=skip, limit=limit)
+    rows = (await db.execute(base.order_by(BlogPost.created_at.desc()).offset(skip).limit(limit))).scalars().all()
+    blog_post_read_response = [BlogPostRead.model_validate(row) for row in rows]
+    return PaginatedResponse(items=blog_post_read_response, total=total, skip=skip, limit=limit)
 
 
 @router.post("/posts", response_model=BlogPostRead, status_code=status.HTTP_201_CREATED)

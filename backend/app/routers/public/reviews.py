@@ -1,13 +1,14 @@
 # app/routers/public/reviews.py
 from uuid import UUID
 
+from fastapi import APIRouter, Query, status
+from sqlalchemy import func, select
+
 from app.core.database import DbSession
 from app.core.deps import CurrentUser
 from app.models.review import Review
 from app.schemas.common import PaginatedResponse
 from app.schemas.review import ReviewCreate, ReviewRead
-from fastapi import APIRouter, Query, status
-from sqlalchemy import func, select
 
 router = APIRouter(prefix="/api/v1/catalog/products", tags=["public-reviews"])
 
@@ -24,15 +25,14 @@ async def list_reviews(
         Review.is_approved.is_(True),
         Review.is_active.is_(True),
     ]
-    total = (
-        await db.execute(select(func.count()).select_from(select(Review).where(*where).subquery()))
-    ).scalar_one()
+    total = (await db.execute(select(func.count()).select_from(select(Review).where(*where).subquery()))).scalar_one()
     rows = (
-        await db.execute(
-            select(Review).where(*where).order_by(Review.created_at.desc()).offset(skip).limit(limit)
-        )
-    ).scalars().all()
-    return PaginatedResponse(items=list(rows), total=total, skip=skip, limit=limit)
+        (await db.execute(select(Review).where(*where).order_by(Review.created_at.desc()).offset(skip).limit(limit)))
+        .scalars()
+        .all()
+    )
+    reviews_read_response = [ReviewRead.model_validate(row) for row in rows]
+    return PaginatedResponse(items=reviews_read_response, total=total, skip=skip, limit=limit)
 
 
 @router.post("/{product_id}/reviews", response_model=ReviewRead, status_code=status.HTTP_201_CREATED)

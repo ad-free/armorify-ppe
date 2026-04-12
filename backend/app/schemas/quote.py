@@ -1,6 +1,5 @@
 # app/schemas/quote.py
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -12,8 +11,8 @@ class QuoteRequestBase(BaseModel):
     user_id: UUID
     company_name: str
     contact_phone: str
-    note: Optional[str] = None
-    status: Optional[QuoteStatus] = QuoteStatus.PENDING
+    note: str | None = None
+    status: QuoteStatus | None = QuoteStatus.PENDING
 
 
 class QuoteRequestCreate(QuoteRequestBase):
@@ -21,10 +20,10 @@ class QuoteRequestCreate(QuoteRequestBase):
 
 
 class QuoteRequestUpdate(BaseModel):
-    company_name: Optional[str] = None
-    contact_phone: Optional[str] = None
-    note: Optional[str] = None
-    status: Optional[QuoteStatus] = None
+    company_name: str | None = None
+    contact_phone: str | None = None
+    note: str | None = None
+    status: QuoteStatus | None = None
 
 
 class QuoteRequestRead(QuoteRequestBase):
@@ -40,7 +39,7 @@ class QuoteItemBase(BaseModel):
     quote_id: UUID
     product_id: UUID
     quantity: int
-    note: Optional[str] = None
+    note: str | None = None
 
 
 class QuoteItemCreate(QuoteItemBase):
@@ -48,9 +47,9 @@ class QuoteItemCreate(QuoteItemBase):
 
 
 class QuoteItemUpdate(BaseModel):
-    product_id: Optional[UUID] = None
-    quantity: Optional[int] = None
-    note: Optional[str] = None
+    product_id: UUID | None = None
+    quantity: int | None = None
+    note: str | None = None
 
 
 class QuoteItemRead(QuoteItemBase):

@@ -1,6 +1,5 @@
 # app/models/cms.py
 from datetime import datetime
-from typing import Optional
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import CheckConstraint, DateTime, Index, Integer, String, Text
@@ -12,10 +11,10 @@ class Banner(BaseMixin, Base):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     image_url: Mapped[str] = mapped_column(String(512), nullable=False)
-    link_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    link_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False)
-    starts_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    ends_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class PageContent(BaseMixin, Base):

@@ -1,6 +1,5 @@
 # app/schemas/brand.py
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -9,9 +8,9 @@ from pydantic import BaseModel
 class BrandBase(BaseModel):
     name: str
     slug: str
-    logo_url: Optional[str] = None
-    country_of_origin: Optional[str] = None
-    description: Optional[str] = None
+    logo_url: str | None = None
+    country_of_origin: str | None = None
+    description: str | None = None
 
 
 class BrandCreate(BrandBase):
@@ -19,11 +18,11 @@ class BrandCreate(BrandBase):
 
 
 class BrandUpdate(BaseModel):
-    name: Optional[str] = None
-    slug: Optional[str] = None
-    logo_url: Optional[str] = None
-    country_of_origin: Optional[str] = None
-    description: Optional[str] = None
+    name: str | None = None
+    slug: str | None = None
+    logo_url: str | None = None
+    country_of_origin: str | None = None
+    description: str | None = None
 
 
 class BrandRead(BrandBase):

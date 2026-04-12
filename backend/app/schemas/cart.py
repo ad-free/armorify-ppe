@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 class CartItemBase(BaseModel):
     product_id: UUID
-    variant_id: Optional[UUID] = None
+    variant_id: UUID | None = None
     quantity: int
     unit_price: Decimal
 

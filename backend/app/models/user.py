@@ -1,7 +1,6 @@
 # app/models/user.py
 from datetime import date
 from enum import Enum as PyEnum
-from typing import Optional
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import (
@@ -39,9 +38,9 @@ class User(BaseMixin, Base):
     firstname: Mapped[str] = mapped_column(String(128), nullable=False)
     lastname: Mapped[str] = mapped_column(String(128), nullable=False)
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
-    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    birthday: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    birthday: Mapped[date | None] = mapped_column(Date, nullable=True)
     role: Mapped[UserRole] = mapped_column(
         Enum(
             UserRole,
@@ -62,7 +61,7 @@ class User(BaseMixin, Base):
         nullable=False,
         server_default=text("'active'"),
     )
-    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     addresses: Mapped[list["Address"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = (
@@ -79,12 +78,12 @@ class Address(BaseMixin, Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    label: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # e.g. "Home", "Office"
+    label: Mapped[str | None] = mapped_column(String(64), nullable=True)  # e.g. "Home", "Office"
     recipient_name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
     address_line: Mapped[str] = mapped_column(Text, nullable=False)
     city: Mapped[str] = mapped_column(String(128), nullable=False)
-    province: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    province: Mapped[str | None] = mapped_column(String(128), nullable=True)
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     user: Mapped["User"] = relationship(back_populates="addresses")
 

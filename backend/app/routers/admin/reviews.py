@@ -2,14 +2,15 @@
 from typing import Optional
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
+
 from app.core.database import DbSession
 from app.core.deps import require_staff
 from app.crud.crud_review import review_crud
 from app.models.review import Review
 from app.schemas.common import PaginatedResponse
 from app.schemas.review import ReviewRead
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
 
 router = APIRouter(
     prefix="/api/v1/admin/reviews",
@@ -29,10 +30,9 @@ async def list_reviews(
     if is_approved is not None:
         stmt = stmt.where(Review.is_approved.is_(is_approved))
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
-    rows = (
-        await db.execute(stmt.offset(skip).limit(limit))
-    ).scalars().all()
-    return PaginatedResponse(items=list(rows), total=total, skip=skip, limit=limit)
+    rows = (await db.execute(stmt.offset(skip).limit(limit))).scalars().all()
+    review_read_response = [ReviewRead.model_validate(row) for row in rows]
+    return PaginatedResponse(items=review_read_response, total=total, skip=skip, limit=limit)
 
 
 @router.patch("/{review_id}/approve", response_model=ReviewRead)

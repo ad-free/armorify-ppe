@@ -1,11 +1,12 @@
 # app/routers/public/product_images.py
 from uuid import UUID
 
+from fastapi import APIRouter
+from sqlalchemy import select
+
 from app.core.database import DbSession
 from app.models.product_image import ProductImage
 from app.schemas.product_image import ProductImageRead
-from fastapi import APIRouter
-from sqlalchemy import select
 
 router = APIRouter(prefix="/api/v1/catalog/products", tags=["public-product-images"])
 

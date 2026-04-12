@@ -1,11 +1,12 @@
 # app/routers/public/brands.py
 from uuid import UUID
 
+from fastapi import APIRouter, HTTPException, status
+
 from app.core.database import DbSession
 from app.crud.crud_brand import brand_crud
 from app.models.brand import Brand
 from app.schemas.brand import BrandRead
-from fastapi import APIRouter, HTTPException, status
 
 router = APIRouter(prefix="/api/v1/catalog/brands", tags=["public-brands"])
 

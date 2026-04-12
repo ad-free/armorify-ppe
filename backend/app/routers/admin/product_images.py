@@ -1,12 +1,13 @@
 # app/routers/admin/product_images.py
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from app.core.database import DbSession
 from app.core.deps import require_staff
 from app.crud.crud_product_image import product_image_crud
 from app.models.product_image import ProductImage
 from app.schemas.product_image import ProductImageCreate, ProductImageRead, ProductImageUpdate
-from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter(
     prefix="/api/v1/admin/catalog/products",

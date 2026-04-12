@@ -1,6 +1,5 @@
 # app/models/quote.py
 from enum import Enum as PyEnum
-from typing import Optional
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import Enum, ForeignKey, Index, Integer, String, Text, text
@@ -28,7 +27,7 @@ class QuoteRequest(BaseMixin, Base):
     )
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     contact_phone: Mapped[str] = mapped_column(String(32), nullable=False)
-    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[QuoteStatus] = mapped_column(
         Enum(
             QuoteStatus,
@@ -58,5 +57,5 @@ class QuoteItem(BaseMixin, Base):
         nullable=False,
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
     quote: Mapped[QuoteRequest] = relationship(back_populates="items")

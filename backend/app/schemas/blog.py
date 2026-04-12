@@ -9,13 +9,13 @@ from pydantic import BaseModel, Field
 class BlogPostBase(BaseModel):
     title: str
     slug: str
-    excerpt: Optional[str] = Field(default=None, max_length=300)
+    excerpt: str | None = Field(default=None, max_length=300)
     body: str
-    cover_image_url: Optional[str] = None
-    author_id: Optional[UUID] = None
+    cover_image_url: str | None = None
+    author_id: UUID | None = None
     published_at: Optional[datetime] = None
-    seo_title: Optional[str] = Field(default=None, max_length=160)
-    seo_description: Optional[str] = Field(default=None, max_length=320)
+    seo_title: str | None = Field(default=None, max_length=160)
+    seo_description: str | None = Field(default=None, max_length=320)
 
 
 class BlogPostCreate(BlogPostBase):
@@ -23,15 +23,15 @@ class BlogPostCreate(BlogPostBase):
 
 
 class BlogPostUpdate(BaseModel):
-    title: Optional[str] = None
-    slug: Optional[str] = None
-    excerpt: Optional[str] = Field(default=None, max_length=300)
-    body: Optional[str] = None
-    cover_image_url: Optional[str] = None
-    author_id: Optional[UUID] = None
+    title: str | None = None
+    slug: str | None = None
+    excerpt: str | None = Field(default=None, max_length=300)
+    body: str | None = None
+    cover_image_url: str | None = None
+    author_id: UUID | None = None
     published_at: Optional[datetime] = None
-    seo_title: Optional[str] = Field(default=None, max_length=160)
-    seo_description: Optional[str] = Field(default=None, max_length=320)
+    seo_title: str | None = Field(default=None, max_length=160)
+    seo_description: str | None = Field(default=None, max_length=320)
 
 
 class BlogPostRead(BlogPostBase):

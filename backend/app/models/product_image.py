@@ -1,7 +1,7 @@
 # app/models/product_image.py
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import ForeignKey, Index, Integer, String, text
@@ -21,7 +21,7 @@ class ProductImage(BaseMixin, Base):
         nullable=False,
     )
     url: Mapped[str] = mapped_column(String(512), nullable=False)
-    alt_text: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    alt_text: Mapped[str | None] = mapped_column(String(255), nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"), default=0)
     product: Mapped[Product] = relationship(foreign_keys=[product_id])
 

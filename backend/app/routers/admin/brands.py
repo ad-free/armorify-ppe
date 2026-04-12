@@ -1,12 +1,13 @@
 # app/routers/admin/brands.py
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
 from app.core.database import DbSession
 from app.core.deps import require_staff
 from app.crud.crud_brand import brand_crud
 from app.models.brand import Brand
 from app.schemas.brand import BrandCreate, BrandRead, BrandUpdate
-from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 router = APIRouter(
     prefix="/api/v1/admin/catalog/brands",
