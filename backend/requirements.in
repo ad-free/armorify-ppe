@@ -15,7 +15,7 @@ pydantic-settings>=2.7.0,<3
 
 # ── auth ──────────────────────────────────────────────────
 python-jose[cryptography]>=3.3.0,<4
-passlib[bcrypt]>=1.7.4,<2
+bcrypt>=4.0.0,<6
 
 # ── utilities ─────────────────────────────────────────────
 python-slugify>=8.0.4,<9

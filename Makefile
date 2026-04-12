@@ -1,107 +1,226 @@
 SHELL := /usr/bin/env bash
 .SILENT:
 
-# Cross-platform Python path detection
+# ─── Platform detection ────────────────────────────────────────────────────────
 UNAME_S := $(shell uname -s)
 ifeq ($(findstring MINGW, $(UNAME_S)),MINGW)
-    # Windows (MSYS2/MinGW)
     PYTHON := $(CURDIR)/.venv/Scripts/python.exe
 else ifeq ($(UNAME_S),Linux)
-    # Linux
     PYTHON := $(CURDIR)/.venv/bin/python
 else ifeq ($(UNAME_S),Darwin)
-    # macOS
     PYTHON := $(CURDIR)/.venv/bin/python
 else
-    # Default to Windows
     PYTHON := $(CURDIR)/.venv/Scripts/python.exe
 endif
 
-PROJECT_DIR := backend
-UVICORN := $(PYTHON) -m uvicorn
+PIP       := $(PYTHON) -m pip
+PYTEST    := $(PYTHON) -m pytest
+ALEMBIC   := $(PYTHON) -m alembic
+FASTAPI   := $(PYTHON) -m fastapi
+UVICORN   := $(PYTHON) -m uvicorn
 PRECOMMIT := $(PYTHON) -m pre_commit
 
-COLOR_GREEN := \033[0;32m
-COLOR_BLUE := \033[0;34m
-COLOR_YELLOW := \033[0;33m
-COLOR_RED := \033[0;31m
-COLOR_RESET := \033[0m
+FRONTEND_DIR := frontend
+BACKEND_DIR  := backend
+BACKEND_APP  := app.main:app
+BACKEND_ENV  := $(BACKEND_DIR)/.dev.env
 
-.PHONY: help dev precommit-install precommit lint venv install alembic-upgrade alembic-downgrade alembic-revision alembic-history alembic-current
+BACKEND_LOAD_ENV := set -a && source "$(BACKEND_ENV)" && set +a
+
+# ─── Colors ────────────────────────────────────────────────────────────────────
+RESET   := \033[0m
+BOLD    := \033[1m
+DIM     := \033[2m
+
+BLACK   := \033[0;30m
+RED     := \033[0;31m
+GREEN   := \033[0;32m
+YELLOW  := \033[0;33m
+BLUE    := \033[0;34m
+MAGENTA := \033[0;35m
+CYAN    := \033[0;36m
+WHITE   := \033[0;37m
+
+B_RED     := \033[1;31m
+B_GREEN   := \033[1;32m
+B_YELLOW  := \033[1;33m
+B_BLUE    := \033[1;34m
+B_MAGENTA := \033[1;35m
+B_CYAN    := \033[1;36m
+B_WHITE   := \033[1;37m
+
+# ─── Helpers ───────────────────────────────────────────────────────────────────
+define section
+	printf "\n$(B_BLUE)▸ $(1)$(RESET)\n"
+endef
+
+define target
+	printf "  $(B_GREEN)%-28s$(RESET)$(DIM)$(1)$(RESET)\n" "$(2)"
+endef
+
+define hint
+	printf "  $(DIM)%-28s  $(CYAN)$(1)$(RESET)\n" ""
+endef
+
+define example
+	printf "  $(DIM)$ make %-23s$(RESET)$(DIM) # $(1)$(RESET)\n" "$(2)"
+endef
+
+# ─── Targets ───────────────────────────────────────────────────────────────────
+.PHONY: help venv install backend-install backend-env-check backend-init \
+        dev dev-uvicorn lint test \
+        alembic-upgrade alembic-downgrade alembic-revision alembic-revision-empty \
+        alembic-history alembic-current \
+        frontend-dev frontend-lint frontend-build frontend-preview
 
 help:
-	printf "%b" "$(COLOR_BLUE)Armorify PPE Makefile commands$(COLOR_RESET)\n"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" help "$(COLOR_RESET)" "Show this help message"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" venv "$(COLOR_RESET)" "Create or update the local .venv environment"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" install "$(COLOR_RESET)" "Install backend Python dependencies into .venv"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" dev "$(COLOR_RESET)" "Start FastAPI development server with reload"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" precommit-install "$(COLOR_RESET)" "Install Git hooks for pre-commit checks"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" precommit "$(COLOR_RESET)" "Run pre-commit on all files in backend/"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" lint "$(COLOR_RESET)" "Run the full lint pipeline via pre-commit"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" alembic-upgrade "$(COLOR_RESET)" "Apply Alembic migrations to the latest revision"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" alembic-downgrade "$(COLOR_RESET)" "Downgrade the database by revision or step"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" alembic-revision "$(COLOR_RESET)" "Create a new Alembic revision (MESSAGE required)"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" alembic-history "$(COLOR_RESET)" "Show Alembic migration history"
-	printf "  %b%-20s%b %s\n" "$(COLOR_GREEN)" alembic-current "$(COLOR_RESET)" "Show the current Alembic revision"
-	printf "\n"
-	printf "%b" "$(COLOR_YELLOW)Usage examples:$(COLOR_RESET)\n"
-	printf "  %b%-20s%b %s\n" "" "make dev" "Start server at http://0.0.0.0:8000"
-	printf "  %b%-20s%b %s\n" "" "make precommit-install" "Install hooks for future commits"
-	printf "  %b%-20s%b %s\n" "" "make precommit" "Run all configured pre-commit checks now"
-	printf "  %b%-20s%b %s\n" "" "make lint" "Alias for running lint/pre-commit checks"
-	printf "\n"
-	printf "%b" "$(COLOR_YELLOW)Notes:$(COLOR_RESET)\n"
-	printf "  %s\n" "- Ensure .venv is created before running commands."
-	printf "  %s\n" "- Use ".env" in backend/ to configure DATABASE_URL and ENVIRONMENT."
-	printf "  %s\n" "- The lint target runs all pre-commit hooks, including ruff, mypy, and isort."
-	printf "  %s\n" "- Run \"make install\" after updating backend/requirements.txt."
+	printf "$(B_WHITE)Armorify PPE$(RESET) — development task runner\n"
+	printf "$(DIM)All commands run from the repo root against .venv/bin/python$(RESET)"
 
-dev:
-	printf "%b" "$(COLOR_YELLOW)Starting development server...$(COLOR_RESET)\n"
-	cd $(PROJECT_DIR) && ENVIRONMENT=development $(UVICORN) app.main:app --reload --host 0.0.0.0 --port 8000
+	$(call section,Environment)
+	$(call target,Create or update .venv (pip upgrade included),venv)
+	$(call target,Install backend Python deps into .venv,install)
+	$(call target,Guard: abort if backend/.dev.env is absent,backend-env-check)
+	$(call target,Seed initial DB data via app/initial_data.py,backend-init)
 
-precommit-install:
-	printf "%b" "$(COLOR_YELLOW)Installing pre-commit hooks...$(COLOR_RESET)\n"
-	$(PRECOMMIT) install
+	$(call section,Development)
+	$(call target,FastAPI dev server — hot-reload on :8000,dev)
+	$(call target,Uvicorn fallback if fastapi CLI unavailable,dev-uvicorn)
+	$(call target,Vite frontend dev server (npm run dev),frontend-dev)
 
-precommit:
-	printf "%b" "$(COLOR_YELLOW)Running pre-commit on all files...$(COLOR_RESET)\n"
+	$(call section,Quality)
+	$(call target,pre-commit hooks: Ruff lint + format on all files,lint)
+	$(call target,ESLint across frontend/ source tree,frontend-lint)
+	$(call target,pytest — quiet; PYTHONPATH set automatically,test)
+
+	$(call section,Database migrations)
+	$(call target,Apply all pending migrations to head,alembic-upgrade)
+	$(call target,Revert by revision hash or relative step,alembic-downgrade)
+	$(call hint,Requires REVISION=  e.g. REVISION=-1 or REVISION=abc123)
+	$(call target,Auto-generate migration from model diff,alembic-revision)
+	$(call hint,Requires MESSAGE=  e.g. MESSAGE="add users table")
+	$(call target,Emit an empty migration skeleton,alembic-revision-empty)
+	$(call hint,Requires MESSAGE=)
+	$(call target,Verbose history: hashes · dates · messages,alembic-history)
+	$(call target,Show the revision the database is currently at,alembic-current)
+
+	$(call section,Frontend build)
+	$(call target,Production Vite build → frontend/dist/,frontend-build)
+	$(call target,Serve production build locally for smoke-testing,frontend-preview)
+
+	printf "\n$(B_YELLOW)Examples$(RESET)\n"
+	$(call example,bootstrap a fresh checkout,install)
+	$(call example,start backend API,dev)
+	$(call example,create a migration,alembic-revision MESSAGE="add users table")
+	$(call example,run the test suite,test)
+
+	printf "\n$(DIM)Backend env vars  →  backend/.dev.env$(RESET)\n"
+	printf "$(DIM)Alembic reads DATABASE_URL from that file automatically.$(RESET)\n\n"
+
+# ─── Environment ───────────────────────────────────────────────────────────────
+venv:
+	printf "$(YELLOW)Creating or updating .venv...$(RESET)\n"
+	python -m venv .venv
+	$(PIP) install --upgrade pip
+	printf "$(GREEN)✓ .venv ready$(RESET)\n"
+
+backend-install: venv
+	printf "$(YELLOW)Installing backend dependencies...$(RESET)\n"
+	$(PIP) install -r $(BACKEND_DIR)/requirements.txt
+
+install: backend-install
+	printf "$(GREEN)✓ All dependencies installed$(RESET)\n"
+
+backend-env-check:
+	@if [ -f "$(BACKEND_ENV)" ]; then \
+		printf "$(GREEN)✓ Found $(BACKEND_ENV)$(RESET)\n"; \
+	else \
+		printf "$(B_RED)✗ Missing $(BACKEND_ENV)$(RESET)\n"; \
+		printf "$(DIM)  Create it with DATABASE_URL and ENVIRONMENT=development$(RESET)\n"; \
+		exit 1; \
+	fi
+
+backend-init: backend-env-check
+	printf "$(YELLOW)Seeding initial data...$(RESET)\n"
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+		$(PYTHON) $(BACKEND_DIR)/app/initial_data.py
+	printf "$(GREEN)✓ Initial data loaded$(RESET)\n"
+
+# ─── Development ───────────────────────────────────────────────────────────────
+dev: backend-env-check
+	printf "$(YELLOW)Starting FastAPI dev server$(RESET) $(DIM)(http://127.0.0.1:8000)$(RESET)\n"
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+		$(FASTAPI) dev $(BACKEND_DIR)/app/main.py
+
+dev-uvicorn: backend-env-check
+	printf "$(YELLOW)Starting uvicorn$(RESET) $(DIM)(--reload, 0.0.0.0:8000)$(RESET)\n"
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+		$(UVICORN) $(BACKEND_APP) --reload --host 0.0.0.0 --port 8000
+
+# ─── Quality ───────────────────────────────────────────────────────────────────
+lint:
+	printf "$(YELLOW)Running pre-commit on all files...$(RESET)\n"
 	$(PRECOMMIT) run --all-files
 
-lint: precommit
-	printf "%b" "$(COLOR_GREEN)Lint pipeline completed.$(COLOR_RESET)\n"
+test:
+	printf "$(YELLOW)Running backend tests...$(RESET)\n"
+	PYTHONPATH=$(BACKEND_DIR) $(PYTEST) -q $(BACKEND_DIR)/tests
 
-venv:
-	printf "%b" "$(COLOR_YELLOW)Creating or updating local .venv...$(COLOR_RESET)\n"
-	python -m venv .venv
-	./.venv/Scripts/python.exe -m pip install --upgrade pip
+# ─── Database migrations ───────────────────────────────────────────────────────
+alembic-upgrade: backend-env-check
+	printf "$(YELLOW)Applying migrations → head...$(RESET)\n"
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini upgrade head
+	printf "$(GREEN)✓ Database up to date$(RESET)\n"
 
-install: venv
-	printf "%b" "$(COLOR_YELLOW)Installing Python dependencies...$(COLOR_RESET)\n"
-	./.venv/Scripts/python.exe -m pip install -r $(PROJECT_DIR)/requirements.txt
-
-alembic-upgrade:
-	printf "%b" "$(COLOR_YELLOW)Applying Alembic migrations to head...$(COLOR_RESET)\n"
-	cd $(PROJECT_DIR) && $(PYTHON) -m alembic upgrade head
-
-alembic-downgrade:
+alembic-downgrade: backend-env-check
 ifndef REVISION
-	$(error REVISION is required. Example: make alembic-downgrade REVISION=-1)
+	$(error $(B_RED)REVISION required$(RESET) — e.g.  make alembic-downgrade REVISION=-1)
 endif
-	printf "%b" "$(COLOR_YELLOW)Downgrading Alembic to $(REVISION)...$(COLOR_RESET)\n"
-	cd $(PROJECT_DIR) && $(PYTHON) -m alembic downgrade $(REVISION)
+	printf "$(YELLOW)Downgrading to $(REVISION)...$(RESET)\n"
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini downgrade $(REVISION)
 
-alembic-revision:
+alembic-revision: backend-env-check
 ifndef MESSAGE
-	$(error MESSAGE is required. Example: make alembic-revision MESSAGE="add users table")
+	$(error $(B_RED)MESSAGE required$(RESET) — e.g.  make alembic-revision MESSAGE="add users table")
 endif
-	printf "%b" "$(COLOR_YELLOW)Creating Alembic revision: $(MESSAGE)...$(COLOR_RESET)\n"
-	cd $(PROJECT_DIR) && $(PYTHON) -m alembic revision --autogenerate -m "$(MESSAGE)"
+	printf "$(YELLOW)Generating migration:$(RESET) $(CYAN)$(MESSAGE)$(RESET)\n"
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini revision --autogenerate -m "$(MESSAGE)"
 
-alembic-history:
-	printf "%b" "$(COLOR_YELLOW)Showing Alembic migration history...$(COLOR_RESET)\n"
-	cd $(PROJECT_DIR) && $(PYTHON) -m alembic history --verbose
+alembic-revision-empty:
+ifndef MESSAGE
+	$(error $(B_RED)MESSAGE required$(RESET) — e.g.  make alembic-revision-empty MESSAGE="seed roles")
+endif
+	printf "$(YELLOW)Creating empty migration:$(RESET) $(CYAN)$(MESSAGE)$(RESET)\n"
+	PYTHONPATH=$(BACKEND_DIR) \
+		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini revision -m "$(MESSAGE)"
 
-alembic-current:
-	printf "%b" "$(COLOR_YELLOW)Showing current Alembic revision...$(COLOR_RESET)\n"
-	cd $(PROJECT_DIR) && $(PYTHON) -m alembic current
+alembic-history: backend-env-check
+	printf "$(YELLOW)Migration history:$(RESET)\n"
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini history --verbose
+
+alembic-current: backend-env-check
+	printf "$(YELLOW)Current revision:$(RESET)\n"
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini current
+
+# ─── Frontend ──────────────────────────────────────────────────────────────────
+frontend-lint:
+	printf "$(YELLOW)Running frontend ESLint...$(RESET)\n"
+	cd $(FRONTEND_DIR) && npm run lint
+
+frontend-dev:
+	printf "$(YELLOW)Starting frontend dev server...$(RESET)\n"
+	cd $(FRONTEND_DIR) && npm run dev
+
+frontend-build:
+	printf "$(YELLOW)Building frontend for production...$(RESET)\n"
+	cd $(FRONTEND_DIR) && npm run build
+	printf "$(GREEN)✓ Build complete → frontend/dist/$(RESET)\n"
+
+frontend-preview:
+	printf "$(YELLOW)Previewing production build...$(RESET)\n"
+	cd $(FRONTEND_DIR) && npm run preview

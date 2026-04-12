@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    
+    /* Emerald Green - The new Primary */
+    --primary: 160 84% 39%;
+    --primary-foreground: 210 40% 98%;
+    
+    /* Ruby Red - Action / Sale */
+    --destructive: 348 83% 47%;
+    --destructive-foreground: 210 40% 98%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    
+    --border: 214.3 31.8% 91.4%;
+  }
+}
+
+body {
+  @apply bg-gray-50 text-foreground antialiased;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Glassmorphism utility for floating headers */
+.glass {
+  @apply bg-white/90 backdrop-blur-md border-b border-white/20 shadow-sm transition-all;
+}

@@ -1,6 +1,9 @@
 # app/routers/quotes.py
-from typing import List
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.quote import QuoteItem, QuoteRequest
@@ -12,17 +15,14 @@ from app.schemas.quote import (
     QuoteRequestRead,
     QuoteRequestUpdate,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])
 
 
-@router.get("/requests", response_model=List[QuoteRequestRead])
-async def list_quote_requests(db: AsyncSession = Depends(get_db)) -> List[QuoteRequest]:
+@router.get("/requests", response_model=list[QuoteRequestRead])
+async def list_quote_requests(db: AsyncSession = Depends(get_db)) -> list[QuoteRequest]:
     result = await db.execute(select(QuoteRequest).where(QuoteRequest.is_active.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("/requests", response_model=QuoteRequestRead, status_code=status.HTTP_201_CREATED)
@@ -44,9 +44,7 @@ async def get_quote_request(request_id: UUID, db: AsyncSession = Depends(get_db)
 
 @router.put("/requests/{request_id}", response_model=QuoteRequestRead)
 async def update_quote_request(
-    request_id: UUID,
-    request_update: QuoteRequestUpdate,
-    db: AsyncSession = Depends(get_db)
+    request_id: UUID, request_update: QuoteRequestUpdate, db: AsyncSession = Depends(get_db)
 ) -> QuoteRequest:
     quote_request = await db.get(QuoteRequest, request_id)
     if quote_request is None or not quote_request.is_active:
@@ -72,10 +70,10 @@ async def soft_delete_quote_request(request_id: UUID, db: AsyncSession = Depends
     return quote_request
 
 
-@router.get("/items", response_model=List[QuoteItemRead])
-async def list_quote_items(db: AsyncSession = Depends(get_db)) -> List[QuoteItem]:
+@router.get("/items", response_model=list[QuoteItemRead])
+async def list_quote_items(db: AsyncSession = Depends(get_db)) -> list[QuoteItem]:
     result = await db.execute(select(QuoteItem).where(QuoteItem.is_active.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("/items", response_model=QuoteItemRead, status_code=status.HTTP_201_CREATED)
@@ -89,9 +87,7 @@ async def create_quote_item(item_in: QuoteItemCreate, db: AsyncSession = Depends
 
 @router.put("/items/{item_id}", response_model=QuoteItemRead)
 async def update_quote_item(
-    item_id: UUID,
-    item_update: QuoteItemUpdate,
-    db: AsyncSession = Depends(get_db)
+    item_id: UUID, item_update: QuoteItemUpdate, db: AsyncSession = Depends(get_db)
 ) -> QuoteItem:
     item = await db.get(QuoteItem, item_id)
     if item is None or not item.is_active:

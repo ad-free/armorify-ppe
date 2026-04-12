@@ -1,21 +1,21 @@
 # app/routers/users.py
-from typing import List
 from uuid import UUID
 
-from app.core.database import get_db
-from app.models.user import User, UserStatus
-from app.schemas.user import UserCreate, UserRead, UserUpdate
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_db
+from app.models.user import User, UserStatus
+from app.schemas.user import UserCreate, UserRead, UserUpdate
+
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("/", response_model=List[UserRead])
-async def list_users(db: AsyncSession = Depends(get_db)) -> List[User]:
+@router.get("/", response_model=list[UserRead])
+async def list_users(db: AsyncSession = Depends(get_db)) -> list[User]:
     result = await db.execute(select(User).where(User.is_active.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.get("/{user_id}", response_model=UserRead)
@@ -40,8 +40,7 @@ async def update_user(user_id: UUID, user_update: UserUpdate, db: AsyncSession =
     user = await db.get(User, user_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    data = user_update.model_dump(exclude_unset=True)
-    for field, value in data.items():
+    for field, value in user_update.model_dump(exclude_unset=True).items():
         setattr(user, field, value)
     db.add(user)
     await db.commit()

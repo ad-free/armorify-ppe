@@ -9,7 +9,7 @@ from pydantic import BaseModel
 class BannerBase(BaseModel):
     title: str
     image_url: str
-    link_url: Optional[str] = None
+    link_url: str | None = None
     position: int
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
@@ -20,9 +20,9 @@ class BannerCreate(BannerBase):
 
 
 class BannerUpdate(BaseModel):
-    title: Optional[str] = None
-    image_url: Optional[str] = None
-    link_url: Optional[str] = None
+    title: str | None = None
+    image_url: str | None = None
+    link_url: str | None = None
     position: Optional[int] = None
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
@@ -31,6 +31,8 @@ class BannerUpdate(BaseModel):
 class BannerRead(BannerBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -46,13 +48,15 @@ class PageContentCreate(PageContentBase):
 
 
 class PageContentUpdate(BaseModel):
-    slug: Optional[str] = None
-    title: Optional[str] = None
-    body: Optional[str] = None
+    slug: str | None = None
+    title: str | None = None
+    body: str | None = None
 
 
 class PageContentRead(PageContentBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}

@@ -1,5 +1,7 @@
 # app/models/product.py
-from typing import Any, Optional
+from decimal import Decimal
+from typing import Any
+from uuid import UUID as _UUID
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import (
@@ -22,13 +24,13 @@ class Category(BaseMixin, Base):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    parent_id: Mapped[Optional[UUID]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parent_id: Mapped[_UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("categories.id", ondelete="SET NULL"),
         nullable=True,
     )
-    industry_tags: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
+    industry_tags: Mapped[Any | None] = mapped_column(JSONB, nullable=True)
     products: Mapped[list["Product"]] = relationship(back_populates="category")
 
     __table_args__ = (
@@ -45,9 +47,9 @@ class Product(BaseMixin, Base):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     price: Mapped[Numeric] = mapped_column(Numeric(12, 2), nullable=False)
-    dealer_price: Mapped[Optional[Numeric]] = mapped_column(Numeric(12, 2), nullable=True)
+    dealer_price: Mapped[Numeric | None] = mapped_column(Numeric(12, 2), nullable=True)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     category_id: Mapped[UUID] = mapped_column(
@@ -55,11 +57,21 @@ class Product(BaseMixin, Base):
         ForeignKey("categories.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    specifications: Mapped[Optional[Any]] = mapped_column(
+    specifications: Mapped[Any | None] = mapped_column(
         JSONB,
         nullable=True,
         server_default=text("'{}'::jsonb"),
     )
+    brand_id: Mapped[_UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("brands.id", ondelete="SET NULL"), nullable=True
+    )
+    compare_at_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    is_new: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    video_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    seo_title: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    seo_description: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    rating_avg: Mapped[Decimal | None] = mapped_column(Numeric(3, 2), nullable=True)
+    rating_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     category: Mapped[Category] = relationship(back_populates="products")
     variants: Mapped[list["ProductVariant"]] = relationship(back_populates="product")
 
@@ -67,6 +79,12 @@ class Product(BaseMixin, Base):
         Index("ix_products_slug", "slug", unique=True),
         Index("ix_products_category_id", "category_id"),
         Index("ix_products_is_featured", "is_featured"),
+        Index("ix_products_brand_id", "brand_id"),
+        Index("ix_products_is_new", "is_new"),
+        CheckConstraint(
+            "compare_at_price > price OR compare_at_price IS NULL",
+            name="ck_products_compare_at_price_gt_price",
+        ),
         CheckConstraint("price > 0", name="ck_products_price_positive"),
         CheckConstraint(
             "dealer_price > 0 OR dealer_price IS NULL",
@@ -89,10 +107,10 @@ class ProductVariant(BaseMixin, Base):
         nullable=False,
     )
     sku: Mapped[str] = mapped_column(String(128), nullable=False)
-    size: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    color: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    size: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    color: Mapped[str | None] = mapped_column(String(64), nullable=True)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    price_override: Mapped[Optional[Numeric]] = mapped_column(Numeric(12, 2), nullable=True)
+    price_override: Mapped[Numeric | None] = mapped_column(Numeric(12, 2), nullable=True)
     product: Mapped[Product] = relationship(back_populates="variants")
 
     __table_args__ = (

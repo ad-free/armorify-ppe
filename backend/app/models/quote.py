@@ -1,11 +1,12 @@
 # app/models/quote.py
 from enum import Enum as PyEnum
-from typing import Optional
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import Enum, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+_enum_values = lambda enum: [e.value for e in enum]  # noqa: E731
 
 
 class QuoteStatus(PyEnum):
@@ -26,17 +27,20 @@ class QuoteRequest(BaseMixin, Base):
     )
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     contact_phone: Mapped[str] = mapped_column(String(32), nullable=False)
-    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[QuoteStatus] = mapped_column(
-        Enum(QuoteStatus, name="quote_status", native_enum=True),
+        Enum(
+            QuoteStatus,
+            name="quote_status",
+            native_enum=True,
+            values_callable=_enum_values,
+        ),
         nullable=False,
         server_default=text("'pending'"),
     )
     items: Mapped[list["QuoteItem"]] = relationship(back_populates="quote")
 
-    __table_args__ = (
-        Index("ix_quote_requests_user_id", "user_id"),
-    )
+    __table_args__ = (Index("ix_quote_requests_user_id", "user_id"),)
 
 
 class QuoteItem(BaseMixin, Base):
@@ -53,5 +57,5 @@ class QuoteItem(BaseMixin, Base):
         nullable=False,
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
     quote: Mapped[QuoteRequest] = relationship(back_populates="items")

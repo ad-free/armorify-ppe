@@ -1,14 +1,18 @@
 # app/schemas/order.py
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from app.models.order import OrderStatus
 from pydantic import BaseModel
+
+from app.models.order import OrderStatus
 
 
 class OrderBase(BaseModel):
-    user_id: UUID
+    user_id: UUID | None = None
+    order_code: str
+    contact_phone: str
     total_amount: Decimal
     status: Optional[OrderStatus] = OrderStatus.PENDING
 
@@ -25,6 +29,8 @@ class OrderUpdate(BaseModel):
 class OrderRead(OrderBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -32,7 +38,7 @@ class OrderRead(OrderBase):
 class OrderItemBase(BaseModel):
     order_id: UUID
     product_id: UUID
-    variant_id: Optional[UUID] = None
+    variant_id: UUID | None = None
     quantity: int
     unit_price: Decimal
 
@@ -42,8 +48,8 @@ class OrderItemCreate(OrderItemBase):
 
 
 class OrderItemUpdate(BaseModel):
-    product_id: Optional[UUID] = None
-    variant_id: Optional[UUID] = None
+    product_id: UUID | None = None
+    variant_id: UUID | None = None
     quantity: Optional[int] = None
     unit_price: Optional[Decimal] = None
 
@@ -51,5 +57,19 @@ class OrderItemUpdate(BaseModel):
 class OrderItemRead(OrderItemBase):
     id: UUID
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class GuestOrderItemCreate(BaseModel):
+    product_id: UUID
+    variant_id: UUID | None = None
+    quantity: int
+    unit_price: Decimal
+
+
+class GuestOrderCreate(BaseModel):
+    contact_phone: str
+    items: list[GuestOrderItemCreate]

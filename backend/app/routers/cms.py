@@ -1,6 +1,9 @@
 # app/routers/cms.py
-from typing import List
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.cms import Banner, PageContent
@@ -12,17 +15,14 @@ from app.schemas.cms import (
     PageContentRead,
     PageContentUpdate,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/cms", tags=["cms"])
 
 
-@router.get("/banners", response_model=List[BannerRead])
-async def list_banners(db: AsyncSession = Depends(get_db)) -> List[Banner]:
+@router.get("/banners", response_model=list[BannerRead])
+async def list_banners(db: AsyncSession = Depends(get_db)) -> list[Banner]:
     result = await db.execute(select(Banner).where(Banner.is_active.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("/banners", response_model=BannerRead, status_code=status.HTTP_201_CREATED)
@@ -60,10 +60,10 @@ async def soft_delete_banner(banner_id: UUID, db: AsyncSession = Depends(get_db)
     return banner
 
 
-@router.get("/pages", response_model=List[PageContentRead])
-async def list_page_contents(db: AsyncSession = Depends(get_db)) -> List[PageContent]:
+@router.get("/pages", response_model=list[PageContentRead])
+async def list_page_contents(db: AsyncSession = Depends(get_db)) -> list[PageContent]:
     result = await db.execute(select(PageContent).where(PageContent.is_active.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("/pages", response_model=PageContentRead, status_code=status.HTTP_201_CREATED)
@@ -77,9 +77,7 @@ async def create_page_content(page_in: PageContentCreate, db: AsyncSession = Dep
 
 @router.put("/pages/{page_id}", response_model=PageContentRead)
 async def update_page_content(
-    page_id: UUID,
-    page_update: PageContentUpdate,
-    db: AsyncSession = Depends(get_db)
+    page_id: UUID, page_update: PageContentUpdate, db: AsyncSession = Depends(get_db)
 ) -> PageContent:
     page = await db.get(PageContent, page_id)
     if page is None or not page.is_active:
