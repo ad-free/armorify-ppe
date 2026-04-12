@@ -1,5 +1,6 @@
 # app/main.py
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.deps import get_current_user, require_admin, require_staff
@@ -20,8 +21,25 @@ from app.routers import (
     users_router,
 )
 
-app = FastAPI(title=settings.app_name, docs_url="/")
+app = FastAPI(
+    title=settings.app_name,
+    docs_url="/",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    swagger_ui_parameters={
+        "persistAuthorization": True,
+    },
+)
 app.add_middleware(SecurityMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://ad-free.github.io", "*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
+)
 
 # ── Public (no auth) ──────────────────────────────────────────────────────────
 app.include_router(auth_router, prefix="/api/v1")
