@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { FloatingContact } from './components/common/FloatingContact';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
+import { useAuthStore } from './store/authStore';
 
 // Lazy load the pages we built
 const HomePage = React.lazy(() => import('./pages/public/HomePage'));
@@ -20,8 +21,24 @@ const CheckoutPage = React.lazy(() => import('./pages/public/CheckoutPage'));
 
 const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = React.lazy(() => import('./pages/auth/RegisterPage'));
+const ProfilePage = React.lazy(() => import('./pages/user/ProfilePage'));
+const AdminDashboard = React.lazy(() => import('./pages/admin/Dashboard'));
+const ResourceManagerPage = React.lazy(() => import('./pages/admin/ResourceManager'));
 
 function App() {
+  const hasHydrated = useAuthStore(state => state._hasHydrated);
+
+  if (!hasHydrated) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-gray-500 font-medium animate-pulse">Initializing Armorify...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <Navbar />
@@ -41,6 +58,9 @@ function App() {
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/manage/:entityId" element={<ResourceManagerPage />} />
           </Routes>
         </Suspense>
       </main>

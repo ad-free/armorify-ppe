@@ -13,5 +13,5 @@ export const loginUser = (body: LoginRequest) =>
 export const registerUser = (body: RegisterRequest) =>
   POST<TokenResponse>('/auth/register', body);
 
-export const getMe = () =>
-  GET<UserRead>('/auth/me');
+export const getMe = (token?: string) =>
+  GET<UserRead>('/auth/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);

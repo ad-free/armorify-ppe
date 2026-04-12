@@ -10,8 +10,7 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: async (body: LoginRequest) => {
       const tokens = await loginUser(body);
-      // after login, we ideally fetch the user profile
-      const user = await getMe(); // Requires the auth token to be passed automatically by your fetch interceptor
+      const user = await getMe(tokens.access_token);
       setAuth(user, tokens.access_token, tokens.refresh_token);
       return { tokens, user };
     }
@@ -24,7 +23,7 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: async (body: RegisterRequest) => {
       const tokens = await registerUser(body);
-      const user = await getMe();
+      const user = await getMe(tokens.access_token);
       setAuth(user, tokens.access_token, tokens.refresh_token);
       return { tokens, user };
     }

@@ -2,7 +2,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.user import UserRole, UserStatus
 
@@ -18,7 +18,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    pass
+    password: str = Field(json_schema_extra={"x-ui-widget": "password", "x-ui-order": 20})
 
 
 class UserUpdate(BaseModel):
@@ -29,14 +29,20 @@ class UserUpdate(BaseModel):
     address: str | None = None
     birthday: date | None = None
     role: UserRole | None = None
+    password: str | None = Field(None, json_schema_extra={"x-ui-widget": "password", "x-ui-order": 20})
 
 
 class UserRead(UserBase):
-    id: UUID
-    status: UserStatus
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
+    id: UUID = Field(json_schema_extra={"x-ui-priority": True, "x-ui-order": 0})
+    firstname: str = Field(json_schema_extra={"x-ui-priority": True, "x-ui-order": 1})
+    lastname: str = Field(json_schema_extra={"x-ui-priority": True, "x-ui-order": 2})
+    phone: str = Field(json_schema_extra={"x-ui-priority": True, "x-ui-order": 3})
+    email: str | None = Field(None, json_schema_extra={"x-ui-priority": True, "x-ui-order": 4})
+    role: UserRole = Field(UserRole.CUSTOMER, json_schema_extra={"x-ui-priority": True, "x-ui-order": 5})
+    status: UserStatus = Field(json_schema_extra={"x-ui-priority": True, "x-ui-order": 6})
+    is_active: bool = Field(json_schema_extra={"x-ui-hidden": True})
+    created_at: datetime = Field(json_schema_extra={"x-ui-order": 100})
+    updated_at: datetime = Field(json_schema_extra={"x-ui-order": 101})
 
     model_config = {"from_attributes": True}
 

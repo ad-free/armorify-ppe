@@ -4,6 +4,7 @@ from .admin import (
     admin_cms_router,
     admin_orders_router,
     admin_quotes_router,
+    admin_users_router,
 )
 from .auth import router as auth_router
 from .protected import addresses_router, cart_router, protected_orders_router
@@ -22,5 +23,6 @@ __all__ = [
     "admin_cms_router",
     "admin_orders_router",
     "admin_quotes_router",
+    "admin_users_router",
     "users_router",
 ]

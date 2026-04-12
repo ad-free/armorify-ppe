@@ -1,4 +1,6 @@
 # app/main.py
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,6 +14,7 @@ from app.routers import (
     admin_cms_router,
     admin_orders_router,
     admin_quotes_router,
+    admin_users_router,
     auth_router,
     cart_router,
     protected_orders_router,
@@ -20,6 +23,14 @@ from app.routers import (
     public_orders_router,
     users_router,
 )
+from app.scripts.initial_data import create_admin
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_admin()
+    yield
+
 
 app = FastAPI(
     title=settings.app_name,
@@ -29,6 +40,7 @@ app = FastAPI(
     swagger_ui_parameters={
         "persistAuthorization": True,
     },
+    lifespan=lifespan,
 )
 app.add_middleware(SecurityMiddleware)
 app.add_middleware(
@@ -63,6 +75,7 @@ app.include_router(admin_cms_router, prefix="/api/v1", dependencies=_staff)
 _admin = [Depends(require_admin)]
 app.include_router(admin_orders_router, prefix="/api/v1", dependencies=_admin)
 app.include_router(admin_quotes_router, prefix="/api/v1", dependencies=_admin)
+app.include_router(admin_users_router, prefix="/api/v1", dependencies=_admin)
 
 
 @app.exception_handler(HTTPException)

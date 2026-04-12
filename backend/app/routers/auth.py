@@ -1,13 +1,13 @@
 # app/routers/auth.py
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from fastapi import APIRouter, HTTPException, status
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy import select
 
 from app.core.database import DbSession
 from app.core.deps import CurrentUser
+from app.core.security import create_access_token, hash_password, verify_password
 from app.core.settings import settings
 from app.models.user import User, UserRole, UserStatus
 from app.schemas.user import (
@@ -20,26 +20,11 @@ from app.schemas.user import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def _hash_password(password: str) -> str:
-    return _pwd_context.hash(password)
-
-
-def _verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_context.verify(plain, hashed)
-
-
-def _create_token(data: dict, expires_delta: timedelta) -> str:
-    payload = {**data, "exp": datetime.now(timezone.utc) + expires_delta}
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
-
 
 def _make_token_pair(user: User) -> TokenResponse:
     base = {"sub": str(user.id), "role": user.role.value}
-    access = _create_token(base, timedelta(minutes=settings.access_token_expire_minutes))
-    refresh = _create_token({**base, "type": "refresh"}, timedelta(days=settings.refresh_token_expire_days))
+    access = create_access_token(base, timedelta(minutes=settings.access_token_expire_minutes))
+    refresh = create_access_token({**base, "type": "refresh"}, timedelta(days=settings.refresh_token_expire_days))
     return TokenResponse(access_token=access, refresh_token=refresh)
 
 
@@ -56,7 +41,7 @@ async def register(payload: RegisterRequest, db: DbSession) -> TokenResponse:
         email=payload.email,
         role=UserRole.CUSTOMER,
         status=UserStatus.ACTIVE,
-        password_hash=_hash_password(payload.password),
+        password_hash=hash_password(payload.password),
     )
     db.add(user)
     await db.commit()
@@ -68,7 +53,7 @@ async def register(payload: RegisterRequest, db: DbSession) -> TokenResponse:
 async def login(payload: LoginRequest, db: DbSession) -> TokenResponse:
     result = await db.execute(select(User).where(User.phone == payload.phone, User.is_active.is_(True)))
     user = result.scalar_one_or_none()
-    if user is None or not user.password_hash or not _verify_password(payload.password, user.password_hash):
+    if user is None or not user.password_hash or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if user.status == UserStatus.DEACTIVATED:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account deactivated")

@@ -38,6 +38,10 @@ def _resolve_env_file() -> str | None:
         dev_path = Path(DEV_ENV_FILE)
         if dev_path.exists():
             return str(dev_path)
+        # Also check backend/ dir
+        backend_dev_path = Path("backend") / DEV_ENV_FILE
+        if backend_dev_path.exists():
+            return str(backend_dev_path)
 
     default_path = Path(DEFAULT_ENV_FILE)
     return str(default_path) if default_path.exists() else None
@@ -64,6 +68,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
+    admin_username: str = "admin"
+    admin_phone: str = "0909090909"
+    admin_password: str = "admin!!!!"
 
     def model_post_init(self, __context: object) -> None:
         missing = [f for f in ("database_url", "secret_key", "jwt_secret_key") if not getattr(self, f)]

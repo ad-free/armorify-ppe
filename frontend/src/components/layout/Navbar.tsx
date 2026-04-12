@@ -1,13 +1,22 @@
 // src/components/layout/Navbar.tsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, Phone, Mail } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, Phone, Mail, LogOut, LayoutDashboard } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { MegaMenu } from './MegaMenu';
 import { useAuthStore } from '@/store/authStore';
 
 export const Navbar: React.FC = () => {
   const [isCategoryMenuOpen, setCategoryMenuOpen] = useState(false);
-  const { user } = useAuthStore();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    setIsProfileOpen(false);
+  };
 
   return (
     <header className="w-full bg-white shadow-sm flex flex-col z-50 relative">
@@ -52,14 +61,76 @@ export const Navbar: React.FC = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-6">
-          <Link to={user ? "/profile" : "/login"} className="flex flex-col items-center gap-1 text-gray-700 hover:text-primary transition-colors">
-            <div className="bg-gray-100 p-2 rounded-full cursor-pointer">
-              <User size={20} strokeWidth={2}/>
+          {user ? (
+            <div className="relative">
+              <button 
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className="flex flex-col items-center gap-1 text-gray-700 hover:text-primary transition-colors focus:outline-none"
+              >
+                <div className="bg-gray-100 p-2 rounded-full cursor-pointer">
+                  <User size={20} strokeWidth={2}/>
+                </div>
+                <span className="text-xs font-semibold hidden lg:block">
+                  {user.firstname}
+                </span>
+              </button>
+
+              {/* Profile Submenu */}
+              {isProfileOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsProfileOpen(false)}
+                  ></div>
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in duration-200 origin-top-right">
+                    <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                      <p className="text-sm font-bold text-gray-900">{user.firstname} {user.lastname}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email || user.phone}</p>
+                    </div>
+                    
+                    <Link 
+                      to="/profile" 
+                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <User size={16} />
+                      <span>Thông tin cá nhân</span>
+                    </Link>
+
+                    {user.role === 'admin' && (
+                      <Link 
+                        to="/admin" 
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <LayoutDashboard size={16} />
+                        <span>Quản trị viên</span>
+                      </Link>
+                    )}
+
+                    <div className="border-t border-gray-100 mt-1 pt-1">
+                      <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
+                      >
+                        <LogOut size={16} />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
-            <span className="text-xs font-semibold hidden lg:block">
-              {user ? user.firstname : 'Đăng nhập'}
-            </span>
-          </Link>
+          ) : (
+            <Link to="/login" className="flex flex-col items-center gap-1 text-gray-700 hover:text-primary transition-colors">
+              <div className="bg-gray-100 p-2 rounded-full cursor-pointer">
+                <User size={20} strokeWidth={2}/>
+              </div>
+              <span className="text-xs font-semibold hidden lg:block">
+                Đăng nhập
+              </span>
+            </Link>
+          )}
           
           <Link to="/cart" className="flex flex-col items-center gap-1 text-gray-700 hover:text-primary transition-colors relative">
             <div className="relative bg-gray-100 p-2 rounded-full cursor-pointer">

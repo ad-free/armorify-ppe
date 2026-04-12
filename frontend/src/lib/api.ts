@@ -11,7 +11,19 @@ export const apiFetch = async <T>(endpoint: string, options: FetchOptions = {}):
   const { params, headers: customHeaders, ...restOptions } = options;
   
   // Build query string
-  let url = `${BASE_URL}${endpoint}`;
+  // If endpoint starts with /, and BASE_URL ends with /api/v1, 
+  // and endpoint also starts with /api/v1, avoid doubling.
+  const baseUrlObj = new URL(BASE_URL);
+  let finalEndpoint = endpoint;
+  if (endpoint.startsWith(baseUrlObj.pathname) && baseUrlObj.pathname !== '/') {
+    finalEndpoint = endpoint.substring(baseUrlObj.pathname.length);
+  }
+  
+  // Ensure we don't have double slashes
+  const cleanBase = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
+  const cleanEndpoint = finalEndpoint.startsWith('/') ? finalEndpoint : `/${finalEndpoint}`;
+  
+  let url = `${cleanBase}${cleanEndpoint}`;
   if (params) {
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
@@ -35,9 +47,9 @@ export const apiFetch = async <T>(endpoint: string, options: FetchOptions = {}):
     headers.set('Content-Type', 'application/json');
   }
 
-  // Inject Auth Token
+  // Inject Auth Token — only if caller hasn't provided one explicitly
   const token = useAuthStore.getState().accessToken;
-  if (token) {
+  if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
