@@ -1,5 +1,7 @@
 # app/models/product.py
+from decimal import Decimal
 from typing import Any, Optional
+from uuid import UUID as _UUID
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import (
@@ -60,6 +62,16 @@ class Product(BaseMixin, Base):
         nullable=True,
         server_default=text("'{}'::jsonb"),
     )
+    brand_id: Mapped[_UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("brands.id", ondelete="SET NULL"), nullable=True
+    )
+    compare_at_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    is_new: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    video_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    seo_title: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    seo_description: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    rating_avg: Mapped[Decimal | None] = mapped_column(Numeric(3, 2), nullable=True)
+    rating_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     category: Mapped[Category] = relationship(back_populates="products")
     variants: Mapped[list["ProductVariant"]] = relationship(back_populates="product")
 
@@ -67,6 +79,12 @@ class Product(BaseMixin, Base):
         Index("ix_products_slug", "slug", unique=True),
         Index("ix_products_category_id", "category_id"),
         Index("ix_products_is_featured", "is_featured"),
+        Index("ix_products_brand_id", "brand_id"),
+        Index("ix_products_is_new", "is_new"),
+        CheckConstraint(
+            "compare_at_price > price OR compare_at_price IS NULL",
+            name="ck_products_compare_at_price_gt_price",
+        ),
         CheckConstraint("price > 0", name="ck_products_price_positive"),
         CheckConstraint(
             "dealer_price > 0 OR dealer_price IS NULL",

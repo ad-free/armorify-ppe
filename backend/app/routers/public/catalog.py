@@ -1,11 +1,13 @@
-from typing import Any
+from decimal import Decimal
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 
 from app.core.database import DbSession
 from app.models.product import Category, Product, ProductVariant
+from app.schemas.common import PaginatedResponse
 from app.schemas.product import CategoryRead, ProductRead, VariantRead
 
 router = APIRouter(prefix="/catalog", tags=["public-catalog"])
@@ -18,24 +20,48 @@ async def list_categories(db: DbSession) -> list[Category]:
     return list(result.scalars().all())
 
 
-@router.get("/products", response_model=list[ProductRead])
+@router.get("/products", response_model=PaginatedResponse[ProductRead])
 async def list_products(
     db: DbSession,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=24, ge=1, le=100),
     category_id: UUID | None = None,
     is_featured: bool | None = None,
+    brand_id: UUID | None = None,
+    price_min: Decimal | None = None,
+    price_max: Decimal | None = None,
+    is_new: bool | None = None,
+    sort_by: Literal["newest", "price_asc", "price_desc", "featured"] = "newest",
     q: str | None = Query(default=None, min_length=1),
-) -> list[Product]:
+) -> PaginatedResponse[ProductRead]:
     filters: list[Any] = [Product.is_active.is_(True)]
     if category_id is not None:
         filters.append(Product.category_id == category_id)
     if is_featured is not None:
         filters.append(Product.is_featured.is_(is_featured))
+    if brand_id is not None:
+        filters.append(Product.brand_id == brand_id)
+    if price_min is not None:
+        filters.append(Product.price >= price_min)
+    if price_max is not None:
+        filters.append(Product.price <= price_max)
+    if is_new is not None:
+        filters.append(Product.is_new.is_(is_new))
     if q is not None:
         term = f"%{q}%"
         filters.append(or_(Product.name.ilike(term), Product.description.ilike(term)))
-    stmt = select(Product).where(and_(*filters))
-    result = await db.execute(stmt)
-    return list(result.scalars().all())
+
+    _sort = {
+        "newest": [Product.created_at.desc()],
+        "price_asc": [Product.price.asc()],
+        "price_desc": [Product.price.desc()],
+        "featured": [Product.is_featured.desc(), Product.created_at.desc()],
+    }[sort_by]
+
+    base = select(Product).where(and_(*filters))
+    total = (await db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
+    rows = (await db.execute(base.order_by(*_sort).offset(skip).limit(limit))).scalars().all()
+    return PaginatedResponse(items=list(rows), total=total, skip=skip, limit=limit)
 
 
 @router.get("/products/{product_id}", response_model=ProductRead)

@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, async_engine_from_config
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.settings import settings
-from app.models import cart, cms, order, product, quote, user  # noqa: F401
+from app.models import blog, brand, cart, cms, order, product, product_image, quote, review, user  # noqa: F401
 from app.models.base import Base
 
 config = context.config
