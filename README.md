@@ -15,18 +15,20 @@ NBE Hoang Duy is a specialized e-commerce platform for Personal Protective Equip
 ## 🚀 Key Features
 
 ### 🎨 Frontend & User Experience
-- **Multi-tier MegaMenu**: Intelligent vertical category system displaying featured brands and sub-categories.
-- **Category Floors**: Homepage "Floor-based" layout (Shoes Floor, Helmet Floor) optimized for SEO and conversion.
-- **Persistent Shopping Cart**: Automatic local storage synchronization using Zustand logic.
-- **Guest Checkout**: Streamlined order process for guest users with support for COD and Bank Transfer payments.
-- **Responsive UI**: Pixel-perfect scaling from Ultra-wide monitors down to smartphones.
-- **Premium Branding**: Implementing a professional Emerald Green & Ruby Red color palette.
+- **Content-rich storefront**: Homepage includes dynamic hero banners, trust highlights, and floor-based category showcases.
+- **Product discovery flow**: Public catalog supports category browsing, search, filtering, sorting, and pagination.
+- **Detailed product pages**: Product detail experience includes image galleries, variants, related products, and review sections.
+- **Commerce-ready checkout**: Cart state is persisted with Zustand and users can complete guest checkout.
+- **Order self-service**: Built-in order tracking form lets customers check order status by code and phone number.
+- **Expanded public pages**: Dedicated routes for blogs, videos, dealer recruitment, brands, and user profile screens.
 
 ### ⚙️ Core System (Backend)
-- **High-Performance RESTful API**: Built with FastAPI utilizing asynchronous processing (async/await).
-- **Catalog Management**: Sophisticated paginated API for Products, Brands, and Categories.
-- **JWT Authentication**: Secure login/registration system for regular users and corporate distributors.
-- **Data Optimization**: Built on SQLAlchemy 2.0 with native soft-delete (`is_active`) and timestamp management.
+- **Layered API architecture**: FastAPI routers are split into public, authenticated, staff, and admin access layers.
+- **Catalog and CMS services**: APIs cover products, categories, brands, banners, and page content management.
+- **Order workflows**: Supports guest order creation, order lookup/tracking, and protected order/cart/address operations.
+- **Role-based access control**: JWT authentication with user/admin roles and enforced staff/admin dependencies.
+- **Admin operations**: Endpoints available for managing users, catalog resources, orders, quotes, and CMS data.
+- **Production-oriented foundation**: Async SQLAlchemy 2.0, soft-delete semantics (`is_active`), security middleware, and health checks.
 
 ---
 
