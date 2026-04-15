@@ -94,10 +94,10 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
   const activeColumns = allColumns.filter(c => visibleKeys.includes(c.key));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       {/* Table Toolbar */}
-      <div className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-        <div className="text-sm text-slate-500 px-2 italic">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+        <div className="text-sm text-slate-500 px-2 italic break-words">
           Showing {data?.length || 0} records
         </div>
         
@@ -140,14 +140,14 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
       </div>
 
       {/* Table Container */}
-      <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm scrollbar-thin scrollbar-thumb-slate-200">
-        <table className="w-full text-left text-sm border-collapse">
+      <div className="relative max-w-full overflow-x-auto overflow-y-hidden rounded-xl border border-slate-200 bg-white shadow-sm scrollbar-thin scrollbar-thumb-slate-200">
+        <table className="w-full min-w-max text-left text-sm border-collapse">
           <thead className="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-200">
             <tr>
               {activeColumns.map((col) => (
-                <th 
+                <th
                   key={col.key} 
-                  className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors group"
+                  className="px-4 lg:px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors group whitespace-nowrap"
                   onClick={() => onSort?.(col.key)}
                 >
                   <div className="flex items-center gap-2">
@@ -156,7 +156,7 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
                   </div>
                 </th>
               ))}
-              <th className="px-6 py-4 text-right bg-slate-50 sticky right-0 z-10 border-l border-slate-200/50 font-semibold text-slate-600 uppercase tracking-tight">
+              <th className="px-4 lg:px-6 py-4 text-right bg-slate-50 sticky right-0 z-10 border-l border-slate-200/50 font-semibold text-slate-600 uppercase tracking-tight whitespace-nowrap">
                 Actions
               </th>
             </tr>
@@ -168,11 +168,11 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
                 return (
                   <tr key={item.id || index} className="group hover:bg-slate-50/50 transition-colors">
                   {activeColumns.map((col) => (
-                    <td key={col.key} className="px-6 py-4 text-slate-700">
+                    <td key={col.key} className="px-4 lg:px-6 py-4 text-slate-700 align-top">
                       {renderCell(item[col.key], schema.properties[col.key])}
                     </td>
                   ))}
-                  <td className="px-6 py-4 text-right bg-white/95 group-hover:bg-slate-50/95 sticky right-0 z-10 border-l border-slate-200/50 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] transition-colors">
+                  <td className="px-4 lg:px-6 py-4 text-right bg-white/95 group-hover:bg-slate-50/95 sticky right-0 z-10 border-l border-slate-200/50 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] transition-colors whitespace-nowrap">
                     <div className="flex items-center justify-end space-x-2">
                        <button 
                         onClick={() => onEdit?.(item)}

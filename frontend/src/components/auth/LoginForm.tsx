@@ -3,10 +3,10 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import toast from 'react-hot-toast';
 import { loginSchema } from '@/lib/schemas';
 import { useLogin } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { authToast } from '@/lib/toast';
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
@@ -21,11 +21,11 @@ export const LoginForm: React.FC = () => {
   const onSubmit = (values: LoginFormValues) => {
     login(values, {
       onSuccess: () => {
-        toast.success('Đăng nhập thành công!');
+        authToast.loginSuccess();
         navigate('/');
       },
       onError: () => {
-        toast.error('Số điện thoại hoặc mật khẩu không đúng.');
+        authToast.loginError();
       }
     });
   };

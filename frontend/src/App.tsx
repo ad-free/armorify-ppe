@@ -67,7 +67,14 @@ function App() {
       
       <Footer />
       <FloatingContact />
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        gutter={10}
+        containerStyle={{ top: 20, right: 20 }}
+        toastOptions={{
+          duration: 3200,
+        }}
+      />
     </BrowserRouter>
   );
 }

@@ -18,6 +18,10 @@ const RESOURCE_PATH_MAP: Record<string, string> = {
   'category': 'admin/catalog/categories',
   'blog': 'admin/cms/pages',
   'banner': 'admin/cms/banners',
+  'brand': 'admin/catalog/brands',
+  'branch': 'admin/catalog/brands',
+  'product_image': 'admin/catalog/product-images',
+  'product-image': 'admin/catalog/product-images',
   'variant': 'admin/catalog/variants',
   'quote': 'admin/quotes/requests',
 };

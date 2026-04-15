@@ -5,6 +5,7 @@ import { Search, ShoppingCart, User, Menu, Phone, Mail, LogOut, LayoutDashboard 
 import { useNavigate } from 'react-router-dom';
 import { MegaMenu } from './MegaMenu';
 import { useAuthStore } from '@/store/authStore';
+import { authToast } from '@/lib/toast';
 
 export const Navbar: React.FC = () => {
   const [isCategoryMenuOpen, setCategoryMenuOpen] = useState(false);
@@ -15,6 +16,7 @@ export const Navbar: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+    authToast.logoutSuccess();
     setIsProfileOpen(false);
   };
 

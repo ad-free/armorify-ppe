@@ -10,7 +10,7 @@ from app.models.brand import Brand
 from app.schemas.brand import BrandCreate, BrandRead, BrandUpdate
 
 router = APIRouter(
-    prefix="/api/v1/admin/catalog/brands",
+    prefix="/admin/catalog/brands",
     tags=["admin-brands"],
     dependencies=[Depends(require_staff)],
 )

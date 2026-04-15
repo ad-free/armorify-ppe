@@ -10,9 +10,11 @@ from app.core.middleware import SecurityMiddleware
 from app.core.settings import settings
 from app.routers import (
     addresses_router,
+    admin_brands_router,
     admin_catalog_router,
     admin_cms_router,
     admin_orders_router,
+    admin_product_images_router,
     admin_quotes_router,
     admin_users_router,
     auth_router,
@@ -69,7 +71,9 @@ app.include_router(users_router, prefix="/api/v1", dependencies=_auth)
 # ── Staff (staff + admin) ─────────────────────────────────────────────────────
 _staff = [Depends(require_staff)]
 app.include_router(admin_catalog_router, prefix="/api/v1", dependencies=_staff)
+app.include_router(admin_brands_router, prefix="/api/v1", dependencies=_staff)
 app.include_router(admin_cms_router, prefix="/api/v1", dependencies=_staff)
+app.include_router(admin_product_images_router, prefix="/api/v1", dependencies=_staff)
 
 # ── Admin only ────────────────────────────────────────────────────────────────
 _admin = [Depends(require_admin)]

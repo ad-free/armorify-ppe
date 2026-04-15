@@ -13,8 +13,10 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
   const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // 1. Fetch Schema
-  const { data: schema, isLoading: isSchemaLoading, error: schemaError } = useEntitySchema(entityName);
+  // 1. Fetch table schema + form schemas (create/update)
+  const { data: readSchema, isLoading: isReadSchemaLoading, error: readSchemaError } = useEntitySchema(entityName, 'read');
+  const { data: createSchema, isLoading: isCreateSchemaLoading, error: createSchemaError } = useEntitySchema(entityName, 'create');
+  const { data: updateSchema, isLoading: isUpdateSchemaLoading, error: updateSchemaError } = useEntitySchema(entityName, 'update');
 
   // 2. Fetch Data
   const { 
@@ -38,16 +40,23 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
     setIsFormOpen(false);
   };
 
+  const isSchemaLoading = isReadSchemaLoading || isCreateSchemaLoading || isUpdateSchemaLoading;
+  const schemaError = readSchemaError || createSchemaError || updateSchemaError;
+  const schema = readSchema;
+  const formSchema = editingItem
+    ? (updateSchema || createSchema || readSchema)
+    : (createSchema || updateSchema || readSchema);
+
   if (isSchemaLoading) return <LoadingSpinner />;
   if (schemaError) return <ErrorDisplay message={schemaError.message} />;
-  if (!schema) return null;
+  if (!schema || !formSchema) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 min-w-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 capitalize">{schema.title || entityName}</h2>
-          <p className="text-slate-500">Manage your {entityName} records and their metadata.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 capitalize break-words">{schema.title || entityName}</h2>
+          <p className="text-sm sm:text-base text-slate-500 break-words">Manage your {entityName} records and their metadata.</p>
         </div>
         {!isFormOpen && (
           <button 
@@ -62,10 +71,10 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
       {isFormOpen ? (
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-4">
           <h3 className="text-lg font-bold text-slate-800 mb-6">
-            {editingItem ? `Edit ${schema.title}` : `New ${schema.title}`}
+            {editingItem ? `Edit ${formSchema.title}` : `New ${formSchema.title}`}
           </h3>
           <DynamicForm 
-            schema={schema} 
+            schema={formSchema}
             initialData={editingItem}
             onSubmit={editingItem ? handleUpdate : handleCreate}
             onCancel={() => setIsFormOpen(false)}

@@ -18,6 +18,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
+    status: UserStatus = Field(UserStatus.ACTIVE, json_schema_extra={"x-ui-order": 6})
     password: str = Field(json_schema_extra={"x-ui-widget": "password", "x-ui-order": 20})
 
 
@@ -29,6 +30,7 @@ class UserUpdate(BaseModel):
     address: str | None = None
     birthday: date | None = None
     role: UserRole | None = None
+    status: UserStatus | None = None
     password: str | None = Field(None, json_schema_extra={"x-ui-widget": "password", "x-ui-order": 20})
 
 
