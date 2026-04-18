@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.database import DbSession
@@ -61,24 +62,31 @@ async def list_products(
     }
     _sort = _sort_options[sort_by]
 
-    base = select(Product).where(and_(*filters))
-    total = (await db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
-    rows = (await db.execute(base.order_by(*_sort).offset(skip).limit(limit))).scalars().all()
+    where_clause = and_(*filters)
+    total = (await db.execute(select(func.count()).select_from(Product).where(where_clause))).scalar_one()
+
+    rows = (
+        (
+            await db.execute(
+                select(Product)
+                .options(selectinload(Product.brand))
+                .where(where_clause)
+                .order_by(*_sort)
+                .offset(skip)
+                .limit(limit)
+            )
+        )
+        .scalars()
+        .all()
+    )
     product_read_response = [ProductRead.model_validate(row) for row in rows]
     return PaginatedResponse(items=product_read_response, total=total, skip=skip, limit=limit)
 
 
-@router.get("/products/{product_id}", response_model=ProductRead)
-async def get_product(product_id: UUID, db: DbSession) -> Product:
-    product = await db.get(Product, product_id)
-    if product is None or not product.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
-    return product
-
-
+# Static path segments must be registered before `/products/{product_id}` so `slug` is not parsed as a UUID.
 @router.get("/products/slug/{slug}", response_model=ProductRead)
 async def get_product_by_slug(slug: str, db: DbSession) -> Product:
-    stmt = select(Product).where(Product.slug == slug, Product.is_active.is_(True))
+    stmt = select(Product).options(selectinload(Product.brand)).where(Product.slug == slug, Product.is_active.is_(True))
     result = await db.execute(stmt)
     product = result.scalar_one_or_none()
     if product is None:
@@ -94,3 +102,17 @@ async def list_product_variants(product_id: UUID, db: DbSession) -> list[Product
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+@router.get("/products/{product_id}", response_model=ProductRead)
+async def get_product(product_id: UUID, db: DbSession) -> Product:
+    stmt = (
+        select(Product)
+        .options(selectinload(Product.brand))
+        .where(Product.id == product_id, Product.is_active.is_(True))
+    )
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
+    if product is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    return product

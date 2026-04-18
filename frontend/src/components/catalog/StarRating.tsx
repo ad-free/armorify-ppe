@@ -6,6 +6,7 @@ interface Props {
   max?: number;
   size?: 'sm' | 'md' | 'lg';
   interactive?: boolean;
+  readOnly?: boolean;
   onChange?: (n: number) => void;
 }
 
@@ -14,8 +15,10 @@ export const StarRating: React.FC<Props> = ({
   max = 5,
   size = 'md',
   interactive = false,
+  readOnly = false,
   onChange,
 }) => {
+  const effectiveInteractive = interactive && !readOnly;
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   const sizeClass = {
@@ -25,7 +28,7 @@ export const StarRating: React.FC<Props> = ({
   }[size];
 
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
-    if (!interactive || !onChange) return;
+    if (!effectiveInteractive || !onChange) return;
     if (e.key === 'Enter' || e.key === ' ') {
       onChange(index + 1);
     } else if (e.key === 'ArrowRight') {
@@ -37,13 +40,13 @@ export const StarRating: React.FC<Props> = ({
 
   return (
     <div
-      className={`flex items-center gap-1 ${interactive ? 'cursor-pointer' : ''}`}
+      className={`flex items-center gap-1 ${effectiveInteractive ? 'cursor-pointer' : ''}`}
       aria-label={`Đánh giá ${value} trên ${max} sao`}
-      role={interactive ? 'slider' : 'img'}
+      role={effectiveInteractive ? 'slider' : 'img'}
       aria-valuemin={1}
       aria-valuemax={max}
       aria-valuenow={value}
-      tabIndex={interactive ? 0 : undefined}
+      tabIndex={effectiveInteractive ? 0 : undefined}
       onMouseLeave={() => setHoverIndex(null)}
     >
       {Array.from({ length: max }).map((_, i) => {

@@ -1,5 +1,6 @@
 import toast from 'react-hot-toast';
 import { AlertCircle, CheckCircle2, LogOut } from 'lucide-react';
+import i18n from '../i18n';
 
 type AuthToastKind = 'success' | 'error' | 'logout';
 
@@ -48,7 +49,10 @@ const showAuthToast = (kind: AuthToastKind, title: string, description: string) 
 };
 
 export const authToast = {
-  loginSuccess: () => showAuthToast('success', 'Dang nhap thanh cong', 'Chao mung ban quay tro lai!'),
-  loginError: () => showAuthToast('error', 'Dang nhap that bai', 'So dien thoai hoac mat khau khong dung.'),
-  logoutSuccess: () => showAuthToast('logout', 'Dang xuat thanh cong', 'Hen gap lai ban trong lan truy cap tiep theo.'),
+  loginSuccess: () =>
+    showAuthToast('success', i18n.t('toast.auth.loginSuccessTitle'), i18n.t('toast.auth.loginSuccessDescription')),
+  loginError: () =>
+    showAuthToast('error', i18n.t('toast.auth.loginErrorTitle'), i18n.t('toast.auth.loginErrorDescription')),
+  logoutSuccess: () =>
+    showAuthToast('logout', i18n.t('toast.auth.logoutSuccessTitle'), i18n.t('toast.auth.logoutSuccessDescription')),
 };

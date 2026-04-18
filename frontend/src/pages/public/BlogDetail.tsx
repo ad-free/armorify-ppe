@@ -1,6 +1,6 @@
 // src/pages/public/BlogDetail.tsx
 import React from 'react';
-import { useParams, Navigate, Link } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
 import { SeoHead } from '@/components/common/SeoHead';

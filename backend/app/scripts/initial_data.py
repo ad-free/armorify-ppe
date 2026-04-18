@@ -1,4 +1,4 @@
-# app/initial_data.py
+# app/scripts/initial_data.py — bootstrap admin user only
 import asyncio
 
 import bcrypt

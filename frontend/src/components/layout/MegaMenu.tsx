@@ -25,7 +25,7 @@ export const MegaMenu: React.FC<Props> = ({ isOpen, onClose }) => {
 
   // Build the tree (Parent/Child structure)
   const tree = useMemo(() => {
-    const categoriesList = catData?.items || [];
+    const categoriesList = catData || [];
     const map = new Map<string, CategoryNode>();
     const roots: CategoryNode[] = [];
 
@@ -33,12 +33,14 @@ export const MegaMenu: React.FC<Props> = ({ isOpen, onClose }) => {
     
     categoriesList.forEach(c => {
       const node = map.get(c.id)!;
-      if (c.parent_id) {
+      if (c.parent_id && c.parent_id !== c.id) {
         const parent = map.get(c.parent_id);
-        if (parent) parent.children.push(node);
-      } else {
-        roots.push(node);
+        if (parent) {
+          parent.children.push(node);
+          return;
+        }
       }
+      roots.push(node);
     });
     return roots;
   }, [catData]);

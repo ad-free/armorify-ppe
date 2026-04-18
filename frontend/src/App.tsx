@@ -1,10 +1,13 @@
-import React, { Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { Suspense, useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Toaster } from 'react-hot-toast';
 import { FloatingContact } from './components/common/FloatingContact';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { useAuthStore } from './store/authStore';
+import { GET } from './lib/api';
+import type { UserRead } from './types/api';
 
 // Lazy load the pages we built
 const HomePage = React.lazy(() => import('./pages/public/HomePage'));
@@ -26,14 +29,40 @@ const AdminDashboard = React.lazy(() => import('./pages/admin/Dashboard'));
 const ResourceManagerPage = React.lazy(() => import('./pages/admin/ResourceManager'));
 
 function App() {
+  const { t } = useTranslation();
   const hasHydrated = useAuthStore(state => state._hasHydrated);
+  const user = useAuthStore(state => state.user);
+  const accessToken = useAuthStore(state => state.accessToken);
+  const refreshToken = useAuthStore(state => state.refreshToken);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
-  if (!hasHydrated) {
+  useEffect(() => {
+    if (!hasHydrated) return;
+
+    const validateTokens = async () => {
+      if (!accessToken || !refreshToken) {
+        setIsAuthChecking(false);
+        return;
+      }
+
+      try {
+        await GET<UserRead>('/auth/me');
+      } catch {
+        // The API layer will already logout on failed refresh attempts.
+      } finally {
+        setIsAuthChecking(false);
+      }
+    };
+
+    validateTokens();
+  }, [hasHydrated, accessToken, refreshToken]);
+
+  if (!hasHydrated || isAuthChecking) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-          <p className="text-gray-500 font-medium animate-pulse">Initializing Armorify...</p>
+          <p className="text-gray-500 font-medium animate-pulse">{t('status.initializing')}</p>
         </div>
       </div>
     );
@@ -44,7 +73,7 @@ function App() {
       <Navbar />
 
       <main className="min-h-[80vh] bg-gray-50">
-        <Suspense fallback={<div className="flex p-20 justify-center">Đang tải...</div>}>
+        <Suspense fallback={<div className="flex p-20 justify-center">{t('status.loading')}</div>}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/blog" element={<BlogList />} />
@@ -59,8 +88,14 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/manage/:entityId" element={<ResourceManagerPage />} />
+            <Route
+              path="/admin"
+              element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/admin/manage/:entityId"
+              element={user?.role === 'admin' ? <ResourceManagerPage /> : <Navigate to="/login" replace />}
+            />
           </Routes>
         </Suspense>
       </main>

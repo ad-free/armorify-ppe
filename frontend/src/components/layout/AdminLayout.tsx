@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   BarChart3, 
   Package, 
@@ -9,6 +10,7 @@ import {
   Grid, 
   MapPin,
   Image,
+  Layers,
   ChevronRight,
   Shield,
   LogOut
@@ -19,17 +21,19 @@ interface AdminLayoutProps {
 }
 
 const ADMIN_MENU = [
-  { id: 'dashboard', label: 'Tổng quan', icon: BarChart3, path: '/admin' },
-  { id: 'catalog', label: 'Danh mục', icon: Grid, path: '/admin/manage/catalog' },
-  { id: 'product', label: 'Sản phẩm', icon: Package, path: '/admin/manage/product' },
-  { id: 'product_image', label: 'Hình ảnh SP', icon: Image, path: '/admin/manage/product_image' },
-  { id: 'order', label: 'Đơn hàng', icon: ShoppingBag, path: '/admin/manage/order' },
-  { id: 'user', label: 'Người dùng', icon: Users, path: '/admin/manage/user' },
-  { id: 'blog', label: 'Bài viết', icon: FileText, path: '/admin/manage/blog' },
-  { id: 'branch', label: 'Chi nhánh', icon: MapPin, path: '/admin/manage/branch' },
+  { id: 'dashboard', labelKey: 'admin.menu.dashboard', icon: BarChart3, path: '/admin' },
+  { id: 'catalog', labelKey: 'admin.menu.catalog', icon: Grid, path: '/admin/manage/catalog' },
+  { id: 'product', labelKey: 'admin.menu.product', icon: Package, path: '/admin/manage/product' },
+  { id: 'variant', labelKey: 'admin.menu.variant', icon: Layers, path: '/admin/manage/variant' },
+  { id: 'product_image', labelKey: 'admin.menu.product_image', icon: Image, path: '/admin/manage/product_image' },
+  { id: 'order', labelKey: 'admin.menu.order', icon: ShoppingBag, path: '/admin/manage/order' },
+  { id: 'user', labelKey: 'admin.menu.user', icon: Users, path: '/admin/manage/user' },
+  { id: 'blog', labelKey: 'admin.menu.blog', icon: FileText, path: '/admin/manage/blog' },
+  { id: 'branch', labelKey: 'admin.menu.branch', icon: MapPin, path: '/admin/manage/branch' },
 ];
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { entityId } = useParams<{ entityId: string }>();
@@ -46,8 +50,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               <div className="w-14 h-14 sm:w-16 sm:h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-3 sm:mb-4">
                 <Shield size={32} />
               </div>
-              <h2 className="font-bold text-gray-900 text-base sm:text-lg text-center">Armorify Admin</h2>
-              <p className="text-xs sm:text-sm text-gray-500 text-center">System Management</p>
+              <h2 className="font-bold text-gray-900 text-base sm:text-lg text-center">{t('admin.title')}</h2>
+              <p className="text-xs sm:text-sm text-gray-500 text-center">{t('admin.subtitle')}</p>
             </div>
             
             <nav className="p-2 space-y-1">
@@ -66,7 +70,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <Icon size={18} />
-                      <span className="font-semibold text-sm truncate">{item.label}</span>
+                      <span className="font-semibold text-sm truncate">{t(item.labelKey)}</span>
                     </div>
                     <ChevronRight size={14} className={isActive ? 'text-white/80' : 'text-gray-300'} />
                   </button>
@@ -79,7 +83,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors font-semibold text-sm"
                 >
                   <LogOut size={18} />
-                  Thoát Admin
+                  {t('admin.exit')}
                 </button>
               </div>
             </nav>

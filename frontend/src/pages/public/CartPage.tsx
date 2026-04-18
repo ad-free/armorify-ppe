@@ -47,8 +47,11 @@ const CartPage: React.FC = () => {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Cart Items */}
             <div className="flex-1 space-y-4">
-              {items.map((item, idx) => (
-                <div key={`${item.product.id}-${idx}`} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex gap-4 md:gap-6 relative">
+              {items.map((item) => (
+                <div
+                  key={`${item.product.id}-${item.variant_id ?? 'default'}-${item.unit_price ?? item.product.price}`}
+                  className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex gap-4 md:gap-6 relative"
+                >
                   <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
                     {/* Placeholder for actual cart image mapping */}
                     <img src="https://via.placeholder.com/200" alt={item.product.name} className="w-full h-full object-cover"/>
@@ -59,7 +62,9 @@ const CartPage: React.FC = () => {
                         {item.product.name}
                       </Link>
                       <p className="font-bold text-red-600 mt-2">
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.product.price)}
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
+                          item.unit_price ?? item.product.price
+                        )}
                       </p>
                     </div>
                     
@@ -71,7 +76,10 @@ const CartPage: React.FC = () => {
                       </div>
                       
                       <p className="font-bold hidden md:block text-gray-900">
-                        Thành tiền: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.product.price * item.quantity)}
+                        Thành tiền:{' '}
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
+                          (item.unit_price ?? item.product.price) * item.quantity
+                        )}
                       </p>
                     </div>
                   </div>

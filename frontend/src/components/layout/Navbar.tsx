@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ShoppingCart, User, Menu, Phone, Mail, LogOut, LayoutDashboard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { MegaMenu } from './MegaMenu';
 import { useAuthStore } from '@/store/authStore';
 import { authToast } from '@/lib/toast';
@@ -10,8 +11,14 @@ import { authToast } from '@/lib/toast';
 export const Navbar: React.FC = () => {
   const [isCategoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { t, i18n } = useTranslation();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+
+  const handleLanguageChange = (lang: 'vi' | 'en') => {
+    localStorage.setItem('armorify-lang', lang);
+    void i18n.changeLanguage(lang);
+  };
 
   const handleLogout = () => {
     logout();
@@ -23,16 +30,34 @@ export const Navbar: React.FC = () => {
   return (
     <header className="w-full bg-white shadow-sm flex flex-col z-50 relative">
       {/* Top Utility Bar */}
-      <div className="bg-gray-100 py-1 hidden lg:block">
-        <div className="container mx-auto px-4 max-w-7xl flex justify-between items-center text-xs text-gray-600 font-medium">
+      <div className="bg-gray-100 py-1">
+        <div className="container mx-auto px-4 max-w-7xl flex flex-wrap justify-between items-center text-xs text-gray-600 font-medium">
           <div className="flex gap-4">
-            <span className="flex items-center gap-1"><Phone size={12}/> Hotline: 0372371668</span>
-            <span className="flex items-center gap-1"><Mail size={12}/> Email: info@nbehoangduy.vn</span>
+            <span className="flex items-center gap-1"><Phone size={12}/> {t('topBar.hotline')}</span>
+            <span className="flex items-center gap-1"><Mail size={12}/> {t('topBar.email')}</span>
           </div>
-          <div className="flex gap-4">
-            <Link to="/about" className="hover:text-primary">Giới thiệu</Link>
-            <Link to="/contact" className="hover:text-primary">Liên hệ</Link>
-            <Link to="/dealer" className="hover:text-primary">Tuyển đại lý</Link>
+          <div className="flex items-center gap-4">
+            <div className="flex gap-4">
+              <Link to="/about" className="hover:text-primary">{t('topBar.about')}</Link>
+              <Link to="/contact" className="hover:text-primary">{t('topBar.contact')}</Link>
+              <Link to="/dealer" className="hover:text-primary">{t('topBar.dealer')}</Link>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleLanguageChange('vi')}
+                className={`text-xs font-semibold px-2 py-1 rounded ${i18n.language === 'vi' ? 'bg-primary text-white' : 'text-gray-600 hover:text-primary'}`}
+              >
+                {t('language.vi')}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLanguageChange('en')}
+                className={`text-xs font-semibold px-2 py-1 rounded ${i18n.language === 'en' ? 'bg-primary text-white' : 'text-gray-600 hover:text-primary'}`}
+              >
+                {t('language.en')}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -52,7 +77,7 @@ export const Navbar: React.FC = () => {
           <div className="relative w-full">
             <input 
               type="text" 
-              placeholder="Tìm kiếm giày bảo hộ, dây đai an toàn..."
+              placeholder={t('search.placeholder')}
               className="w-full pl-4 pr-12 py-2.5 rounded-l-md border-y border-l border-gray-300 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm shadow-sm"
             />
             <button className="absolute right-0 top-0 bottom-0 px-4 bg-primary text-white rounded-r-md hover:bg-primary/90 flex items-center justify-center">
@@ -96,7 +121,7 @@ export const Navbar: React.FC = () => {
                       onClick={() => setIsProfileOpen(false)}
                     >
                       <User size={16} />
-                      <span>Thông tin cá nhân</span>
+                      <span>{t('actions.profile')}</span>
                     </Link>
 
                     {user.role === 'admin' && (
@@ -106,7 +131,7 @@ export const Navbar: React.FC = () => {
                         onClick={() => setIsProfileOpen(false)}
                       >
                         <LayoutDashboard size={16} />
-                        <span>Quản trị viên</span>
+                        <span>{t('actions.admin')}</span>
                       </Link>
                     )}
 
@@ -116,7 +141,7 @@ export const Navbar: React.FC = () => {
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
                       >
                         <LogOut size={16} />
-                        <span>Đăng xuất</span>
+                        <span>{t('actions.logout')}</span>
                       </button>
                     </div>
                   </div>
@@ -129,7 +154,7 @@ export const Navbar: React.FC = () => {
                 <User size={20} strokeWidth={2}/>
               </div>
               <span className="text-xs font-semibold hidden lg:block">
-                Đăng nhập
+                {t('actions.login')}
               </span>
             </Link>
           )}
@@ -141,7 +166,7 @@ export const Navbar: React.FC = () => {
                 0
               </span>
             </div>
-            <span className="text-xs font-semibold hidden lg:block">Giỏ hàng</span>
+            <span className="text-xs font-semibold hidden lg:block">{t('actions.cart')}</span>
           </Link>
         </div>
       </div>
@@ -156,7 +181,7 @@ export const Navbar: React.FC = () => {
             onMouseLeave={() => setCategoryMenuOpen(false)}
           >
             <Menu size={20}/>
-            <span className="font-bold tracking-wide text-sm uppercase">Danh Mục Sản Phẩm</span>
+            <span className="font-bold tracking-wide text-sm uppercase">{t('navigation.categories')}</span>
             
             {/* The actual Mega Menu */}
             <div className="absolute top-full left-0 w-full lg:w-[800px] z-50">
@@ -166,10 +191,10 @@ export const Navbar: React.FC = () => {
 
           {/* Quick Links */}
           <div className="flex items-center gap-8 ml-8 text-sm font-bold uppercase tracking-wide">
-            <Link to="/sale" className="hover:text-yellow-300 transition-colors">⚡ Khuyến Mãi</Link>
-            <Link to="/brand/3m" className="hover:text-white/80 transition-colors">Thương Hiệu 3M</Link>
-            <Link to="/video" className="hover:text-white/80 transition-colors">Video Review</Link>
-            <Link to="/blog" className="hover:text-white/80 transition-colors">Tin Tức Kỹ Thuật</Link>
+            <Link to="/sale" className="hover:text-yellow-300 transition-colors">{t('navigation.sale')}</Link>
+            <Link to="/brand/3m" className="hover:text-white/80 transition-colors">{t('navigation.brand')}</Link>
+            <Link to="/video" className="hover:text-white/80 transition-colors">{t('navigation.video')}</Link>
+            <Link to="/blog" className="hover:text-white/80 transition-colors">{t('navigation.blog')}</Link>
           </div>
         </div>
       </div>

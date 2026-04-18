@@ -46,6 +46,12 @@ export const genericApiClient = {
     return POST<Record<string, unknown>>(`/${path}/`, data);
   },
 
+  uploadImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return POST<{ url: string }>(`/admin/catalog/uploads/images`, formData);
+  },
+
   update: async (entity: string, id: string | number, data: Record<string, unknown>) => {
     const path = getResourcePath(entity);
     return PUT<Record<string, unknown>>(`/${path}/${id}`, data);
@@ -85,10 +91,43 @@ export const useGenericResource = (entityName: string, params: QueryParams = { s
     queryFn: () => genericApiClient.fetchList(entityName, params),
   });
 
+  const getRelatedQueryKeys = (entity: string) => {
+    const lowerName = entity.toLowerCase();
+    const related: Array<string[]> = [];
+
+    if (lowerName === 'catalog' || lowerName === 'category') {
+      related.push(['categories']);
+    }
+    if (lowerName === 'brand' || lowerName === 'branch') {
+      related.push(['brands']);
+    }
+    // Storefront hooks use different keys than admin CRUD (`useProducts` → `['products', …]`).
+    if (lowerName === 'product') {
+      related.push(['products']);
+      related.push(['related']);
+    }
+    if (lowerName === 'variant') {
+      related.push(['products']);
+      related.push(['product-variants']);
+      related.push(['related']);
+    }
+    if (lowerName === 'product_image' || lowerName === 'product-image') {
+      related.push(['products']);
+      related.push(['product-images']);
+    }
+
+    return related;
+  };
+
+  const invalidateEntityQueries = () => {
+    queryClient.invalidateQueries({ queryKey: [entityName] });
+    getRelatedQueryKeys(entityName).forEach((key) => queryClient.invalidateQueries({ queryKey: key }));
+  };
+
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => genericApiClient.create(entityName, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [entityName] });
+      invalidateEntityQueries();
     },
   });
 
@@ -96,21 +135,21 @@ export const useGenericResource = (entityName: string, params: QueryParams = { s
     mutationFn: ({ id, data }: { id: string | number; data: Record<string, unknown> }) =>
       genericApiClient.update(entityName, id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [entityName] });
+      invalidateEntityQueries();
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string | number) => genericApiClient.delete(entityName, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [entityName] });
+      invalidateEntityQueries();
     },
   });
 
   const restoreMutation = useMutation({
     mutationFn: (id: string | number) => genericApiClient.restore(entityName, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [entityName] });
+      invalidateEntityQueries();
     },
   });
 

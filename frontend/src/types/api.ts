@@ -58,6 +58,21 @@ export interface ReviewCreate {
   body?: string | null;
 }
 
+export interface ProductCreate {
+  name: string;
+  slug: string;
+  description?: string | null;
+  price: number;
+  dealer_price?: number | null;
+  stock?: number;
+  is_featured?: boolean;
+  category_id: string;
+  specifications?: unknown;
+  cover_image_url?: string | null;
+}
+
+export type ProductUpdate = Partial<ProductCreate>;
+
 export interface BlogPostRead {
   id: string;
   title: string;
@@ -94,13 +109,28 @@ export interface PaginatedResponse<T> {
   limit: number;
 }
 
+export interface ProductBrandRead {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  country_of_origin: string | null;
+}
+
 export interface ProductRead {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
   price: number;
+  dealer_price: number | null;
+  stock: number;
+  is_featured: boolean;
   category_id: string;
+  specifications: Record<string, unknown> | unknown[] | null;
+  cover_image_url: string | null;
   brand_id: string | null;
+  brand: ProductBrandRead | null;
   compare_at_price: string | null;
   is_new: boolean;
   video_url: string | null;
@@ -108,6 +138,23 @@ export interface ProductRead {
   seo_description: string | null;
   rating_avg: string | null;
   rating_count: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductVariantRead {
+  id: string;
+  product_id: string;
+  sku: string;
+  size: string | null;
+  color: string | null;
+  stock: number;
+  price_override: string | null;
+  attributes: Record<string, unknown> | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CategoryRead {

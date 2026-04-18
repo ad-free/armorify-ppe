@@ -1,5 +1,5 @@
 // src/pages/public/BrandPage.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams, Navigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SeoHead } from '@/components/common/SeoHead';
@@ -15,7 +15,7 @@ const BrandPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   
   const { data: brands, isLoading: brandsLoading } = useBrands();
-  const brand = brands?.find(b => b.slug === slug);
+  const brand = brands?.items?.find((b) => b.slug === slug);
 
   // Pagination & filter state from URL
   const page = parseInt(searchParams.get('page') || '1', 10);
@@ -35,7 +35,7 @@ const BrandPage: React.FC = () => {
   });
 
   if (brandsLoading) return <div className="container mx-auto py-20 text-center animate-pulse">Đang tải...</div>;
-  if (!brandsLoading && !brand) return <Navigate to="/products" replace />;
+  if (!brandsLoading && !brand) return <Navigate to="/" replace />;
 
   return (
     <motion.div

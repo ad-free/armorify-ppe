@@ -8,7 +8,7 @@ import { useCartStore } from '@/store/cartStore';
 // In a finalized push, GuestOrderForm would read directly from useCartStore
 
 const CheckoutPage: React.FC = () => {
-  const { getTotalItems } = useCartStore();
+  useCartStore();
 
   return (
     <div className="bg-gray-50 min-h-screen py-12">

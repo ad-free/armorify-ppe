@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { ProductRead } from '@/types/api';
 import { StarRating } from './StarRating';
 import { DiscountBadge } from './DiscountBadge';
@@ -11,6 +12,15 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const { t, i18n } = useTranslation();
+  const fmt = (value: number) =>
+    new Intl.NumberFormat(i18n.language === 'vi' ? 'vi-VN' : 'en-US', {
+      style: 'currency',
+      currency: 'VND',
+      maximumFractionDigits: 0,
+    }).format(value);
+  const dealer = product.dealer_price != null && Number(product.dealer_price) > 0 ? Number(product.dealer_price) : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -33,9 +43,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       </div>
 
       <Link to={`/products/${product.slug}`} className="block relative aspect-square overflow-hidden bg-gray-50 flex-shrink-0">
-        {/* Mock image for now since ProductRead API doesn't guarantee a singular string image URL in list, you would normally map the first product image */}
         <img 
-          src="https://via.placeholder.com/400x400.png?text=Product+Image" 
+          src={product.cover_image_url || "https://via.placeholder.com/400x400.png?text=Product+Image"} 
           alt={product.name} 
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           loading="lazy"
@@ -52,7 +61,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="p-4 flex flex-col flex-grow">
         {/* Meta info */}
         <div className="flex items-center gap-1 mb-2">
-          <StarRating rating={Number(product.rating_avg) || 0} readOnly size={14} />
+          <StarRating value={Number(product.rating_avg) || 0} readOnly size="sm" />
           <span className="text-xs text-gray-400">({product.rating_count})</span>
         </div>
 
@@ -62,14 +71,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </h3>
         </Link>
         
-        <div className="flex flex-col mt-auto pt-3 border-t border-gray-50">
-          <span className="text-lg font-bold text-red-600">
-            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
-          </span>
-          {product.compare_at_price && Number(product.compare_at_price) > product.price && (
-            <span className="text-sm text-gray-400 line-through">
-              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(product.compare_at_price))}
-            </span>
+        <div className="flex flex-col mt-auto pt-3 border-t border-gray-50 gap-1">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-lg font-bold text-red-600">{fmt(product.price)}</span>
+            {product.compare_at_price && Number(product.compare_at_price) > product.price && (
+              <span className="text-sm text-gray-400 line-through">{fmt(Number(product.compare_at_price))}</span>
+            )}
+          </div>
+          {dealer != null && (
+            <p className="text-xs font-semibold text-primary">
+              {t('productDetail.dealerPrice')}: <span className="tabular-nums">{fmt(dealer)}</span>
+            </p>
           )}
         </div>
       </div>

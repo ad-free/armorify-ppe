@@ -2,8 +2,8 @@
 import React from 'react';
 
 interface Props {
-  price: string;
-  compareAtPrice: string | null;
+  price: string | number;
+  compareAtPrice: string | number | null;
 }
 
 export const DiscountBadge: React.FC<Props> = ({ price, compareAtPrice }) => {

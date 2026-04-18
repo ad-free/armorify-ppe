@@ -68,8 +68,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
-    admin_username: str = "admin"
-    admin_phone: str = "0909090909"
+    admin_username: str = "0971409192"
+    admin_phone: str = "0971409192"
     admin_password: str = "admin!!!!"
 
     def model_post_init(self, __context: object) -> None:

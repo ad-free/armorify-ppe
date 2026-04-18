@@ -1,9 +1,11 @@
 # app/main.py
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.deps import get_current_user, require_admin, require_staff
 from app.core.middleware import SecurityMiddleware
@@ -25,6 +27,10 @@ from app.routers import (
     public_orders_router,
     users_router,
 )
+from app.routers.public.brands import router as public_brands_router
+from app.routers.public.product_images import router as public_product_images_router
+from app.routers.public.related import router as public_related_products_router
+from app.routers.public.reviews import router as public_product_reviews_router
 from app.scripts.initial_data import create_admin
 
 
@@ -44,6 +50,9 @@ app = FastAPI(
     },
     lifespan=lifespan,
 )
+
+static_dir = Path(__file__).resolve().parent.parent / "static"
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 app.add_middleware(SecurityMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -58,6 +67,10 @@ app.add_middleware(
 # ── Public (no auth) ──────────────────────────────────────────────────────────
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(public_catalog_router, prefix="/api/v1")
+app.include_router(public_brands_router)
+app.include_router(public_product_images_router)
+app.include_router(public_related_products_router)
+app.include_router(public_product_reviews_router)
 app.include_router(public_cms_router, prefix="/api/v1")
 app.include_router(public_orders_router, prefix="/api/v1")
 

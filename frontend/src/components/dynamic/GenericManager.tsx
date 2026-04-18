@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useGenericResource } from '../../api/generic';
 import { useEntitySchema } from '../../hooks/useSchema';
 import { DynamicTable } from './DynamicTable';
@@ -7,6 +8,12 @@ import { DynamicForm } from './DynamicForm';
 interface GenericManagerProps {
   entityName: string;
 }
+
+const humanizeEntity = (value: string) =>
+  value
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b([a-z])/g, (match) => match.toUpperCase());
 
 export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) => {
   const [params, setParams] = useState({ skip: 0, limit: 10, sort_by: 'id' });
@@ -19,13 +26,21 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
   const { data: updateSchema, isLoading: isUpdateSchemaLoading, error: updateSchemaError } = useEntitySchema(entityName, 'update');
 
   // 2. Fetch Data
-  const { 
-    items, 
-    isLoading: isDataLoading, 
-    create, 
-    update, 
+  const { t } = useTranslation();
+  const entityLabel = t(`admin.menu.${entityName}`, { defaultValue: humanizeEntity(entityName) });
+
+  const normalizeSchemaTitle = (title?: string) => {
+    if (!title) return entityLabel;
+    return /(?:Read|Create|Update|Detail|List|Schema)$/.test(title) ? entityLabel : title;
+  };
+
+  const {
+    items,
+    isLoading: isDataLoading,
+    create,
+    update,
     remove,
-    restore
+    restore,
   } = useGenericResource(entityName, params);
 
   const handleCreate = async (data: Record<string, unknown>) => {
@@ -55,15 +70,15 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
     <div className="space-y-6 min-w-0">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 capitalize break-words">{schema.title || entityName}</h2>
-          <p className="text-sm sm:text-base text-slate-500 break-words">Manage your {entityName} records and their metadata.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 capitalize break-words">{normalizeSchemaTitle(schema.title)}</h2>
+          <p className="text-sm sm:text-base text-slate-500 break-words">{t('generic.manageRecords', { entity: entityLabel })}</p>
         </div>
         {!isFormOpen && (
           <button 
             onClick={() => { setEditingItem(null); setIsFormOpen(true); }}
             className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
           >
-            Create New
+            {t('generic.createNew')}
           </button>
         )}
       </div>
@@ -71,9 +86,10 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
       {isFormOpen ? (
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-4">
           <h3 className="text-lg font-bold text-slate-800 mb-6">
-            {editingItem ? `Edit ${formSchema.title}` : `New ${formSchema.title}`}
+            {editingItem ? t('generic.editRecord', { title: normalizeSchemaTitle(formSchema.title) }) : t('generic.newRecord', { title: normalizeSchemaTitle(formSchema.title) })}
           </h3>
           <DynamicForm 
+            entityName={entityName}
             schema={formSchema}
             initialData={editingItem}
             onSubmit={editingItem ? handleUpdate : handleCreate}
@@ -97,16 +113,22 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
 };
 
 // Simplified UI components for demo
-const LoadingSpinner = () => (
-  <div className="flex flex-col items-center justify-center p-20 space-y-4">
-    <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-    <span className="text-slate-600 font-medium">Bootstrapping schema...</span>
-  </div>
-);
+const LoadingSpinner = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center justify-center p-20 space-y-4">
+      <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+      <span className="text-slate-600 font-medium">{t('generic.loadingSchema')}</span>
+    </div>
+  );
+};
 
-const ErrorDisplay = ({ message }: { message: string }) => (
-  <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-700">
-    <h4 className="font-bold">Schema Resolution Error</h4>
-    <p>{message}</p>
-  </div>
-);
+const ErrorDisplay = ({ message }: { message: string }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-700">
+      <h4 className="font-bold">{t('generic.schemaError')}</h4>
+      <p>{message}</p>
+    </div>
+  );
+};
