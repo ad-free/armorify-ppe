@@ -1,88 +1,122 @@
 // src/components/layout/Footer.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Youtube, Instagram, MapPin, Mail, Phone } from 'lucide-react';
+import { Facebook, Youtube, Instagram, MapPin, Mail, Phone, Zap } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-white border-t pt-16 pb-8 text-sm text-gray-600">
-      <div className="container mx-auto px-4 max-w-7xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-        {/* Column 1: Info */}
-        <div className="space-y-4">
-          <Link to="/" className="flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-primary text-white flex items-center justify-center rounded-lg font-bold text-xl">A</div>
-            <span className="text-2xl font-black text-gray-900 tracking-tight">NBE Hoang Duy</span>
+    <footer className="bg-white font-sans border-t border-gray-100">
+      {/* Main Footer */}
+      <div className="container mx-auto pt-20 pb-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        {/* Column 1: Brand */}
+        <div className="space-y-8">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="w-10 h-10 bg-primary text-white flex items-center justify-center rounded-xl font-black text-xl shadow-sm">
+                <Zap size={22} className="fill-white" />
+            </div>
+            <span className="text-2xl font-black text-gray-900 tracking-tighter">
+                NBE Hoang Duy<span className="text-primary">.</span>
+            </span>
           </Link>
-          <p className="leading-relaxed">
-            Leading supplier of genuine, high-quality Personal Protective Equipment in Vietnam. Ensuring safety for your everyday work infrastructure.
+          <p className="text-sm text-gray-500 leading-relaxed font-medium">
+            Nhà cung cấp thiết bị bảo hộ lao động hàng đầu Việt Nam. Cam kết chính hãng, chất lượng, giá tốt nhất thị trường.
           </p>
           <div className="flex gap-4 pt-2">
-            <a href="#" className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition">
-              <Facebook size={16} />
-            </a>
-            <a href="#" className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center hover:bg-red-700 transition">
-              <Youtube size={16} />
-            </a>
-            <a href="#" className="w-8 h-8 rounded-full bg-pink-600 text-white flex items-center justify-center hover:bg-pink-700 transition">
-              <Instagram size={16} />
-            </a>
+            {[
+              { href: '#', bg: 'bg-[#3b5998]', icon: Facebook },
+              { href: '#', bg: 'bg-[#ff0000]', icon: Youtube },
+              { href: '#', bg: 'bg-[#e4405f]', icon: Instagram },
+            ].map((s, i) => {
+              const Icon = s.icon;
+              return (
+                <a key={i} href={s.href} className={`w-10 h-10 rounded-xl ${s.bg} text-white flex items-center justify-center transition-all hover:-translate-y-1 shadow-md`}>
+                  <Icon size={18} />
+                </a>
+              );
+            })}
           </div>
         </div>
 
-        {/* Column 2: Policies */}
-        <div>
-          <h3 className="font-bold text-gray-900 text-lg mb-6 uppercase tracking-wider">Hỗ Trợ Khách Hàng</h3>
-          <ul className="space-y-3 font-medium">
-            <li><Link to="/about" className="hover:text-primary transition-colors">Giới thiệu NBE Hoang Duy</Link></li>
-            <li><Link to="/policy/shipping" className="hover:text-primary transition-colors">Chính sách giao hàng</Link></li>
-            <li><Link to="/policy/returns" className="hover:text-primary transition-colors">Chính sách đổi trả bảo hành</Link></li>
-            <li><Link to="/policy/privacy" className="hover:text-primary transition-colors">Chính sách bảo mật</Link></li>
-            <li><Link to="/dealer" className="hover:text-primary transition-colors">Đăng ký đại lý sỉ</Link></li>
-          </ul>
-        </div>
-
-        {/* Column 3: Contact */}
-        <div>
-          <h3 className="font-bold text-gray-900 text-lg mb-6 uppercase tracking-wider">Thông Tin Liên Hệ</h3>
+        {/* Column 2: Quick Links */}
+        <div className="lg:pl-10">
+          <h3 className="font-black text-gray-900 text-[15px] mb-8 tracking-tight uppercase">Cửa Hàng</h3>
           <ul className="space-y-4">
-            <li className="flex gap-3 items-start">
-              <MapPin className="text-primary flex-shrink-0 mt-0.5" size={18} />
-              <span>123 Đường Điện Biên Phủ, Phường 15, Quận Bình Thạnh, TP.HCM</span>
-            </li>
-            <li className="flex gap-3 items-center">
-              <Phone className="text-primary flex-shrink-0" size={18} />
-              <span className="font-bold text-gray-900">0372.371.668 (Zalo/Call)</span>
-            </li>
-            <li className="flex gap-3 items-center">
-              <Mail className="text-primary flex-shrink-0" size={18} />
-              <span>info@nbehoangduy.vn</span>
-            </li>
+            {[
+              { to: '/categories', label: 'Tất cả sản phẩm' },
+              { to: '/sale', label: 'Khuyến mãi' },
+              { to: '/brand/3m', label: 'Thương hiệu 3M' },
+              { to: '/video', label: 'Video hướng dẫn' },
+              { to: '/blog', label: 'Tin tức & Blog' },
+            ].map((l) => (
+              <li key={l.to}>
+                <Link to={l.to} className="text-sm text-gray-500 hover:text-primary transition-colors font-bold flex items-center gap-2 group">
+                  <span className="w-1 h-1 rounded-full bg-gray-200 group-hover:bg-primary transition-colors" />
+                  {l.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 
-        {/* Column 4: Certifications */}
+        {/* Column 3: Support */}
         <div>
-          <h3 className="font-bold text-gray-900 text-lg mb-6 uppercase tracking-wider">Chứng Nhận</h3>
-          <div className="space-y-4">
-            <div className="bg-gray-100 p-4 rounded text-center border-dashed border-2 border-gray-200 font-bold text-gray-400">
-              [Logo Bộ Công Thương]
-            </div>
-            <div className="bg-gray-100 p-4 rounded text-center border-dashed border-2 border-gray-200 font-bold text-gray-400">
-              [DMCA Protected]
-            </div>
+          <h3 className="font-black text-gray-900 text-[15px] mb-8 tracking-tight uppercase">Hỗ Trợ</h3>
+          <ul className="space-y-4">
+            {[
+              { to: '/about', label: 'Về chúng tôi' },
+              { to: '/contact', label: 'Liên hệ' },
+              { to: '/policy/shipping', label: 'Chính sách giao hàng' },
+              { to: '/policy/returns', label: 'Đổi trả & Bảo hành' },
+              { to: '/dealer', label: 'Đăng ký đại lý' },
+            ].map((l) => (
+              <li key={l.to}>
+                <Link to={l.to} className="text-sm text-gray-500 hover:text-primary transition-colors font-bold flex items-center gap-2 group">
+                  <span className="w-1 h-1 rounded-full bg-gray-200 group-hover:bg-primary transition-colors" />
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Column 4: Contact */}
+        <div>
+          <h3 className="font-black text-gray-900 text-[15px] mb-8 tracking-tight uppercase">Liên Hệ</h3>
+          <ul className="space-y-6">
+            <li className="flex gap-4 items-start">
+              <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 flex-shrink-0 group-hover:text-primary transition-colors">
+                <MapPin size={20} strokeWidth={2} />
+              </div>
+              <span className="text-sm text-gray-500 font-bold leading-relaxed">123 Đường Điện Biên Phủ, Bình Thạnh, TP.HCM</span>
+            </li>
+            <li className="flex gap-4 items-center">
+              <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 flex-shrink-0 group-hover:text-primary transition-colors">
+                <Phone size={18} strokeWidth={2} />
+              </div>
+              <a href="tel:0372371668" className="text-sm font-black text-gray-900 hover:text-primary transition-colors leading-none tracking-tight">0372.371.668</a>
+            </li>
+            <li className="flex gap-4 items-center">
+              <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 flex-shrink-0 group-hover:text-primary transition-colors">
+                <Mail size={18} strokeWidth={2} />
+              </div>
+              <a href="mailto:info@nbehoangduy.vn" className="text-sm text-gray-500 font-bold hover:text-primary transition-colors leading-none">info@nbehoangduy.vn</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Bottom Bar */}
+      <div className="border-t border-gray-100 bg-[#f8f8f8]">
+        <div className="container mx-auto py-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs font-bold text-gray-400 tracking-tighter uppercase">© 2026 NBE Hoang Duy. All rights reserved.</p>
+          <div className="flex items-center gap-6 text-xs text-gray-400 font-bold">
+            <Link to="/policy/privacy" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px]">Chính sách bảo mật</Link>
+            <Link to="/policy/terms" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px]">Điều khoản</Link>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-200">
-        <div className="container mx-auto px-4 py-6 max-w-7xl flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium text-gray-500">
-          <p>© 2026 CÔNG TY TNHH NBE HOANG DUY. All rights reserved.</p>
-          <div className="flex gap-4">
-            <span>Mã số thuế: 0101234567</span>
-            <span>Cấp bởi: Sở Kế Hoạch & Đầu Tư TP.HCM</span>
-          </div>
-        </div>
-      </div>
     </footer>
   );
 };
+

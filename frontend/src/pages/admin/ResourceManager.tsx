@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { GenericManager } from '../../components/dynamic/GenericManager';
+import { ProductManager } from '../../components/admin/ProductManager';
 
 export const ResourceManagerPage: React.FC = () => {
   const { t } = useTranslation();
@@ -18,19 +19,16 @@ export const ResourceManagerPage: React.FC = () => {
   const activeEntityLabel = t(`admin.menu.${activeEntity}`, { defaultValue: activeEntity.replace(/_/g, ' ').replace(/\b([a-z])/g, (match) => match.toUpperCase()) });
 
   return (
-    <AdminLayout>
-      <div className="flex flex-col gap-3 mb-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest">
-          <span>{t('admin.resourceManager.breadcrumb')}</span>
-          <span>/</span>
-          <span className="text-primary">{activeEntityLabel}</span>
-        </div>
-        <p className="text-sm text-slate-500 max-w-3xl">{entityHelpText}</p>
-      </div>
-      
-      <GenericManager entityName={activeEntity} />
+    <AdminLayout title={activeEntityLabel} subtitle={entityHelpText}>
+      {activeEntity === 'product' ? (
+        <ProductManager />
+      ) : (
+        <GenericManager entityName={activeEntity} />
+      )}
     </AdminLayout>
   );
 };
+
+
 
 export default ResourceManagerPage;

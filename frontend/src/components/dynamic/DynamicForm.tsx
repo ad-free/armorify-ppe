@@ -221,15 +221,15 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   });
 
   return (
-    <form onSubmit={handleFormSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <form onSubmit={handleFormSubmit} className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {fields.map(([key, prop]) => {
           const fieldLabel = getFieldLabel(key, prop);
           return (
             <div key={key} className={prop.type === 'object' || prop.type === 'array' ? 'md:col-span-2' : ''}>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
                 {fieldLabel}{PRICE_FIELDS.has(key) ? ` (${t('generic.currency', 'VND')})` : ''}
-                {schema.required?.includes(key) && <span className="text-rose-500 ml-1">*</span>}
+                {schema.required?.includes(key) && <span className="text-rose-500 ml-1.5">*</span>}
               </label>
               
               <Controller
@@ -254,7 +254,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
               />
               
               {(prop.description || PRICE_FIELDS.has(key) || key === 'color' || key === 'attributes' || (prop['x-ui-widget'] === 'password' && initialData) || RELATION_FIELDS[key]) && (
-                <p className="mt-1.5 text-xs text-slate-500 italic">
+                <p className="mt-2.5 text-[11px] text-gray-400 font-bold italic leading-relaxed opacity-80">
                   {prop['x-ui-widget'] === 'password' && initialData 
                     ? t('generic.leaveBlankToKeepPassword') + ' ' 
                     : ''}
@@ -269,19 +269,19 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
               )}
               
               {errors[key] && (
-                <p className="mt-1.5 text-xs text-rose-500 font-medium">{t('generic.fieldRequired')}</p>
+                <p className="mt-2.5 text-[11px] text-rose-500 font-black uppercase tracking-tighter">{t('generic.fieldRequired')}</p>
               )}
             </div>
           );
         })}
       </div>
 
-      <div className="flex items-center justify-end space-x-4 pt-6 border-t border-slate-100">
+      <div className="flex items-center justify-end gap-4 pt-10 mt-10 border-t border-gray-50">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+            className="px-6 py-3 text-xs font-black text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors"
           >
             {t('generic.cancel')}
           </button>
@@ -289,7 +289,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
         <button
           type="submit"
           disabled={isLoading}
-          className="px-6 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-200 disabled:opacity-50 transition-all"
+          className="px-10 py-4 bg-primary text-white text-xs font-black rounded-2xl shadow-[0_10px_30px_rgba(13,164,135,0.2)] hover:bg-primary/95 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-50 uppercase tracking-widest"
         >
           {isLoading ? t('generic.saving') : initialData ? t('generic.updateRecord') : t('generic.createRecord')}
         </button>
@@ -297,6 +297,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
     </form>
   );
 };
+
 
 const isFileField = (fieldKey: string, schema: PropertySchema) => {
   const normalizedKey = fieldKey.toLowerCase();
@@ -449,27 +450,43 @@ const FormFieldAdapter = ({
   error?: string;
 }) => {
   const { t } = useTranslation();
-  const commonClasses = `w-full px-4 py-2.5 rounded-lg border focus:ring-4 transition-all outline-none ${
-    error ? 'border-rose-300 focus:ring-rose-100 bg-rose-50' : 'border-slate-200 focus:ring-indigo-100 focus:border-indigo-400'
+  const commonClasses = `w-full px-6 py-4 rounded-2xl border font-bold text-sm transition-all outline-none ${
+    error 
+      ? 'border-rose-200 focus:ring-4 focus:ring-rose-50/50 bg-rose-50/30' 
+      : 'border-gray-100 bg-gray-50/30 focus:border-primary focus:ring-4 focus:ring-primary/5 focus:bg-white'
   }`;
 
   if (isFileField(fieldKey, schema)) {
     return (
-      <div>
-        <input
-          type="file"
-          accept="image/*"
-          className={commonClasses}
-          onChange={(e) => {
-            onManualEdit?.();
-            const file = e.target.files?.[0] || null;
-            field.onChange(file ?? field.value);
-          }}
-        />
+      <div className="space-y-3">
+        <label className="flex items-center justify-center w-full px-6 py-10 border-2 border-dashed border-gray-200 rounded-3xl hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
+          <div className="flex flex-col items-center">
+             <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center mb-3 group-hover:bg-white transition-colors">
+                <Columns className="text-gray-400 group-hover:text-primary" size={20} />
+             </div>
+             <p className="text-xs font-black text-gray-400 uppercase tracking-widest group-hover:text-primary">Click to upload image</p>
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              onManualEdit?.();
+              const file = e.target.files?.[0] || null;
+              field.onChange(file ?? field.value);
+            }}
+          />
+        </label>
         {typeof field.value === 'string' && field.value ? (
-          <p className="mt-2 text-sm text-slate-500">
-            Current image: <a href={field.value} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">View file</a>
-          </p>
+          <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+             <div className="w-12 h-12 rounded-xl overflow-hidden bg-white border border-gray-200 shrink-0">
+                <img src={field.value} alt="Preview" className="w-full h-full object-cover" />
+             </div>
+             <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hiện tại</p>
+                <a href={field.value} target="_blank" rel="noreferrer" className="text-xs font-bold text-primary hover:underline truncate block">Xem ảnh đầy đủ</a>
+             </div>
+          </div>
         ) : null}
       </div>
     );
@@ -479,17 +496,25 @@ const FormFieldAdapter = ({
     const normalizedColor = typeof field.value === 'string'
       ? (field.value.startsWith('#') ? field.value : COLOR_PALETTE.find((opt) => opt.label.toLowerCase() === field.value.toLowerCase())?.value)
       : undefined;
-    const colorValue = normalizedColor || '#000000';
+    const colorValue = normalizedColor || '#0da487';
 
     return (
-      <div className="flex items-center gap-3">
-        <input
-          type="color"
-          value={colorValue}
+      <div className="flex items-center gap-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+        <div className="relative w-12 h-12 rounded-xl overflow-hidden shadow-soft shrink-0 border-2 border-white">
+           <input
+             type="color"
+             value={colorValue}
+             onChange={(e) => field.onChange(e.target.value)}
+             className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer"
+           />
+        </div>
+        <input 
+          type="text" 
+          value={field.value || ''} 
           onChange={(e) => field.onChange(e.target.value)}
-          className="w-12 h-12 p-0 border-none bg-transparent cursor-pointer"
+          placeholder="#000000"
+          className="bg-transparent border-none focus:ring-0 font-black text-gray-900 uppercase tracking-widest w-full"
         />
-        <span className="text-sm text-slate-600">{field.value || 'Choose color'}</span>
       </div>
     );
   }
@@ -502,19 +527,21 @@ const FormFieldAdapter = ({
   if (STATIC_SELECT_FIELDS[fieldKey]) {
     const options = STATIC_SELECT_FIELDS[fieldKey];
     return (
-      <select
-        {...field}
-        value={field.value ?? ''}
-        onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
-        className={commonClasses}
-      >
-        <option value="">{t('generic.selectOption', { field: fieldLabel })}</option>
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          {...field}
+          value={field.value ?? ''}
+          onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
+          className={commonClasses}
+        >
+          <option value="">{t('generic.selectOption', { field: fieldLabel })}</option>
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
     );
   }
 
@@ -553,17 +580,18 @@ const FormFieldAdapter = ({
   // Boolean -> Toggle/Checkbox
   if (schema.type === 'boolean') {
     return (
-      <div className="flex items-center mt-2">
-        <input
-          type="checkbox"
-          checked={field.value}
-          onChange={(e) => {
+      <div className="flex items-center gap-4 p-2">
+        <button
+          type="button"
+          onClick={() => {
             onManualEdit?.();
-            field.onChange(e.target.checked);
+            field.onChange(!field.value);
           }}
-          className="w-5 h-5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
-        />
-        <span className="ml-2 text-sm text-slate-600">{field.value ? t('generic.enabled') : t('generic.disabled')}</span>
+          className={`w-14 h-8 rounded-full transition-all relative ${field.value ? 'bg-primary' : 'bg-gray-200'}`}
+        >
+          <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all ${field.value ? 'right-1' : 'left-1'}`} />
+        </button>
+        <span className="text-xs font-black text-gray-500 uppercase tracking-widest">{field.value ? t('generic.enabled') : t('generic.disabled')}</span>
       </div>
     );
   }
@@ -598,12 +626,29 @@ const FormFieldAdapter = ({
     );
   }
 
+
   // Text / Email / Password
   const type = schema['x-ui-widget'] || (schema.format === 'email' ? 'email' : 'text');
   const isPriceField = PRICE_FIELDS.has(fieldKey);
   const placeholder = isPriceField
     ? t('generic.placeholder.price', { field: fieldLabel })
     : t('generic.placeholder.default', { field: fieldLabel });
+
+  if (type === 'rich-text') {
+    return (
+      <textarea
+        {...field}
+        rows={8}
+        placeholder={placeholder}
+        className={`${commonClasses} font-mono text-sm leading-relaxed resize-y`}
+        onChange={(e) => {
+          onManualEdit?.();
+          field.onChange(e.target.value);
+        }}
+        value={field.value ?? ''}
+      />
+    );
+  }
 
   return (
     <input

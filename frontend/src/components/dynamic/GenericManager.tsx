@@ -67,27 +67,20 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
   if (!schema || !formSchema) return null;
 
   return (
-    <div className="space-y-6 min-w-0">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 capitalize break-words">{normalizeSchemaTitle(schema.title)}</h2>
-          <p className="text-sm sm:text-base text-slate-500 break-words">{t('generic.manageRecords', { entity: entityLabel })}</p>
-        </div>
-        {!isFormOpen && (
-          <button 
-            onClick={() => { setEditingItem(null); setIsFormOpen(true); }}
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-          >
-            {t('generic.createNew')}
-          </button>
-        )}
-      </div>
-
+    <div className="space-y-8 min-w-0">
       {isFormOpen ? (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-4">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">
-            {editingItem ? t('generic.editRecord', { title: normalizeSchemaTitle(formSchema.title) }) : t('generic.newRecord', { title: normalizeSchemaTitle(formSchema.title) })}
-          </h3>
+        <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-[0_20px_60px_rgba(0,0,0,0.03)] animate-in fade-in slide-in-from-bottom-6 duration-500">
+          <div className="flex items-center justify-between mb-10 border-b border-gray-50 pb-6">
+            <h3 className="text-xl font-black text-gray-900">
+              {editingItem ? t('generic.editRecord', { title: normalizeSchemaTitle(formSchema.title) }) : t('generic.newRecord', { title: normalizeSchemaTitle(formSchema.title) })}
+            </h3>
+            <button
+               onClick={() => setIsFormOpen(false)}
+               className="text-xs font-black text-gray-400 uppercase tracking-widest hover:text-rose-500 transition-colors"
+            >
+               Huỷ bỏ
+            </button>
+          </div>
           <DynamicForm 
             entityName={entityName}
             schema={formSchema}
@@ -102,6 +95,7 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
           schema={schema}
           data={items || []}
           isLoading={isDataLoading}
+          onAdd={() => { setEditingItem(null); setIsFormOpen(true); }}
           onEdit={(row) => { setEditingItem(row); setIsFormOpen(true); }}
           onDelete={remove}
           onRestore={restore}
@@ -112,16 +106,18 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
   );
 };
 
+
 // Simplified UI components for demo
 const LoadingSpinner = () => {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col items-center justify-center p-20 space-y-4">
-      <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-      <span className="text-slate-600 font-medium">{t('generic.loadingSchema')}</span>
+    <div className="flex flex-col items-center justify-center p-24 space-y-6">
+      <div className="w-14 h-14 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
+      <span className="text-gray-400 font-black text-xs uppercase tracking-[0.2em]">{t('generic.loadingSchema')}</span>
     </div>
   );
 };
+
 
 const ErrorDisplay = ({ message }: { message: string }) => {
   const { t } = useTranslation();

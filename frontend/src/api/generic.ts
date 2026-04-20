@@ -80,6 +80,8 @@ export const genericApiClient = {
   },
 };
 
+import { authToast } from '@/lib/toast';
+
 /**
  * Hook for managing a generic resource
  */
@@ -128,7 +130,11 @@ export const useGenericResource = (entityName: string, params: QueryParams = { s
     mutationFn: (data: Record<string, unknown>) => genericApiClient.create(entityName, data),
     onSuccess: () => {
       invalidateEntityQueries();
+      authToast.success('Thành công', `Đã tạo ${entityName} mới thành công!`);
     },
+    onError: (err: { message?: string }) => {
+      authToast.error('Thất bại', `Lỗi khi tạo ${entityName}: ` + (err.message || 'Không rõ nguyên nhân'));
+    }
   });
 
   const updateMutation = useMutation({
@@ -136,21 +142,33 @@ export const useGenericResource = (entityName: string, params: QueryParams = { s
       genericApiClient.update(entityName, id, data),
     onSuccess: () => {
       invalidateEntityQueries();
+      authToast.success('Thành công', `Đã cập nhật ${entityName} thành công!`);
     },
+    onError: (err: { message?: string }) => {
+      authToast.error('Thất bại', `Lỗi khi cập nhật ${entityName}: ` + (err.message || 'Không rõ nguyên nhân'));
+    }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string | number) => genericApiClient.delete(entityName, id),
     onSuccess: () => {
       invalidateEntityQueries();
+      authToast.success('Thành công', `Đã xoá ${entityName} thành công!`);
     },
+    onError: (err: { message?: string }) => {
+      authToast.error('Thất bại', `Lỗi khi xoá ${entityName}: ` + (err.message || 'Không rõ nguyên nhân'));
+    }
   });
 
   const restoreMutation = useMutation({
     mutationFn: (id: string | number) => genericApiClient.restore(entityName, id),
     onSuccess: () => {
       invalidateEntityQueries();
+      authToast.success('Thành công', `Đã khôi phục ${entityName} thành công!`);
     },
+    onError: (err: { message?: string }) => {
+      authToast.error('Thất bại', `Lỗi khi khôi phục ${entityName}: ` + (err.message || 'Không rõ nguyên nhân'));
+    }
   });
 
   return {

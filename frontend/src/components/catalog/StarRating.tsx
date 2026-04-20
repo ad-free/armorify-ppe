@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 interface Props {
   value: number;
   max?: number;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   interactive?: boolean;
   readOnly?: boolean;
   onChange?: (n: number) => void;
@@ -22,6 +22,7 @@ export const StarRating: React.FC<Props> = ({
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   const sizeClass = {
+    xs: 'w-2.5 h-2.5',
     sm: 'w-3 h-3',
     md: 'w-4 h-4',
     lg: 'w-5 h-5',

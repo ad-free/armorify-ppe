@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,36 +7,49 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 220 20% 18%; /* Softer dark charcoal instead of pure black */
     
-    /* Emerald Green - The new Primary */
-    --primary: 160 84% 39%;
+    /* FastKart Green Primary - Slightly deeper for better readability */
+    --primary: 168 85% 32%; /* #0a8971 */
     --primary-foreground: 210 40% 98%;
     
-    /* Ruby Red - Action / Sale */
-    --destructive: 348 83% 47%;
+    /* FastKart Orange - Secondary / Highlights */
+    --secondary: 35 100% 60%; /* #ffa53b */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    /* FastKart Rose - Sale / Flash */
+    --destructive: 354 80% 55%; /* #f0444e */
     --destructive-foreground: 210 40% 98%;
 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215 15% 35%; /* Softer, more readable gray */
     
-    --border: 214.3 31.8% 91.4%;
+    --border: 210 20% 93%; /* Softer borders */
+    --radius: 0.75rem;
   }
 }
 
 body {
-  @apply bg-gray-50 text-foreground antialiased;
+  @apply bg-[#f4f7f7] text-foreground antialiased;
+  font-family: 'Public Sans', sans-serif;
+  color: #2d2d2d; /* Fixed softened black for whole site */
 }
 
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.container {
+  @apply max-w-[1440px] px-4 md:px-6;
 }
 
 /* Glassmorphism utility for floating headers */
 .glass {
-  @apply bg-white/90 backdrop-blur-md border-b border-white/20 shadow-sm transition-all;
+  @apply bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm transition-all;
 }
+
+/* Custom shadow for cards */
+.card-shadow {
+  box-shadow: 0 10px 20px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.card-shadow:hover {
+  box-shadow: 0 15px 35px rgba(0,0,0,0.05), 0 5px 15px rgba(0,0,0,0.04);
+}
+

@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Any, Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CategoryBase(BaseModel):
@@ -39,7 +39,7 @@ class CategoryRead(CategoryBase):
 class ProductBase(BaseModel):
     name: str
     slug: str
-    description: str | None = None
+    description: str | None = Field(default=None, json_schema_extra={"x-ui-widget": "rich-text"})
     price: Decimal
     dealer_price: Optional[Decimal] = None
     compare_at_price: Optional[Decimal] = None
@@ -47,7 +47,7 @@ class ProductBase(BaseModel):
     is_featured: Optional[bool] = False
     category_id: UUID
     specifications: Optional[Any] = None
-    cover_image_url: str | None = None
+    cover_image_url: str | None = Field(default=None, json_schema_extra={"x-ui-hidden": True})
 
 
 class ProductCreate(ProductBase):
@@ -65,7 +65,7 @@ class ProductUpdate(BaseModel):
     is_featured: Optional[bool] = None
     category_id: UUID | None = None
     specifications: Optional[Any] = None
-    cover_image_url: str | None = None
+    cover_image_url: str | None = Field(default=None, json_schema_extra={"x-ui-hidden": True})
 
 
 class ProductBrandRead(BaseModel):

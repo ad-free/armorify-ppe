@@ -65,7 +65,7 @@ const ProductDetail: React.FC = () => {
       const found = variants.find((v) => v.id === selectedVariantId);
       if (found) return found;
     }
-    return variants[0];
+    return null;
   }, [variants, selectedVariantId]);
 
   const effectivePrice = useMemo(() => {
@@ -120,6 +120,10 @@ const ProductDetail: React.FC = () => {
 
   const handleAddToCart = () => {
     if (!product || stockState === 'out') return;
+    if (variants && variants.length > 0 && !activeVariant) {
+      toast.error('Vui lòng chọn một phân loại hàng trước khi thêm vào giỏ.');
+      return;
+    }
     addItem(product, quantity, activeVariant?.id, effectivePrice);
     toast.custom(
       (toastId) => (
@@ -145,6 +149,10 @@ const ProductDetail: React.FC = () => {
 
   const handleBuyNow = () => {
     if (!product || stockState === 'out') return;
+    if (variants && variants.length > 0 && !activeVariant) {
+      toast.error('Vui lòng chọn một phân loại hàng trước khi mua.');
+      return;
+    }
     addItem(product, quantity, activeVariant?.id, effectivePrice);
     navigate('/checkout');
   };
@@ -331,7 +339,6 @@ const ProductDetail: React.FC = () => {
                   {variants.map((v) => {
                     const unit = resolveVariantUnitPrice(product, v);
                     const selected = activeVariant?.id === v.id;
-                    const label = [v.size, v.color].filter(Boolean).join(' · ') || v.sku;
                     return (
                       <button
                         key={v.id}
@@ -346,8 +353,21 @@ const ProductDetail: React.FC = () => {
                             : 'border-slate-200 bg-white hover:border-primary/40'
                         }`}
                       >
-                        <div className="font-semibold text-slate-900">{label}</div>
-                        <div className="text-xs font-medium text-slate-600 tabular-nums">{formatMoney(unit)}</div>
+                        <div className="font-semibold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                          {v.size && <span>{v.size}</span>}
+                          {v.size && v.color && <span className="text-slate-300">·</span>}
+                          {v.color && (
+                            v.color.startsWith('#') || v.color.match(/^(rgba?|hsl)/) ? (
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-3.5 h-3.5 rounded-full border border-slate-200 shadow-sm" style={{ backgroundColor: v.color }} title={v.color} />
+                              </div>
+                            ) : (
+                              <span>{v.color}</span>
+                            )
+                          )}
+                          {!v.size && !v.color && <span>{v.sku}</span>}
+                        </div>
+                        <div className="text-xs font-medium text-slate-600 tabular-nums mt-0.5">{formatMoney(unit)}</div>
                       </button>
                     );
                   })}

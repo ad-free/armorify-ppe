@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Toaster } from 'react-hot-toast';
 import { FloatingContact } from './components/common/FloatingContact';
@@ -16,6 +16,10 @@ const BlogDetail = React.lazy(() => import('./pages/public/BlogDetail'));
 const BrandPage = React.lazy(() => import('./pages/public/BrandPage'));
 const DealerPage = React.lazy(() => import('./pages/public/DealerPage'));
 const VideoPage = React.lazy(() => import('./pages/public/VideoPage'));
+const AboutPage = React.lazy(() => import('./pages/public/AboutPage'));
+const ContactPage = React.lazy(() => import('./pages/public/ContactPage'));
+const NotFoundPage = React.lazy(() => import('./pages/public/NotFoundPage'));
+const OrderSuccessPage = React.lazy(() => import('./pages/public/OrderSuccessPage'));
 
 const CategoryPage = React.lazy(() => import('./pages/public/CategoryPage'));
 const ProductDetail = React.lazy(() => import('./pages/public/ProductDetail'));
@@ -27,6 +31,35 @@ const RegisterPage = React.lazy(() => import('./pages/auth/RegisterPage'));
 const ProfilePage = React.lazy(() => import('./pages/user/ProfilePage'));
 const AdminDashboard = React.lazy(() => import('./pages/admin/Dashboard'));
 const ResourceManagerPage = React.lazy(() => import('./pages/admin/ResourceManager'));
+
+const AppLayout = ({ children, t }: { children: React.ReactNode; t: (key: string) => string }) => {
+  const { pathname } = useLocation();
+  const isAdmin = pathname.startsWith('/admin');
+
+  if (isAdmin) {
+    return (
+      <main className="min-h-screen bg-[#f4f7f6]">
+        <Suspense fallback={<div className="flex h-screen items-center justify-center bg-[#f4f7f6] uppercase font-black text-xs tracking-widest text-gray-400">{t('status.loading')}...</div>}>
+          {children}
+        </Suspense>
+      </main>
+    );
+  }
+
+  return (
+    <>
+      <Navbar />
+      <main className="min-h-[80vh] bg-gray-50">
+        <Suspense fallback={<div className="flex p-20 justify-center">{t('status.loading')}</div>}>
+          {children}
+        </Suspense>
+      </main>
+      <Footer />
+      <FloatingContact />
+    </>
+  );
+};
+
 
 function App() {
   const { t } = useTranslation();
@@ -70,44 +103,66 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Navbar />
+      <AppLayout t={t}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/blog" element={<BlogList />} />
+          <Route path="/blog/:slug" element={<BlogDetail />} />
+          <Route path="/brand/:slug" element={<BrandPage />} />
+          <Route path="/dealer" element={<DealerPage />} />
+          <Route path="/video" element={<VideoPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/order-success" element={<OrderSuccessPage />} />
+          <Route path="/categories/:slug" element={<CategoryPage />} />
+          <Route path="/categories" element={<CategoryPage />} />
+          <Route path="/products/:slug" element={<ProductDetail />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route
+            path="/admin"
+            element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/admin/manage/:entityId"
+            element={user?.role === 'admin' ? <ResourceManagerPage /> : <Navigate to="/login" replace />}
+          />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </AppLayout>
 
-      <main className="min-h-[80vh] bg-gray-50">
-        <Suspense fallback={<div className="flex p-20 justify-center">{t('status.loading')}</div>}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/blog" element={<BlogList />} />
-            <Route path="/blog/:slug" element={<BlogDetail />} />
-            <Route path="/brand/:slug" element={<BrandPage />} />
-            <Route path="/dealer" element={<DealerPage />} />
-            <Route path="/video" element={<VideoPage />} />
-            <Route path="/categories/:slug" element={<CategoryPage />} />
-            <Route path="/products/:slug" element={<ProductDetail />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route
-              path="/admin"
-              element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/login" replace />}
-            />
-            <Route
-              path="/admin/manage/:entityId"
-              element={user?.role === 'admin' ? <ResourceManagerPage /> : <Navigate to="/login" replace />}
-            />
-          </Routes>
-        </Suspense>
-      </main>
-      
-      <Footer />
-      <FloatingContact />
       <Toaster
         position="top-right"
-        gutter={10}
-        containerStyle={{ top: 20, right: 20 }}
+        gutter={12}
+        containerStyle={{ top: 40, right: 40 }}
         toastOptions={{
-          duration: 3200,
+          duration: 4000,
+          className: 'premium-toast',
+          style: {
+            background: '#ffffff',
+            color: '#1a202c',
+            padding: '16px 24px',
+            borderRadius: '16px',
+            fontSize: '14px',
+            fontWeight: '600',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
+            border: '1px border border-gray-100',
+          },
+          success: {
+            iconTheme: {
+              primary: '#0da487',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
         }}
       />
     </BrowserRouter>

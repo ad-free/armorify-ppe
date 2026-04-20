@@ -13,13 +13,8 @@ export const DiscountBadge: React.FC<Props> = ({ price, compareAtPrice }) => {
   if (pct <= 0) return null;
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-muted-foreground line-through text-sm">
-        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(compareAtPrice))}
-      </span>
-      <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
-        -{pct}%
-      </span>
-    </div>
+    <span className="bg-rose-600 text-white text-xs font-black px-2.5 py-1 rounded-full shadow-md tracking-wide">
+      −{pct}%
+    </span>
   );
 };

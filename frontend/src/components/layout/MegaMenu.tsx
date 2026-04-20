@@ -1,10 +1,20 @@
-// src/components/layout/MegaMenu.tsx
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, HardHat, Shirt, Shield, Glasses, Wrench, Zap, Footprints, Headphones } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useBrands, useCategories } from '@/hooks/useCatalog';
+import { useCategories } from '@/hooks/useCatalog';
 import type { CategoryRead } from '@/types/api';
+
+const ICON_MAP: Record<string, React.ElementType> = {
+  'mu-bao-ho': HardHat,
+  'quan-ao-bao-ho': Shirt,
+  'gang-tay': Shield,
+  'kinh-bao-ho': Glasses,
+  'giay-bao-ho': Footprints,
+  'thiet-bi-dien': Zap,
+  'dung-cu': Wrench,
+  'chong-on': Headphones,
+};
 
 interface CategoryNode extends CategoryRead {
   children: CategoryNode[];
@@ -15,141 +25,138 @@ interface Props {
   onClose?: () => void;
 }
 
-export const MegaMenu: React.FC<Props> = ({ isOpen, onClose }) => {
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+export const MegaMenu: React.FC<Props> = ({ isOpen: _isOpen, onClose }) => {
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  const { data: brandData } = useBrands();
-  const brands = brandData?.items || [];
-  
   const { data: catData } = useCategories();
-
-  // Build the tree (Parent/Child structure)
   const tree = useMemo(() => {
     const categoriesList = catData || [];
     const map = new Map<string, CategoryNode>();
     const roots: CategoryNode[] = [];
-
     categoriesList.forEach(c => map.set(c.id, { ...c, children: [] }));
-    
     categoriesList.forEach(c => {
       const node = map.get(c.id)!;
       if (c.parent_id && c.parent_id !== c.id) {
         const parent = map.get(c.parent_id);
-        if (parent) {
-          parent.children.push(node);
-          return;
-        }
+        if (parent) { parent.children.push(node); return; }
       }
       roots.push(node);
     });
     return roots;
   }, [catData]);
 
-  // If the parent Navbar says it's closed, render nothing
-  if (!isOpen) return null;
+  // Use the first category as default if none selected
+  const activeNodeId = selectedNodeId || (tree.length > 0 ? tree[0].id : null);
+  
+  // Update state whenever we change selection
+  const handleSelectNode = (id: string) => setSelectedNodeId(id);
 
   return (
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 10 }}
-      transition={{ duration: 0.2 }}
-      className="bg-white shadow-2xl border-t-0 border border-gray-100 flex text-gray-900 rounded-b-xl overflow-hidden min-h-[400px]"
+      exit={{ opacity: 0, y: 15 }}
+      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+      className="bg-white shadow-[0_30px_100px_rgba(0,0,0,0.2)] border border-gray-100 flex text-gray-900 rounded-b-3xl overflow-hidden w-[950px] min-w-[950px] min-h-[400px] origin-top"
     >
-      {/* LEFT COLUMN: Vertical Root Categories */}
-      <div className="w-1/3 border-r bg-gray-50 flex flex-col py-2">
-        {tree.map(node => (
-          <div
-            key={node.id}
-            onMouseEnter={() => setHoveredNodeId(node.id)}
-            className={`px-6 py-3 cursor-pointer flex justify-between items-center transition-colors ${
-              hoveredNodeId === node.id ? 'bg-white text-primary font-bold shadow-sm relative z-10' : 'hover:bg-gray-100 hover:text-primary font-medium'
-            }`}
-          >
-            <Link to={`/categories/${node.slug}`} onClick={onClose} className="flex-1">
-              {node.name}
-            </Link>
-            {node.children.length > 0 && <ChevronRight size={16} className="text-gray-400" />}
-          </div>
-        ))}
-        {tree.length === 0 && (
-          <div className="px-6 py-4 text-gray-400 text-sm">Đang tải danh mục...</div>
-        )}
+
+      {/* LEFT COLUMN: Root Categories */}
+      <div className="w-[300px] border-r border-gray-50 bg-[#f9fbfb] flex flex-col py-4 relative z-10 shrink-0">
+        {tree.map(node => {
+          const isSelected = activeNodeId === node.id;
+          const Icon = ICON_MAP[node.slug] || Shield;
+          return (
+            <div
+              key={node.id}
+              onMouseEnter={() => handleSelectNode(node.id)}
+              onClick={() => handleSelectNode(node.id)}
+              className={`relative px-8 py-4 cursor-pointer flex justify-between items-center transition-all group ${
+                isSelected ? 'bg-white text-primary' : 'text-gray-600 hover:text-primary hover:bg-white/50'
+              }`}
+            >
+              {/* Active Indicator Bar */}
+              {isSelected && (
+                <motion.div 
+                  layoutId="activeCategory"
+                  className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary rounded-r-full shadow-[2px_0_10px_rgba(13,164,135,0.3)]"
+                />
+              )}
+
+              <div className="flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isSelected ? 'bg-primary/10' : 'bg-gray-100 group-hover:bg-primary/5'}`}>
+                  <Icon size={20} className={isSelected ? 'text-primary' : 'text-gray-400 group-hover:text-primary'} />
+                </div>
+                <span className={`text-[15px] tracking-tight ${isSelected ? 'font-bold text-slate-800' : 'font-semibold text-slate-500'}`}>{node.name}</span>
+              </div>
+              <ChevronRight size={16} className={`transition-transform duration-300 ${isSelected ? 'translate-x-1 opacity-100 text-primary' : 'opacity-20 translate-x-0'}`} />
+            </div>
+          );
+        })}
       </div>
 
-      {/* RIGHT COLUMN: Children & Brands (Depends on hovered node) */}
-      <div className="w-2/3 p-8 bg-white relative">
+      {/* RIGHT COLUMN: Spilling Content */}
+      <div className="flex-1 bg-white relative max-h-[550px] overflow-y-auto custom-scrollbar p-12">
         <AnimatePresence mode="wait">
-          {hoveredNodeId && (
-            <motion.div
-              key={hoveredNodeId}
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.15 }}
-              className="absolute inset-0 p-8 flex flex-col"
-            >
-              {(() => {
-                const activeNode = tree.find(n => n.id === hoveredNodeId);
-                if (!activeNode) return null;
+          <motion.div
+            key={activeNodeId}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+            className="grid grid-cols-2 gap-x-12 gap-y-12"
+          >
+            {(() => {
+              const activeNode = tree.find(n => n.id === activeNodeId);
+              if (!activeNode) return null;
 
-                return (
-                  <div className="flex gap-8 max-h-[350px] overflow-y-auto">
-                    {/* Sub Categories block */}
-                    {activeNode.children.length > 0 && (
-                      <div className="flex-1">
-                        <h3 className="font-extrabold border-b-2 border-primary inline-block pb-1 mb-4 text-gray-800">
-                          DANH MỤC CON
-                        </h3>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                          {activeNode.children.map(child => (
+              return (
+                <>
+                  {activeNode.children.map((child) => (
+                    <div key={child.id} className="flex flex-col group/col">
+                      <Link 
+                        to={`/categories/${child.slug}`}
+                        onClick={onClose}
+                        className="text-[17px] font-bold text-slate-800 mb-6 pb-2 border-b border-gray-100 block group-hover/col:text-primary transition-colors relative"
+                      >
+                        {child.name}
+                        <span className="absolute bottom-[-1px] left-0 w-0 h-0.5 bg-primary transition-all group-hover/col:w-full" />
+                      </Link>
+                      <ul className="space-y-4">
+                        {child.children.map((sub) => (
+                          <li key={sub.id} className="flex items-center gap-3 group/link">
+                            <motion.span 
+                              whileHover={{ scale: 1.5 }}
+                              className="w-1.5 h-1.5 rounded-full bg-gray-200 group-hover/link:bg-primary transition-colors" 
+                            />
                             <Link 
-                              key={child.id} 
-                              to={`/categories/${child.slug}`} 
+                              to={`/categories/${sub.slug}`}
                               onClick={onClose}
-                              className="text-gray-600 hover:text-primary hover:translate-x-1 transition-transform text-sm font-medium"
+                              className="text-[14px] font-semibold text-slate-500 hover:text-primary transition-colors"
                             >
-                              {child.name}
+                              {sub.name}
                             </Link>
-                          ))}
-                        </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                  {activeNode.children.length === 0 && (
+                    <div className="col-span-2 flex flex-col items-center justify-center py-24 text-gray-300">
+                      <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                         <Shield size={32} className="opacity-20" />
                       </div>
-                    )}
-
-                    {/* Featured Brands Demo Block */}
-                    {brands.length > 0 && (
-                      <div className="w-48 flex-shrink-0">
-                        <h3 className="font-extrabold border-b-2 border-gray-800 inline-block pb-1 mb-4 text-gray-800">
-                          THƯƠNG HIỆU
-                        </h3>
-                        <div className="space-y-3">
-                          {brands.slice(0, 5).map(brand => (
-                            <Link 
-                              key={brand.id} 
-                              to={`/brand/${brand.slug}`} 
-                              onClick={onClose}
-                              className="block p-2 border rounded-md hover:border-primary text-center hover:shadow-sm"
-                            >
-                              <span className="text-xs font-bold text-gray-700">{brand.name}</span>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </motion.div>
-          )}
+                      <p className="text-[13px] font-black uppercase tracking-widest">Không có danh mục con</p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </motion.div>
         </AnimatePresence>
-
-        {/* Empty state when nothing is hovered */}
-        {!hoveredNodeId && (
-          <div className="flex items-center justify-center h-full text-gray-400 font-medium">
-            Di chuột vào danh mục bên trái để xem chi tiết
-          </div>
-        )}
       </div>
     </motion.div>
   );
 };
+
+
+
