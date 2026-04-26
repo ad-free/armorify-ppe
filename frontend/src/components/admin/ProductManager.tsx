@@ -106,8 +106,9 @@ const ProductImageManager = ({ productId }: { productId: string }) => {
 };
 
 const ProductVariantManager = ({ productId }: { productId: string }) => {
-  const { items, isLoading, remove, create } = useGenericResource('variant', { limit: 100 });
+  const { items, isLoading, remove, create, update } = useGenericResource('variant', { limit: 100 });
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [sku, setSku] = useState('');
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
@@ -115,16 +116,40 @@ const ProductVariantManager = ({ productId }: { productId: string }) => {
 
   const productVariants = (items || []).filter((v: Record<string, unknown>) => (v as unknown as ProductVariantNode).product_id === productId) as unknown as ProductVariantNode[];
 
-  const handleAdd = async () => {
+  const handleSave = async () => {
     if (!sku) return;
-    await create({
+    const payload = {
       product_id: productId,
       sku,
       size: size || null,
       color: color || null,
       stock,
-    });
+    };
+    if (editingId) {
+      await update({ id: editingId, data: payload });
+    } else {
+      await create(payload);
+    }
     setAdding(false);
+    setEditingId(null);
+    setSku('');
+    setSize('');
+    setColor('');
+    setStock(0);
+  };
+
+  const startEdit = (v: ProductVariantNode) => {
+    setSku(v.sku);
+    setSize(v.size || '');
+    setColor(v.color || '');
+    setStock(v.stock);
+    setEditingId(v.id);
+    setAdding(true);
+  };
+
+  const cancelEdit = () => {
+    setAdding(false);
+    setEditingId(null);
     setSku('');
     setSize('');
     setColor('');
@@ -140,7 +165,9 @@ const ProductVariantManager = ({ productId }: { productId: string }) => {
         </div>
         <button
           className="px-6 py-3 bg-primary/10 text-primary font-black rounded-xl hover:bg-primary hover:text-white transition-all text-xs uppercase tracking-widest shadow-sm"
-          onClick={() => setAdding(true)}
+          onClick={() => {
+            setSku(''); setSize(''); setColor(''); setStock(0); setEditingId(null); setAdding(true);
+          }}
         >
           Thêm biến thể mới
         </button>
@@ -170,8 +197,10 @@ const ProductVariantManager = ({ productId }: { productId: string }) => {
             </div>
           </div>
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100">
-             <button onClick={() => setAdding(false)} className="px-6 py-3 text-xs font-black text-gray-400 uppercase tracking-widest hover:text-rose-500 transition-colors">Hủy bỏ</button>
-             <button onClick={handleAdd} className="px-8 py-3 bg-primary text-white font-black rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95">Lưu biến thể</button>
+             <button onClick={cancelEdit} className="px-6 py-3 text-xs font-black text-gray-400 uppercase tracking-widest hover:text-rose-500 transition-colors">Hủy bỏ</button>
+             <button onClick={handleSave} className="px-8 py-3 bg-primary text-white font-black rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95">
+               {editingId ? 'Cập nhật' : 'Lưu biến thể'}
+             </button>
           </div>
         </div>
       )}
@@ -187,7 +216,7 @@ const ProductVariantManager = ({ productId }: { productId: string }) => {
                 <th className="px-4 py-3 font-semibold text-slate-800">Color</th>
                 <th className="px-4 py-3 font-semibold text-slate-800">Size</th>
                 <th className="px-4 py-3 font-semibold text-slate-800">Stock</th>
-                <th className="px-4 py-3 font-semibold text-slate-800 w-16 text-right">Actions</th>
+                <th className="px-4 py-3 font-semibold text-slate-800 w-24 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -222,7 +251,10 @@ const ProductVariantManager = ({ productId }: { productId: string }) => {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => remove(v.id)} className="text-rose-600 hover:text-rose-800 font-medium text-xs">Delete</button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button onClick={() => startEdit(v)} className="text-indigo-600 hover:text-indigo-800 font-medium text-xs">Edit</button>
+                        <button onClick={() => remove(v.id)} className="text-rose-600 hover:text-rose-800 font-medium text-xs">Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))

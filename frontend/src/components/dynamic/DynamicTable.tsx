@@ -254,9 +254,21 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
 };
 
 const renderCell = (value: unknown, schema: PropertySchema, t: (key: string, options?: Record<string, unknown>) => string, key: string) => {
-  if (value === null || value === undefined) return <span className="text-slate-200 font-bold italic text-[11px]">N/A</span>;
+  if (value === null || value === undefined || value === '') return <span className="text-slate-200 font-bold italic text-[11px]">N/A</span>;
 
   const stringValue = String(value);
+
+  // 0. Handle Images
+  const normalizedKey = key.toLowerCase();
+  if (typeof value === 'string' && (normalizedKey.includes('image') || normalizedKey.includes('logo') || normalizedKey.includes('avatar') || normalizedKey.includes('picture'))) {
+    if (value.startsWith('http') || value.startsWith('/') || value.startsWith('data:image')) {
+      return (
+        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 shrink-0 shadow-sm hover:scale-110 transition-transform">
+          <img src={value} alt="" className="w-full h-full object-cover" />
+        </div>
+      );
+    }
+  }
 
   // 1. Handle Boolean (Status/Active)
   if (schema.type === 'boolean' && typeof value === 'boolean') {

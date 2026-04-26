@@ -129,6 +129,8 @@ export const useEntitySchema = (entityName: string, mode: SchemaMode = 'read') =
         'branch': 'Brand',
         'product_image': 'ProductImage',
         'product-image': 'ProductImage',
+        'quote': 'QuoteRequest',
+        'banner': 'Banner',
       };
 
       // 2. Identify the base name (either from map or capitalized)

@@ -52,8 +52,10 @@
       "product_image": "Hình ảnh sản phẩm",
       "order": "Đơn hàng",
       "user": "Người dùng",
-      "blog": "Bài viết",
-      "branch": "Chi nhánh"
+      "blog": "Tin tức & Trang",
+      "brand": "Thương hiệu",
+      "banner": "Banner & Video",
+      "quote": "Báo giá"
     },
     "exit": "Thoát Admin",
     "dashboard": {

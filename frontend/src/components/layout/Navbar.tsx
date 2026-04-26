@@ -1,12 +1,13 @@
 // src/components/layout/Navbar.tsx
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, NavLink } from 'react-router-dom';
 import { Search, ShoppingCart, User, Menu, Phone, Mail, LogOut, LayoutDashboard, MapPin, Zap, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence } from 'framer-motion';
 import { MegaMenu } from './MegaMenu';
 import { useAuthStore } from '@/store/authStore';
+import { useCartStore } from '@/store/cartStore';
 import { authToast } from '@/lib/toast';
 
 export const Navbar: React.FC = () => {
@@ -14,6 +15,7 @@ export const Navbar: React.FC = () => {
   const categoryMenuTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = React.useRef<HTMLDivElement>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const handleCategoryMenuOpen = () => {
     if (categoryMenuTimeoutRef.current) clearTimeout(categoryMenuTimeoutRef.current);
@@ -28,6 +30,20 @@ export const Navbar: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const items = useCartStore((state) => state.items);
+  
+  const totalItems = items.reduce((total, item) => total + item.quantity, 0);
+  const totalPrice = items.reduce((total, item) => {
+    const unit = item.unit_price ?? item.product.price;
+    return total + unit * item.quantity;
+  }, 0);
+
+  const formatMoney = (value: number) =>
+    new Intl.NumberFormat(i18n.language === 'vi' ? 'vi-VN' : 'en-US', {
+      style: 'currency',
+      currency: 'VND',
+      maximumFractionDigits: 0,
+    }).format(value);
 
   // Close profile dropdown when clicking outside
   React.useEffect(() => {
@@ -44,6 +60,13 @@ export const Navbar: React.FC = () => {
     };
   }, [isProfileOpen]);
 
+  // Sticky scroll detection
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleLanguageChange = (lang: 'vi' | 'en') => {
     localStorage.setItem('armorify-lang', lang);
     void i18n.changeLanguage(lang);
@@ -57,7 +80,7 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="w-full bg-white flex flex-col z-50 relative font-sans">
+    <header className={`w-full bg-white flex flex-col z-50 sticky top-0 font-sans transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_24px_rgba(0,0,0,0.08)]' : ''}`}>
       {/* Top Utility Bar (FastKart style: light grey, thin) */}
       <div className="bg-[#f8f8f8] py-2 border-b border-gray-200 hidden md:block">
         <div className="container mx-auto px-4 max-w-7xl flex flex-wrap justify-between items-center text-[13px] text-gray-500 font-medium">
@@ -183,12 +206,12 @@ export const Navbar: React.FC = () => {
                 <ShoppingCart size={24} strokeWidth={2.5}/>
               </div>
               <span className="absolute -top-2 -right-2 bg-[#ffa53b] text-white text-[11px] min-w-[20px] h-[20px] px-1.5 rounded-full flex items-center justify-center font-black shadow-[0_3px_10px_rgba(255,165,59,0.3)] border-2 border-white">
-                0
+                {totalItems}
               </span>
             </div>
             <div className="hidden sm:flex flex-col text-left">
               <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">Giỏ hàng</span>
-              <span className="text-[15px] font-black text-gray-900 leading-none group-hover:text-primary transition-colors">0đ</span>
+              <span className="text-[15px] font-black text-gray-900 leading-none group-hover:text-primary transition-colors">{formatMoney(totalPrice)}</span>
             </div>
           </Link>
 
@@ -226,30 +249,37 @@ export const Navbar: React.FC = () => {
 
 
             {/* Quick Links */}
-            <nav className="flex items-center gap-10 ml-10">
+            <nav className="flex items-center gap-8 ml-10">
               {[
-                { to: '/', label: 'Home' },
-                { to: '/categories', label: 'Shop' },
-                { to: '/categories/giay-bao-ho', label: 'Giày Bảo Hộ' },
-                { to: '/categories/quan-ao-bao-ho', label: 'Quần Áo' },
-                { to: '/brand/3m', label: 'Thương Hiệu' },
-                { to: '/blog', label: 'Tin Tức' },
+                { to: '/', label: 'Trang Chủ', end: true },
+                { to: '/categories', label: 'Sản Phẩm', end: false },
+                { to: '/brand', label: 'Thương Hiệu', end: false },
+                { to: '/dealer', label: 'Đại Lý', end: false },
+                { to: '/blog', label: 'Tin Tức', end: false },
+                { to: '/contact', label: 'Liên Hệ', end: false },
               ].map((link) => (
-                <Link 
-                  key={link.to} 
-                  to={link.to} 
-                  className="text-[15px] font-black text-gray-700 hover:text-primary transition-colors py-5 relative group"
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.end}
+                  className={({ isActive }) =>
+                    `text-[14px] font-bold transition-colors py-4 relative group whitespace-nowrap ${
+                      isActive ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                    }`
+                  }
                 >
-                  {link.label}
-                  <span className="absolute bottom-4 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
-                </Link>
+                  {({ isActive }) => (
+                    <>
+                      {link.label}
+                      <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${
+                        isActive ? 'w-full' : 'w-0 group-hover:w-full'
+                      }`} />
+                    </>
+                  )}
+                </NavLink>
               ))}
             </nav>
           </div>
-          
-          <Link to="/flash-sale" className="flex items-center gap-2 text-primary font-black hover:opacity-80 transition-all text-sm tracking-tight">
-            <Zap size={18} className="fill-primary" /> DEAL TODAY
-          </Link>
         </div>
       </div>
 

@@ -37,5 +37,9 @@ export const trackOrderSchema = z.object({
 });
 
 export const guestOrderSchema = z.object({
-  contact_phone: z.string().min(10, 'Số điện thoại không hợp lệ').max(11)
+  fullname: z.string().min(2, 'Vui lòng nhập họ tên'),
+  contact_phone: z.string().min(10, 'Số điện thoại không hợp lệ').max(11),
+  address: z.string().min(10, 'Vui lòng nhập địa chỉ giao hàng chi tiết'),
+  note: z.string().optional(),
+  payment_method: z.enum(['cod', 'transfer']).default('cod'),
 });

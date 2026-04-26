@@ -203,6 +203,7 @@ export interface GuestOrderItemCreate {
 
 export interface GuestOrderCreate {
   contact_phone: string;
+  customer_name?: string | null;
   items: GuestOrderItemCreate[];
 }
 
@@ -211,6 +212,7 @@ export interface OrderRead {
   user_id: string | null;
   order_code: string;
   contact_phone: string;
+  customer_name: string | null;
   total_amount: number;
   status: string;
   is_active: boolean;

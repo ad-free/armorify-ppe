@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, Controller, ControllerRenderProps, FieldValues } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { Columns } from 'lucide-react';
 import { EntitySchema, PropertySchema } from '../../hooks/useSchema';
 import { genericApiClient } from '../../api/generic';
+import { RichTextEditor } from '../ui/RichTextEditor';
 
 interface DynamicFormProps {
   entityName: string;
@@ -636,16 +638,14 @@ const FormFieldAdapter = ({
 
   if (type === 'rich-text') {
     return (
-      <textarea
-        {...field}
-        rows={8}
-        placeholder={placeholder}
-        className={`${commonClasses} font-mono text-sm leading-relaxed resize-y`}
-        onChange={(e) => {
-          onManualEdit?.();
-          field.onChange(e.target.value);
-        }}
+      <RichTextEditor
         value={field.value ?? ''}
+        onChange={(val) => {
+          onManualEdit?.();
+          field.onChange(val);
+        }}
+        placeholder={placeholder}
+        className=""
       />
     );
   }

@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { ShoppingCart, Heart, Eye } from 'lucide-react';
 import { ProductRead } from '@/types/api';
 import { StarRating } from './StarRating';
+import toast from 'react-hot-toast';
+import { useCartStore } from '@/store/cartStore';
 
 interface ProductCardProps {
   product: ProductRead;
@@ -12,6 +14,7 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { i18n } = useTranslation();
+  const addItem = useCartStore((s) => s.addItem);
 
   const fmt = (value: number) =>
     new Intl.NumberFormat(i18n.language === 'vi' ? 'vi-VN' : 'en-US', {
@@ -129,7 +132,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Action Button */}
         <div className="mt-5 pt-4 border-t border-gray-100/60">
-          <button className="w-full py-3 bg-gray-50 text-gray-600 font-black text-[11px] rounded-[1.1rem] flex items-center justify-center gap-2.5 border border-gray-100 group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:shadow-lg group-hover:shadow-primary/30 transition-all duration-300 active:scale-95 uppercase tracking-widest">
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              addItem(product, 1);
+              toast.success(`Đã thêm ${product.name} vào giỏ hàng!`, {
+                icon: '🛒',
+                style: {
+                  borderRadius: '10px',
+                  background: '#333',
+                  color: '#fff',
+                },
+              });
+            }}
+            className="w-full py-3 bg-gray-50 text-gray-600 font-black text-[11px] rounded-[1.1rem] flex items-center justify-center gap-2.5 border border-gray-100 group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:shadow-lg group-hover:shadow-primary/30 transition-all duration-300 active:scale-95 uppercase tracking-widest"
+          >
             <ShoppingCart size={16} strokeWidth={2.5} className="group-hover:rotate-12 transition-transform" />
             THÊM<span className="hidden sm:inline">VÀO GIỎ</span>
           </button>

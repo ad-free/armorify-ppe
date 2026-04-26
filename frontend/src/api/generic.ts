@@ -130,10 +130,10 @@ export const useGenericResource = (entityName: string, params: QueryParams = { s
     mutationFn: (data: Record<string, unknown>) => genericApiClient.create(entityName, data),
     onSuccess: () => {
       invalidateEntityQueries();
-      authToast.success('Thành công', `Đã tạo ${entityName} mới thành công!`);
+      authToast.success('Đã tạo thành công', `Bản ghi ${entityName} mới đã được lưu.`);
     },
     onError: (err: { message?: string }) => {
-      authToast.error('Thất bại', `Lỗi khi tạo ${entityName}: ` + (err.message || 'Không rõ nguyên nhân'));
+      authToast.error('Lỗi khi tạo', err.message || 'Không rõ nguyên nhân');
     }
   });
 
@@ -142,10 +142,10 @@ export const useGenericResource = (entityName: string, params: QueryParams = { s
       genericApiClient.update(entityName, id, data),
     onSuccess: () => {
       invalidateEntityQueries();
-      authToast.success('Thành công', `Đã cập nhật ${entityName} thành công!`);
+      authToast.success('Đã cập nhật', 'Các thay đổi đã được lưu lại.');
     },
     onError: (err: { message?: string }) => {
-      authToast.error('Thất bại', `Lỗi khi cập nhật ${entityName}: ` + (err.message || 'Không rõ nguyên nhân'));
+      authToast.error('Lỗi cập nhật', err.message || 'Không rõ nguyên nhân');
     }
   });
 
@@ -153,10 +153,10 @@ export const useGenericResource = (entityName: string, params: QueryParams = { s
     mutationFn: (id: string | number) => genericApiClient.delete(entityName, id),
     onSuccess: () => {
       invalidateEntityQueries();
-      authToast.success('Thành công', `Đã xoá ${entityName} thành công!`);
+      authToast.success('Đã xoá thành công', 'Dữ liệu đã được gỡ bỏ.');
     },
     onError: (err: { message?: string }) => {
-      authToast.error('Thất bại', `Lỗi khi xoá ${entityName}: ` + (err.message || 'Không rõ nguyên nhân'));
+      authToast.error('Lỗi khi xoá', err.message || 'Không rõ nguyên nhân');
     }
   });
 

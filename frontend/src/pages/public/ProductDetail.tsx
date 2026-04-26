@@ -1,6 +1,7 @@
 // src/pages/public/ProductDetail.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -76,18 +77,24 @@ const ProductDetail: React.FC = () => {
 
   const effectiveStock = useMemo(() => {
     if (!product) return 0;
-    if (activeVariant) return activeVariant.stock;
-    return product.stock;
-  }, [product, activeVariant]);
+    if (variants && variants.length > 0) {
+      if (activeVariant) return activeVariant.stock;
+      // If variants exist but none selected, sum their stocks to see if ANY is available
+      return variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    }
+    return product.stock || 0;
+  }, [product, variants, activeVariant]);
 
   const primarySku = activeVariant?.sku ?? variants?.[0]?.sku ?? '—';
 
   const stockState = useMemo(() => {
     if (!product) return 'out' as const;
     if (effectiveStock <= 0) return 'out' as const;
+    // If there are variants and user hasn't selected one, we don't know the exact stock yet, but we know it's > 0 (handled above)
+    if (variants && variants.length > 0 && !activeVariant) return 'in' as const;
     if (effectiveStock <= 5) return 'low' as const;
     return 'in' as const;
-  }, [product, effectiveStock]);
+  }, [product, effectiveStock, variants, activeVariant]);
 
   const maxQty = product ? Math.min(99, Math.max(1, effectiveStock)) : 1;
 
@@ -99,7 +106,12 @@ const ProductDetail: React.FC = () => {
 
   const safeDescriptionHtml = useMemo(() => {
     if (!product?.description) return '';
-    return DOMPurify.sanitize(product.description, { USE_PROFILES: { html: true } });
+    try {
+      const parsed = marked.parse(product.description, { async: false }) as string;
+      return DOMPurify.sanitize(parsed, { USE_PROFILES: { html: true } });
+    } catch (e) {
+      return DOMPurify.sanitize(product.description, { USE_PROFILES: { html: true } });
+    }
   }, [product?.description]);
 
   const onSale = Boolean(

@@ -28,6 +28,7 @@ class Order(BaseMixin, Base):
     )
     order_code: Mapped[str] = mapped_column(String(64), nullable=False)
     contact_phone: Mapped[str] = mapped_column(String(32), nullable=False)
+    customer_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     total_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     status: Mapped[OrderStatus] = mapped_column(
         Enum(

@@ -47,7 +47,7 @@ class ProductBase(BaseModel):
     is_featured: Optional[bool] = False
     category_id: UUID
     specifications: Optional[Any] = None
-    cover_image_url: str | None = Field(default=None, json_schema_extra={"x-ui-hidden": True})
+    cover_image_url: str | None = None
 
 
 class ProductCreate(ProductBase):
@@ -57,7 +57,7 @@ class ProductCreate(ProductBase):
 class ProductUpdate(BaseModel):
     name: str | None = None
     slug: str | None = None
-    description: str | None = None
+    description: str | None = Field(default=None, json_schema_extra={"x-ui-widget": "rich-text"})
     price: Optional[float] = None
     dealer_price: Optional[float] = None
     compare_at_price: Optional[float] = None
@@ -65,7 +65,7 @@ class ProductUpdate(BaseModel):
     is_featured: Optional[bool] = None
     category_id: UUID | None = None
     specifications: Optional[Any] = None
-    cover_image_url: str | None = Field(default=None, json_schema_extra={"x-ui-hidden": True})
+    cover_image_url: str | None = None
 
 
 class ProductBrandRead(BaseModel):

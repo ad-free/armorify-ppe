@@ -3,6 +3,7 @@ import React from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 import { SeoHead } from '@/components/common/SeoHead';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { useBlogPost, useBlogPosts } from '@/hooks/useBlog';
@@ -89,7 +90,17 @@ const BlogDetail: React.FC = () => {
 
         <div 
           className="prose prose-lg max-w-none prose-img:rounded-lg mb-16 prose-a:text-primary hover:prose-a:text-primary/80 prose-headings:text-gray-900"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.body) }}
+          dangerouslySetInnerHTML={{ 
+            __html: DOMPurify.sanitize(
+              (function() {
+                try {
+                  return marked.parse(post.body, { async: false }) as string;
+                } catch {
+                  return post.body;
+                }
+              })()
+            ) 
+          }}
         />
         
         {/* Related Posts */}

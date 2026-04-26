@@ -52,8 +52,10 @@
       "product_image": "Product Images",
       "order": "Orders",
       "user": "Users",
-      "blog": "Blog Posts",
-      "branch": "Branches"
+      "blog": "News & Pages",
+      "brand": "Brands",
+      "banner": "Banners & Videos",
+      "quote": "Quotes"
     },
     "exit": "Exit Admin",
     "dashboard": {

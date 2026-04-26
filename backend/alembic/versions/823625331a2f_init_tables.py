@@ -116,6 +116,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.UUID(), nullable=True),
         sa.Column("order_code", sa.String(64), nullable=False),
         sa.Column("contact_phone", sa.String(32), nullable=False),
+        sa.Column("customer_name", sa.String(128), nullable=True),
         sa.Column("total_amount", sa.Numeric(12, 2), nullable=False),
         sa.Column("status", sa.Enum("pending", "confirmed", "shipped", "delivered", "cancelled", name="order_status"), server_default=sa.text("'pending'"), nullable=False),
         sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
