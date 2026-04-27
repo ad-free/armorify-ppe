@@ -46,7 +46,7 @@ class ProductBase(BaseModel):
     stock: Optional[int] = 0
     is_featured: Optional[bool] = False
     category_id: UUID
-    specifications: Optional[Any] = None
+    specifications: Optional[dict[str, Any]] = None
     cover_image_url: str | None = None
 
 
@@ -64,7 +64,7 @@ class ProductUpdate(BaseModel):
     stock: Optional[int] = None
     is_featured: Optional[bool] = None
     category_id: UUID | None = None
-    specifications: Optional[Any] = None
+    specifications: Optional[dict[str, Any]] = None
     cover_image_url: str | None = None
 
 

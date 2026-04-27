@@ -1,6 +1,5 @@
-// src/hooks/useAuth.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { loginUser, registerUser, getMe } from '@/api/auth';
+import { loginUser, registerUser, getMe, updateMe, changePassword } from '@/api/auth';
 import type { LoginRequest, RegisterRequest } from '@/types/api';
 import { useAuthStore } from '@/store/authStore';
 
@@ -38,4 +37,23 @@ export const useLogout = () => {
     logout();
     queryClient.clear();
   };
+};
+
+export const useUpdateMe = () => {
+  const setUser = useAuthStore(state => state.setUser);
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (body: any) => updateMe(body),
+    onSuccess: (user) => {
+      setUser(user);
+      queryClient.invalidateQueries({ queryKey: ['auth-me'] });
+    }
+  });
+};
+
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: (body: any) => changePassword(body)
+  });
 };

@@ -15,10 +15,18 @@ function normalizeSpecs(raw: unknown): SpecRow[] {
     });
   }
   if (typeof raw === 'object') {
-    return Object.entries(raw as Record<string, unknown>).map(([k, v]) => ({
-      label: k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-      value: v === null || v === undefined ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v),
-    }));
+    return Object.entries(raw as Record<string, unknown>).map(([k, v]) => {
+      // If the key looks like a slug (has underscores, no spaces), normalize it.
+      // Otherwise, assume it's a user-entered label and keep it as is.
+      const label = (!k.includes(' ') && k.includes('_'))
+        ? k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+        : k;
+
+      return {
+        label,
+        value: v === null || v === undefined ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v),
+      };
+    });
   }
   return [];
 }
@@ -40,18 +48,24 @@ export const ProductSpecifications: React.FC<ProductSpecificationsProps> = ({ sp
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="w-full text-sm">
-        <tbody className="divide-y divide-slate-100">
+    <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_4px_25px_rgba(0,0,0,0.04)]">
+      <table className="w-full text-[13px] sm:text-sm border-collapse">
+        <tbody className="divide-y divide-slate-100/50">
           {rows.map((row, idx) => (
-            <tr key={`${row.label}-${idx}`} className="hover:bg-slate-50/80 transition-colors">
+            <tr key={`${row.label}-${idx}`} className="group hover:bg-slate-50/40 transition-all duration-300">
               <th
                 scope="row"
-                className="w-[38%] max-w-[220px] align-top px-4 py-3 text-left font-semibold text-slate-700 bg-slate-50/60 border-r border-slate-100"
+                className="w-[32%] sm:w-[28%] max-w-[200px] align-top px-6 py-5 text-left bg-slate-50/30 group-hover:bg-primary/5 transition-colors"
               >
-                {row.label}
+                <span className="font-bold text-slate-800 leading-snug break-words">
+                  {row.label}
+                </span>
               </th>
-              <td className="px-4 py-3 text-slate-600 leading-relaxed">{row.value}</td>
+              <td className="px-6 py-5 align-top">
+                <p className="text-slate-600 font-medium leading-relaxed break-words whitespace-pre-wrap">
+                  {row.value}
+                </p>
+              </td>
             </tr>
           ))}
         </tbody>

@@ -12,6 +12,8 @@ from app.core.settings import settings
 from app.models.user import User, UserRole, UserStatus
 from app.schemas.user import (
     LoginRequest,
+    MeUpdate,
+    PasswordChangeRequest,
     RefreshRequest,
     RegisterRequest,
     TokenResponse,
@@ -79,3 +81,24 @@ async def refresh_token(payload: RefreshRequest, db: DbSession) -> TokenResponse
 @router.get("/me", response_model=UserRead)
 async def me(current_user: CurrentUser) -> User:
     return current_user
+
+
+@router.patch("/me", response_model=UserRead)
+async def update_me(payload: MeUpdate, current_user: CurrentUser, db: DbSession) -> User:
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(current_user, field, value)
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+
+@router.post("/change-password")
+async def change_password(payload: PasswordChangeRequest, current_user: CurrentUser, db: DbSession) -> dict[str, str]:
+    if not current_user.password_hash or not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password incorrect")
+
+    current_user.password_hash = hash_password(payload.new_password)
+    db.add(current_user)
+    await db.commit()
+    return {"status": "password changed"}

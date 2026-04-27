@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, Controller, ControllerRenderProps, FieldValues } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Columns } from 'lucide-react';
+import { Columns, X } from 'lucide-react';
 import { EntitySchema, PropertySchema } from '../../hooks/useSchema';
 import { genericApiClient } from '../../api/generic';
 import { RichTextEditor } from '../ui/RichTextEditor';
+
+import { authToast } from '../../lib/toast';
 
 interface DynamicFormProps {
   entityName: string;
@@ -62,6 +64,39 @@ const PRICE_FIELDS = new Set(['price', 'dealer_price', 'compare_at_price', 'unit
 
 const SLUG_SOURCE_CANDIDATES = ['name', 'title', 'label'] as const;
 
+const CurrencyInput: React.FC<{ field: any; commonClasses: string }> = ({ field, commonClasses }) => {
+  const formatValue = (val: any) => {
+    if (val === undefined || val === null || val === '') return '';
+    const num = parseFloat(val.toString().replace(/[^0-9.]/g, ''));
+    if (isNaN(num)) return '';
+    return new Intl.NumberFormat('vi-VN').format(num);
+  };
+
+  const [displayValue, setDisplayValue] = useState(formatValue(field.value));
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/[^0-9]/g, '');
+    const numericValue = rawValue ? parseInt(rawValue, 10) : 0;
+    setDisplayValue(new Intl.NumberFormat('vi-VN').format(numericValue));
+    field.onChange(numericValue);
+  };
+
+  return (
+    <div className="relative group">
+      <input
+        type="text"
+        value={displayValue}
+        onChange={handleChange}
+        className={`${commonClasses} pr-16 font-black text-gray-900 tracking-wider text-base`}
+        placeholder="0"
+      />
+      <div className="absolute right-5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-gray-100 rounded-lg text-[10px] font-black text-gray-400 uppercase tracking-widest group-focus-within:bg-primary/10 group-focus-within:text-primary transition-colors">
+        VND
+      </div>
+    </div>
+  );
+};
+
 export const DynamicForm: React.FC<DynamicFormProps> = ({
   entityName,
   schema,
@@ -75,13 +110,13 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
   const [relationOptions, setRelationOptions] = useState<Record<string, RelationOption[]>>({});
 
-  const { 
-    control, 
-    handleSubmit, 
+  const {
+    control,
+    handleSubmit,
     watch,
     setValue,
     getValues,
-    formState: { errors } 
+    formState: { errors }
   } = useForm({
     defaultValues: initialData || {},
   });
@@ -222,79 +257,126 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
     await onSubmit(payload);
   });
 
+  const mainFieldKeys = new Set(['name', 'title', 'description', 'content', 'specifications', 'attributes', 'summary', 'body']);
+
+  const mainFields = fields.filter(([key, prop]) =>
+    mainFieldKeys.has(key) ||
+    prop.type === 'object' ||
+    prop.type === 'array' ||
+    prop['x-ui-widget'] === 'rich-text'
+  );
+
+  const sideFields = fields.filter(([key]) =>
+    !mainFields.some(([mKey]) => mKey === key)
+  );
+
+  const renderField = (key: string, prop: PropertySchema) => {
+    const fieldLabel = getFieldLabel(key, prop);
+    return (
+      <div key={key} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] mb-2.5">
+          {fieldLabel}{PRICE_FIELDS.has(key) ? ` (${t('generic.currency', 'VND')})` : ''}
+          {schema.required?.includes(key) && <span className="text-rose-500 ml-1.5">*</span>}
+        </label>
+
+        <Controller
+          name={key}
+          control={control}
+          rules={{ required: schema.required?.includes(key) }}
+          render={({ field }) => (
+            <FormFieldAdapter
+              fieldKey={key}
+              field={field}
+              fieldLabel={fieldLabel}
+              schema={prop}
+              relationOptions={relationOptions[key]}
+              onManualEdit={() => {
+                if (key === 'slug') {
+                  isSlugManuallyEdited.current = true;
+                }
+              }}
+              error={errors[key]?.message as string}
+            />
+          )}
+        />
+
+        {(prop.description || PRICE_FIELDS.has(key) || key === 'color' || RELATION_FIELDS[key]) && (
+          <p className="mt-2 text-[10px] text-gray-400 font-bold italic opacity-70 leading-relaxed">
+            {prop.description}
+          </p>
+        )}
+
+        {errors[key] && (
+          <p className="mt-2 text-[10px] text-rose-500 font-black uppercase tracking-tighter">{t('generic.fieldRequired')}</p>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <form onSubmit={handleFormSubmit} className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {fields.map(([key, prop]) => {
-          const fieldLabel = getFieldLabel(key, prop);
-          return (
-            <div key={key} className={prop.type === 'object' || prop.type === 'array' ? 'md:col-span-2' : ''}>
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
-                {fieldLabel}{PRICE_FIELDS.has(key) ? ` (${t('generic.currency', 'VND')})` : ''}
-                {schema.required?.includes(key) && <span className="text-rose-500 ml-1.5">*</span>}
-              </label>
-              
-              <Controller
-                name={key}
-                control={control}
-                rules={{ required: schema.required?.includes(key) }}
-                render={({ field }) => (
-                  <FormFieldAdapter 
-                    fieldKey={key}
-                    field={field} 
-                    fieldLabel={fieldLabel}
-                    schema={prop} 
-                    relationOptions={relationOptions[key]}
-                    onManualEdit={() => {
-                      if (key === 'slug') {
-                        isSlugManuallyEdited.current = true;
-                      }
-                    }}
-                    error={errors[key]?.message as string} 
-                  />
-                )}
-              />
-              
-              {(prop.description || PRICE_FIELDS.has(key) || key === 'color' || key === 'attributes' || (prop['x-ui-widget'] === 'password' && initialData) || RELATION_FIELDS[key]) && (
-                <p className="mt-2.5 text-[11px] text-gray-400 font-bold italic leading-relaxed opacity-80">
-                  {prop['x-ui-widget'] === 'password' && initialData 
-                    ? t('generic.leaveBlankToKeepPassword') + ' ' 
-                    : ''}
-                  {PRICE_FIELDS.has(key) ? t('generic.priceHint') + ' ' : ''}
-                  {key === 'color' ? t('generic.colorHint') + ' ' : ''}
-                  {key === 'attributes' ? t('generic.attributesHint') + ' ' : ''}
-                  {RELATION_FIELDS[key]
-                    ? `${(relationOptions[key]?.length || 0) > 0 ? RELATION_FIELDS[key].hint : RELATION_FIELDS[key].emptyMessage} `
-                    : ''}
-                  {prop.description}
-                </p>
-              )}
-              
-              {errors[key] && (
-                <p className="mt-2.5 text-[11px] text-rose-500 font-black uppercase tracking-tighter">{t('generic.fieldRequired')}</p>
-              )}
+    <form onSubmit={handleFormSubmit} className="space-y-10">
+      <div className="flex flex-col lg:flex-row gap-10">
+        {/* Main Content Column */}
+        <div className="flex-1 space-y-8 min-w-0">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-8">
+            <div className="border-b border-gray-50 pb-4 mb-2">
+              <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest">Thông tin chính</h4>
             </div>
-          );
-        })}
+            {mainFields.map(([key, prop]) => renderField(key, prop))}
+          </div>
+        </div>
+
+        {/* Sidebar Column */}
+        <div className="w-full lg:w-[380px] space-y-8 shrink-0">
+          <div className="bg-gray-50/50 p-8 rounded-[2.5rem] border border-gray-100 space-y-8">
+            <div className="border-b border-gray-200/50 pb-4 mb-2">
+              <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest">Thiết lập & Phân loại</h4>
+            </div>
+            {sideFields.map(([key, prop]) => renderField(key, prop))}
+          </div>
+        </div>
       </div>
 
-      <div className="flex items-center justify-end gap-4 pt-10 mt-10 border-t border-gray-50">
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-6 py-3 text-xs font-black text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors"
-          >
-            {t('generic.cancel')}
-          </button>
-        )}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="px-10 py-4 bg-primary text-white text-xs font-black rounded-2xl shadow-[0_10px_30px_rgba(13,164,135,0.2)] hover:bg-primary/95 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-50 uppercase tracking-widest"
-        >
-          {isLoading ? t('generic.saving') : initialData ? t('generic.updateRecord') : t('generic.createRecord')}
-        </button>
+      {/* Clean Floating Sticky Footer Actions */}
+      <div className="sticky bottom-6 z-30 mt-16 px-4 md:px-0">
+        <div className="max-w-5xl mx-auto bg-white/80 backdrop-blur-2xl py-3 px-6 md:px-8 rounded-[2rem] shadow-[0_15px_50px_rgba(0,0,0,0.12)] border border-white flex items-center justify-between gap-4 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-5">
+            <div className={`relative flex items-center justify-center ${isLoading ? 'animate-pulse' : ''}`}>
+              {isLoading ? (
+                <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <div className="w-2.5 h-2.5 bg-primary rounded-full" />
+                </div>
+              )}
+            </div>
+            <div className="hidden sm:block">
+              <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-0.5">Hệ thống sẵn sàng</h5>
+              <p className="text-[12px] font-bold text-gray-900">
+                {isLoading ? 'Đang thực thi lệnh lưu...' : initialData ? 'Cập nhật thay đổi ngay' : 'Tạo mới bản ghi này'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-6 py-3.5 text-[11px] font-black text-gray-400 uppercase tracking-widest hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+              >
+                {t('generic.cancel')}
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="px-10 py-3.5 bg-primary text-white text-[11px] font-black rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-50 disabled:translate-y-0 uppercase tracking-widest"
+            >
+              {isLoading ? t('generic.saving') : initialData ? t('generic.updateRecord') : t('generic.createRecord')}
+            </button>
+          </div>
+        </div>
       </div>
     </form>
   );
@@ -324,11 +406,25 @@ const newAttributeRow = (): AttributeRow => ({
 const AttributesField = ({
   field,
   commonClasses,
+  labels = {},
 }: {
   field: ControllerRenderProps<FieldValues, string>;
   commonClasses: string;
+  labels?: {
+    name?: string;
+    value?: string;
+    add?: string;
+    placeholderKey?: string;
+    placeholderValue?: string;
+  };
 }) => {
   const { t } = useTranslation();
+
+  const labelName = labels.name || t('generic.attributeName');
+  const labelValue = labels.value || t('generic.attributeValue');
+  const labelAdd = labels.add || t('generic.addAttribute');
+  const placeholderKey = labels.placeholderKey || t('generic.placeholder.example', { example: 'color' });
+  const placeholderValue = labels.placeholderValue || t('generic.placeholder.example', { example: 'red' });
   const parseAttributes = useCallback((value: unknown): AttributeRow[] => {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) return [];
     return Object.entries(value as Record<string, unknown>).map(([key, attrValue]) => ({
@@ -393,22 +489,22 @@ const AttributesField = ({
       {entries.map((entry, index) => (
         <div key={entry.id} className="grid grid-cols-12 gap-2 items-end">
           <div className="col-span-5">
-            <label className="block text-xs text-slate-500 mb-1">{t('generic.attributeName')}</label>
+            <label className="block text-xs text-slate-500 mb-1">{labelName}</label>
             <input
               type="text"
               value={entry.key}
               onChange={(e) => handleKeyChange(index, e.target.value)}
-              placeholder={t('generic.placeholder.example', { example: 'quality' })}
+              placeholder={placeholderKey}
               className={commonClasses}
             />
           </div>
           <div className="col-span-5">
-            <label className="block text-xs text-slate-500 mb-1">{t('generic.attributeValue')}</label>
+            <label className="block text-xs text-slate-500 mb-1">{labelValue}</label>
             <input
               type="text"
               value={entry.value}
               onChange={(e) => handleValueChange(index, e.target.value)}
-              placeholder={t('generic.placeholder.example', { example: 'premium' })}
+              placeholder={placeholderValue}
               className={commonClasses}
             />
           </div>
@@ -428,20 +524,20 @@ const AttributesField = ({
         onClick={handleAddEntry}
         className="inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition"
       >
-        {t('generic.addAttribute')}
+        {labelAdd}
       </button>
     </div>
   );
 };
 
-const FormFieldAdapter = ({ 
+const FormFieldAdapter = ({
   fieldKey,
-  field, 
+  field,
   fieldLabel,
-  schema, 
+  schema,
   relationOptions,
   onManualEdit,
-  error 
+  error
 }: {
   fieldKey: string;
   fieldLabel: string;
@@ -452,42 +548,86 @@ const FormFieldAdapter = ({
   error?: string;
 }) => {
   const { t } = useTranslation();
-  const commonClasses = `w-full px-6 py-4 rounded-2xl border font-bold text-sm transition-all outline-none ${
-    error 
-      ? 'border-rose-200 focus:ring-4 focus:ring-rose-50/50 bg-rose-50/30' 
-      : 'border-gray-100 bg-gray-50/30 focus:border-primary focus:ring-4 focus:ring-primary/5 focus:bg-white'
-  }`;
+  const commonClasses = `w-full px-6 py-4 rounded-2xl border font-bold text-sm transition-all outline-none ${error
+    ? 'border-rose-200 focus:ring-4 focus:ring-rose-50/50 bg-rose-50/30'
+    : 'border-gray-100 bg-gray-50/30 focus:border-primary focus:ring-4 focus:ring-primary/5 focus:bg-white'
+    }`;
+
+  const [isUploading, setIsUploading] = useState(false);
 
   if (isFileField(fieldKey, schema)) {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      onManualEdit?.();
+      setIsUploading(true);
+
+      try {
+        const uploaded = await genericApiClient.uploadImage(file);
+        field.onChange(uploaded.url);
+        authToast.success('Tải ảnh thành công!', 'Ảnh đã sẵn sàng để lưu.');
+      } catch (err) {
+        console.error('Upload error:', err);
+        authToast.error('Tải ảnh thất bại', 'Vui lòng kiểm tra lại kết nối hoặc định dạng ảnh.');
+      } finally {
+        setIsUploading(false);
+      }
+    };
+
     return (
-      <div className="space-y-3">
-        <label className="flex items-center justify-center w-full px-6 py-10 border-2 border-dashed border-gray-200 rounded-3xl hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
+      <div className="space-y-4">
+        <label className={`flex items-center justify-center w-full px-6 py-10 border-2 border-dashed rounded-3xl transition-all cursor-pointer group ${isUploading ? 'bg-gray-50 border-primary/30 cursor-not-allowed' : 'border-gray-200 hover:border-primary hover:bg-primary/5'
+          }`}>
           <div className="flex flex-col items-center">
-             <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center mb-3 group-hover:bg-white transition-colors">
-                <Columns className="text-gray-400 group-hover:text-primary" size={20} />
-             </div>
-             <p className="text-xs font-black text-gray-400 uppercase tracking-widest group-hover:text-primary">Click to upload image</p>
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-3 transition-colors ${isUploading ? 'bg-primary/20 text-primary' : 'bg-gray-50 text-gray-400 group-hover:bg-white group-hover:text-primary'
+              }`}>
+              {isUploading ? (
+                <div className="w-6 h-6 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+              ) : (
+                <Columns size={24} />
+              )}
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] transition-colors group-hover:text-primary">
+              {isUploading ? 'Đang xử lý dữ liệu...' : 'Nhấn để tải hình ảnh lên'}
+            </p>
+            <p className="text-[9px] font-bold text-gray-400 mt-2">Định dạng JPG, PNG, WEBP (Tối đa 5MB)</p>
           </div>
           <input
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => {
-              onManualEdit?.();
-              const file = e.target.files?.[0] || null;
-              field.onChange(file ?? field.value);
-            }}
+            onChange={handleFileChange}
+            disabled={isUploading}
           />
         </label>
+
         {typeof field.value === 'string' && field.value ? (
-          <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-2xl border border-gray-100">
-             <div className="w-12 h-12 rounded-xl overflow-hidden bg-white border border-gray-200 shrink-0">
-                <img src={field.value} alt="Preview" className="w-full h-full object-cover" />
-             </div>
-             <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hiện tại</p>
-                <a href={field.value} target="_blank" rel="noreferrer" className="text-xs font-bold text-primary hover:underline truncate block">Xem ảnh đầy đủ</a>
-             </div>
+          <div className="flex items-center gap-5 p-4 bg-white rounded-3xl border border-gray-100 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shrink-0 p-1">
+              <img src={field.value} alt="Preview" className="w-full h-full object-contain rounded-xl" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Đã tải lên thành công</p>
+              </div>
+              <a
+                href={field.value}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-bold text-gray-900 hover:text-primary transition-colors truncate block"
+              >
+                {field.value.split('/').pop()}
+              </a>
+            </div>
+            <button
+              type="button"
+              onClick={() => field.onChange(null)}
+              className="p-2 text-gray-300 hover:text-rose-500 transition-colors"
+            >
+              <X size={18} />
+            </button>
           </div>
         ) : null}
       </div>
@@ -503,16 +643,16 @@ const FormFieldAdapter = ({
     return (
       <div className="flex items-center gap-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
         <div className="relative w-12 h-12 rounded-xl overflow-hidden shadow-soft shrink-0 border-2 border-white">
-           <input
-             type="color"
-             value={colorValue}
-             onChange={(e) => field.onChange(e.target.value)}
-             className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer"
-           />
+          <input
+            type="color"
+            value={colorValue}
+            onChange={(e) => field.onChange(e.target.value)}
+            className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer"
+          />
         </div>
-        <input 
-          type="text" 
-          value={field.value || ''} 
+        <input
+          type="text"
+          value={field.value || ''}
           onChange={(e) => field.onChange(e.target.value)}
           placeholder="#000000"
           className="bg-transparent border-none focus:ring-0 font-black text-gray-900 uppercase tracking-widest w-full"
@@ -521,8 +661,21 @@ const FormFieldAdapter = ({
     );
   }
 
-  if (fieldKey === 'attributes') {
-    return <AttributesField field={field} commonClasses={commonClasses} />;
+  if (fieldKey === 'attributes' || fieldKey === 'specifications') {
+    const isSpecs = fieldKey === 'specifications';
+    return (
+      <AttributesField
+        field={field}
+        commonClasses={commonClasses}
+        labels={{
+          name: isSpecs ? t('generic.specName', 'Tên thông số') : undefined,
+          value: isSpecs ? t('generic.specValue', 'Giá trị') : undefined,
+          add: isSpecs ? t('generic.addSpec', 'Thêm thông số') : undefined,
+          placeholderKey: isSpecs ? t('generic.placeholder.example', { example: 'Chất liệu' }) : undefined,
+          placeholderValue: isSpecs ? t('generic.placeholder.example', { example: 'Cotton 100%' }) : undefined,
+        }}
+      />
+    );
   }
 
   // Static select fields, such as color
@@ -596,6 +749,11 @@ const FormFieldAdapter = ({
         <span className="text-xs font-black text-gray-500 uppercase tracking-widest">{field.value ? t('generic.enabled') : t('generic.disabled')}</span>
       </div>
     );
+  }
+
+  // Price
+  if (PRICE_FIELDS.has(fieldKey)) {
+    return <CurrencyInput field={field} commonClasses={commonClasses} />;
   }
 
   // Number

@@ -32,31 +32,40 @@ const TOAST_CONFIG: Record<ToastKind, { icon: React.ElementType; color: string; 
   },
 };
 
-/**
- * Hiển thị Toast thông minh: 
- * - Chống lặp (duplicate) bằng cách sử dụng message làm ID
- * - Thiết kế nhỏ gọn, tinh tế hơn
- */
+const activeToasts = new Set<string>();
+
 const showPremiumToast = (kind: ToastKind, title: string, description?: string) => {
+  // Sử dụng một ID cố định duy nhất cho tất cả premium toasts 
+  // Điều này đảm bảo CHỈ CÓ TỐI ĐA 1 thông báo trên màn hình, xóa bỏ hoàn toàn việc lặp lại.
+  const toastId = 'armorify-premium-toast-singleton';
+  
+  if (activeToasts.has(toastId)) {
+    toast.dismiss(toastId);
+  }
+  activeToasts.add(toastId);
+
+  const duration = kind === 'error' ? 4000 : 2500;
+
+  setTimeout(() => activeToasts.delete(toastId), duration + 500);
+
   const config = TOAST_CONFIG[kind];
   const Icon = config.icon;
-  // Sử dụng title làm ID để các toast trùng lặp sẽ ghi đè lên nhau thay vì hiện nhiều cái
-  const toastId = `toast-${title.replace(/\s+/g, '-').toLowerCase()}`;
 
   return toast.custom(
     (t: Toast) => (
       <div
-        className={`${
-          t.visible ? 'animate-in fade-in slide-in-from-right-5 duration-300' : 'animate-out fade-out slide-out-to-right-5 duration-200'
-        } pointer-events-auto flex w-full max-w-[320px] rounded-2xl bg-white/95 backdrop-blur-md border ${config.border} shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-3.5 transition-all`}
+        className={`${t.visible
+          ? 'animate-in fade-in slide-in-from-right-5 duration-300'
+          : 'animate-out fade-out slide-out-to-right-5 duration-200'
+          } pointer-events-auto flex w-full max-w-[320px] rounded-2xl bg-white/95 backdrop-blur-md border ${config.border} shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-3.5 transition-all`}
       >
         <div className="flex items-start gap-3 w-full">
-          <div 
+          <div
             className={`flex-shrink-0 w-9 h-9 rounded-xl ${config.bg} flex items-center justify-center mt-0.5`}
           >
             <Icon size={18} style={{ color: config.color }} strokeWidth={3} />
           </div>
-          
+
           <div className="flex-1 min-w-0 pt-0.5">
             <h3 className="text-[13px] font-black text-gray-900 leading-snug">
               {title}
@@ -69,7 +78,10 @@ const showPremiumToast = (kind: ToastKind, title: string, description?: string) 
           </div>
 
           <button
-            onClick={() => toast.dismiss(t.id)}
+            onClick={() => {
+              toast.dismiss(t.id);
+              activeToasts.delete(toastId);
+            }}
             className="flex-shrink-0 p-1 rounded-lg text-gray-300 hover:text-gray-400 transition-all"
           >
             <X size={14} strokeWidth={3} />
@@ -77,10 +89,10 @@ const showPremiumToast = (kind: ToastKind, title: string, description?: string) 
         </div>
       </div>
     ),
-    { 
-      id: toastId, // Quan trọng: Chống hiển thị 2 lần
-      duration: kind === 'error' ? 4000 : 2500,
-      position: 'top-right'
+    {
+      id: toastId,
+      duration,
+      position: 'top-right',
     }
   );
 };

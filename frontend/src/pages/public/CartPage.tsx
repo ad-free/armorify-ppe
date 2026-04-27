@@ -6,10 +6,13 @@ import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { SeoHead } from '@/components/common/SeoHead';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { useCartStore } from '@/store/cartStore';
+import { formatCurrency } from '@/lib/currency';
 
 const CartPage: React.FC = () => {
   const { items, removeItem, updateQuantity, getTotalPrice } = useCartStore();
   const navigate = useNavigate();
+
+  const formatMoney = (val: number) => formatCurrency(val);
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
@@ -86,9 +89,7 @@ const CartPage: React.FC = () => {
                         </p>
                       )}
                       <p className="font-bold text-red-600 mt-2">
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
-                          item.unit_price ?? item.product.price
-                        )}
+                        {formatMoney(item.unit_price ?? item.product.price)}
                       </p>
                     </div>
                     
@@ -101,9 +102,7 @@ const CartPage: React.FC = () => {
                       
                       <p className="font-bold hidden md:block text-gray-900">
                         Thành tiền:{' '}
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
-                          (item.unit_price ?? item.product.price) * item.quantity
-                        )}
+                        {formatMoney((item.unit_price ?? item.product.price) * item.quantity)}
                       </p>
                     </div>
                   </div>
@@ -124,7 +123,7 @@ const CartPage: React.FC = () => {
                 <div className="space-y-4 mb-6 text-gray-600 font-medium">
                   <div className="flex justify-between">
                     <span>Tạm tính</span>
-                    <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(getTotalPrice())}</span>
+                    <span>{formatMoney(getTotalPrice())}</span>
                   </div>
                   <div className="flex justify-between text-green-600">
                     <span>Giảm giá</span>
@@ -133,7 +132,7 @@ const CartPage: React.FC = () => {
                   <div className="flex justify-between border-t border-dashed pt-4">
                     <span className="font-bold text-gray-900">Tổng cộng</span>
                     <span className="font-black text-2xl text-red-600">
-                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(getTotalPrice())}
+                      {formatMoney(getTotalPrice())}
                     </span>
                   </div>
                   <p className="text-right text-xs text-gray-400 mt-1">(Đã bao gồm VAT nếu có)</p>

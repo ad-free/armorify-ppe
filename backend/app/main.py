@@ -15,6 +15,7 @@ from app.routers import (
     admin_brands_router,
     admin_catalog_router,
     admin_cms_router,
+    admin_dashboard_router,
     admin_orders_router,
     admin_product_images_router,
     admin_quotes_router,
@@ -93,6 +94,7 @@ _admin = [Depends(require_admin)]
 app.include_router(admin_orders_router, prefix="/api/v1", dependencies=_admin)
 app.include_router(admin_quotes_router, prefix="/api/v1", dependencies=_admin)
 app.include_router(admin_users_router, prefix="/api/v1", dependencies=_admin)
+app.include_router(admin_dashboard_router, prefix="/api/v1", dependencies=_admin)
 
 
 @app.exception_handler(HTTPException)

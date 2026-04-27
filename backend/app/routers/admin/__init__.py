@@ -3,6 +3,7 @@ from app.core.deps import require_admin, require_staff
 from .brands import router as admin_brands_router
 from .catalog import router as admin_catalog_router
 from .cms import router as admin_cms_router
+from .dashboard import router as admin_dashboard_router
 from .orders import router as admin_orders_router
 from .product_images import router as admin_product_images_router
 from .quotes import router as admin_quotes_router
@@ -16,6 +17,7 @@ __all__ = [
     "admin_product_images_router",
     "admin_quotes_router",
     "admin_users_router",
+    "admin_dashboard_router",
     "require_staff",
     "require_admin",
 ]

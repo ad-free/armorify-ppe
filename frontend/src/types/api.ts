@@ -207,6 +207,16 @@ export interface GuestOrderCreate {
   items: GuestOrderItemCreate[];
 }
 
+export interface OrderItemRead {
+  id: string;
+  order_id: string;
+  product_id: string;
+  variant_id: string | null;
+  quantity: number;
+  unit_price: number;
+  product?: ProductRead;
+}
+
 export interface OrderRead {
   id: string;
   user_id: string | null;
@@ -218,4 +228,26 @@ export interface OrderRead {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  items?: OrderItemRead[];
+}
+
+export interface DashboardStats {
+  total_revenue: number;
+  total_orders: number;
+  total_users: number;
+  low_stock_count: number;
+  revenue_growth: number;
+  order_growth: number;
+}
+
+export interface RevenueChartPoint {
+  date: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface DashboardData {
+  stats: DashboardStats;
+  revenue_chart: RevenueChartPoint[];
+  recent_orders: OrderRead[];
 }

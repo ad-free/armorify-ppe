@@ -34,6 +34,14 @@ class UserUpdate(BaseModel):
     password: str | None = Field(None, json_schema_extra={"x-ui-widget": "password", "x-ui-order": 20})
 
 
+class MeUpdate(BaseModel):
+    firstname: str | None = None
+    lastname: str | None = None
+    email: str | None = None
+    address: str | None = None
+    birthday: date | None = None
+
+
 class UserRead(UserBase):
     id: UUID = Field(json_schema_extra={"x-ui-priority": True, "x-ui-order": 0})
     firstname: str = Field(json_schema_extra={"x-ui-priority": True, "x-ui-order": 1})
@@ -80,6 +88,18 @@ class TokenResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
 
 
 # ── Address ───────────────────────────────────────────────

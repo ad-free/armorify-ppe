@@ -1,8 +1,8 @@
-# app/models/order.py
 from decimal import Decimal
 from enum import Enum as PyEnum
 
 from app.models.base import Base, BaseMixin
+from app.models.product import Product
 from sqlalchemy import Enum, ForeignKey, Index, Integer, Numeric, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -70,6 +70,7 @@ class OrderItem(BaseMixin, Base):
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     order: Mapped[Order] = relationship(back_populates="items")
+    product: Mapped[Product] = relationship()
 
     __table_args__ = (
         Index("ix_order_items_order_id", "order_id"),

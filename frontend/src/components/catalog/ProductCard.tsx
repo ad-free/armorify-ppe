@@ -8,6 +8,10 @@ import { StarRating } from './StarRating';
 import toast from 'react-hot-toast';
 import { useCartStore } from '@/store/cartStore';
 
+import { useWishlistStore } from '@/store/wishlistStore';
+import { useAuthStore } from '@/store/authStore';
+import { formatCurrency } from '@/lib/currency';
+
 interface ProductCardProps {
   product: ProductRead;
 }
@@ -15,13 +19,11 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { i18n } = useTranslation();
   const addItem = useCartStore((s) => s.addItem);
+  const { user } = useAuthStore();
+  const { toggleItem, isInWishlist } = useWishlistStore();
+  const isFavorite = isInWishlist(product.id);
 
-  const fmt = (value: number) =>
-    new Intl.NumberFormat(i18n.language === 'vi' ? 'vi-VN' : 'en-US', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0,
-    }).format(value);
+  const fmt = (val: number) => formatCurrency(val, { locale: i18n.language === 'vi' ? 'vi-VN' : 'en-US' });
 
   const comparePrice = product.compare_at_price ? Number(product.compare_at_price) : 0;
   const discount = comparePrice > product.price
@@ -51,9 +53,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
       {/* Action Buttons (Floating on hover) */}
       <div className="absolute top-4 right-4 z-30 flex flex-col gap-2.5 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0 duration-300">
-        <button className="w-10 h-10 bg-white text-gray-500 hover:text-white hover:bg-destructive rounded-xl shadow-xl flex items-center justify-center transition-all duration-300 active:scale-90">
-          <Heart size={20} />
-        </button>
+        {user && (
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleItem(product);
+              if (!isFavorite) {
+                toast.success('Đã thêm vào yêu thích!');
+              }
+            }}
+            className={`w-10 h-10 rounded-xl shadow-xl flex items-center justify-center transition-all duration-300 active:scale-90 ${
+              isFavorite 
+                ? 'bg-destructive text-white' 
+                : 'bg-white text-gray-500 hover:text-white hover:bg-destructive'
+            }`}
+          >
+            <Heart size={20} fill={isFavorite ? "currentColor" : "none"} />
+          </button>
+        )}
         <Link 
           to={`/products/${product.slug}`}
           className="w-10 h-10 bg-white text-gray-500 hover:text-white hover:bg-primary rounded-xl shadow-xl flex items-center justify-center transition-all duration-300 active:scale-90"

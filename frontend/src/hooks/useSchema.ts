@@ -149,21 +149,27 @@ export const useEntitySchema = (entityName: string, mode: SchemaMode = 'read') =
       let schema = null;
       let usedName = '';
 
+      const schemas = spec?.components?.schemas;
+      if (!schemas) {
+        console.error('OpenAPI spec is missing components/schemas:', spec);
+        throw new Error(`Invalid OpenAPI spec from server. Could not find any schemas.`);
+      }
+
       for (const name of possibleNames) {
-        if (spec.components?.schemas?.[name]) {
-          schema = spec.components.schemas[name];
+        if (schemas[name]) {
+          schema = schemas[name];
           usedName = name;
           break;
         }
       }
       
       if (!schema) {
-        console.error('Available schemas:', Object.keys(spec.components?.schemas || {}));
-        throw new Error(`Schema for entity "${entityName}" not found. Tried: ${possibleNames.join(', ')}`);
+        const available = Object.keys(schemas);
+        console.error(`Schema for "${entityName}" not found. Available:`, available);
+        throw new Error(`Schema for entity "${entityName}" not found. Tried: ${possibleNames.join(', ')}. Available: ${available.slice(0, 10).join(', ')}...`);
       }
       
-      const components = (spec.components?.schemas || {}) as Record<string, OpenApiSchema>;
-      const normalizedSchema = normalizeEntitySchema(schema as OpenApiSchema, components);
+      const normalizedSchema = normalizeEntitySchema(schema as OpenApiSchema, schemas as Record<string, OpenApiSchema>);
 
       // Store the used schema name in the schema object for form mapping
       return { ...normalizedSchema, _schemaName: usedName } as EntitySchema & { _schemaName: string };

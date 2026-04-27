@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.models.order import OrderStatus
+from app.schemas.product import ProductRead
 
 
 class OrderBase(BaseModel):
@@ -32,6 +33,7 @@ class OrderRead(OrderBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    items: list["OrderItemRead"] = []
 
     model_config = {"from_attributes": True}
 
@@ -60,6 +62,7 @@ class OrderItemRead(OrderItemBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    product: Optional[ProductRead] = None
 
     model_config = {"from_attributes": True}
 

@@ -5,7 +5,7 @@ import { marked } from 'marked';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { BadgeCheck, Check, Headphones, ShoppingCart, Sparkles, Truck, Undo2 } from 'lucide-react';
+import { BadgeCheck, Check, Headphones, ShoppingCart, Sparkles, Truck, Undo2, Heart } from 'lucide-react';
 import { SeoHead } from '@/components/common/SeoHead';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { StarRating } from '@/components/catalog/StarRating';
@@ -21,11 +21,12 @@ import {
   useRelatedProducts,
 } from '@/hooks/useCatalog';
 import { useCartStore } from '@/store/cartStore';
+import { useWishlistStore } from '@/store/wishlistStore';
+import { useAuthStore } from '@/store/authStore';
 import type { ProductRead, ProductVariantRead } from '@/types/api';
 
 type DetailTab = 'description' | 'specs' | 'reviews';
 
-const stripHtml = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 const resolveVariantUnitPrice = (product: ProductRead, v: ProductVariantRead) => {
   const o = v.price_override;
@@ -41,6 +42,8 @@ const ProductDetail: React.FC = () => {
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>('description');
   const addItem = useCartStore((s) => s.addItem);
+  const { user } = useAuthStore();
+  const { toggleItem, isInWishlist } = useWishlistStore();
 
   const { data: product, isLoading, isError } = useProductBySlug(slug);
   const { data: images } = useProductImages(product?.id);
@@ -98,19 +101,20 @@ const ProductDetail: React.FC = () => {
 
   const maxQty = product ? Math.min(99, Math.max(1, effectiveStock)) : 1;
 
-  const descriptionExcerpt = useMemo(() => {
-    if (!product?.description) return '';
-    const plain = stripHtml(product.description);
-    return plain.length > 240 ? `${plain.slice(0, 240)}…` : plain;
-  }, [product?.description]);
 
   const safeDescriptionHtml = useMemo(() => {
     if (!product?.description) return '';
+    const purifyConfig = {
+      ADD_TAGS: ['iframe'],
+      ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling'],
+      USE_PROFILES: { html: true }
+    };
+
     try {
       const parsed = marked.parse(product.description, { async: false }) as string;
-      return DOMPurify.sanitize(parsed, { USE_PROFILES: { html: true } });
+      return DOMPurify.sanitize(parsed, purifyConfig);
     } catch (e) {
-      return DOMPurify.sanitize(product.description, { USE_PROFILES: { html: true } });
+      return DOMPurify.sanitize(product.description, purifyConfig);
     }
   }, [product?.description]);
 
@@ -387,9 +391,6 @@ const ProductDetail: React.FC = () => {
               </div>
             )}
 
-            {descriptionExcerpt && (
-              <p className="mt-5 text-sm leading-relaxed text-slate-600 sm:text-base">{descriptionExcerpt}</p>
-            )}
 
             <div className="mt-8 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm sm:p-6">
               <div className="mb-5 flex flex-wrap items-center gap-4">
@@ -418,6 +419,27 @@ const ProductDetail: React.FC = () => {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
+                {user && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (product) {
+                        const wasFavorite = isInWishlist(product.id);
+                        toggleItem(product);
+                        if (!wasFavorite) {
+                          toast.success('Đã thêm vào yêu thích!');
+                        } else {
+                          toast('Đã xóa khỏi yêu thích', { icon: '🗑️' });
+                        }
+                      }
+                    }}
+                    className={`inline-flex w-14 items-center justify-center rounded-xl border border-slate-200 transition active:scale-95 ${
+                      product && isInWishlist(product.id) ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-white text-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Heart size={22} fill={product && isInWishlist(product.id) ? "currentColor" : "none"} />
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={stockState === 'out'}
@@ -491,8 +513,11 @@ const ProductDetail: React.FC = () => {
               )}
 
               {activeTab === 'specs' && (
-                <div>
-                  <h3 className="mb-4 text-lg font-bold text-slate-900">{t('productDetail.specsTitle')}</h3>
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-8 w-1 bg-primary rounded-full" />
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight">{t('productDetail.specsTitle')}</h3>
+                  </div>
                   <ProductSpecifications specifications={product.specifications} />
                 </div>
               )}

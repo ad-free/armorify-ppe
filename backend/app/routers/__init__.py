@@ -3,6 +3,7 @@ from .admin import (
     admin_brands_router,
     admin_catalog_router,
     admin_cms_router,
+    admin_dashboard_router,
     admin_orders_router,
     admin_product_images_router,
     admin_quotes_router,
@@ -28,5 +29,6 @@ __all__ = [
     "admin_product_images_router",
     "admin_quotes_router",
     "admin_users_router",
+    "admin_dashboard_router",
     "users_router",
 ]

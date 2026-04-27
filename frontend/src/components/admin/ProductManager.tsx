@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Columns } from 'lucide-react';
+import { Columns, X, Package } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useGenericResource, genericApiClient } from '../../api/generic';
 import { useEntitySchema } from '../../hooks/useSchema';
 import { DynamicTable } from '../dynamic/DynamicTable';
 import { DynamicForm } from '../dynamic/DynamicForm';
+import { authToast } from '@/lib/toast';
 
 // --- Sub-managers for Images and Variants ---
 
@@ -34,16 +36,20 @@ const ProductImageManager = ({ productId }: { productId: string }) => {
     if (!e.target.files?.length) return;
     setUploading(true);
     try {
+      let successCount = 0;
       for (const file of Array.from(e.target.files)) {
         const uploadRes = await genericApiClient.uploadImage(file);
         await create({
           product_id: productId,
           url: uploadRes.url,
-          position: productImages.length, // Append at end
+          position: productImages.length + successCount, // Append at end
         });
+        successCount++;
       }
+      authToast.success(`Tải lên thành công ${successCount} ảnh`, 'Thư viện đã được cập nhật.');
     } catch (err) {
       console.error(err);
+      authToast.error('Tải ảnh thất bại', 'Vui lòng thử lại sau.');
     } finally {
       setUploading(false);
     }
@@ -79,7 +85,7 @@ const ProductImageManager = ({ productId }: { productId: string }) => {
       ) : productImages.length === 0 ? (
         <div className="p-16 text-center bg-gray-50/50 rounded-[2rem] border-2 border-dashed border-gray-100 flex flex-col items-center">
           <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-4 shadow-sm text-gray-300">
-             <Columns size={32} />
+            <Columns size={32} />
           </div>
           <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Chưa có hình ảnh nào</p>
         </div>
@@ -197,10 +203,10 @@ const ProductVariantManager = ({ productId }: { productId: string }) => {
             </div>
           </div>
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100">
-             <button onClick={cancelEdit} className="px-6 py-3 text-xs font-black text-gray-400 uppercase tracking-widest hover:text-rose-500 transition-colors">Hủy bỏ</button>
-             <button onClick={handleSave} className="px-8 py-3 bg-primary text-white font-black rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95">
-               {editingId ? 'Cập nhật' : 'Lưu biến thể'}
-             </button>
+            <button onClick={cancelEdit} className="px-6 py-3 text-xs font-black text-gray-400 uppercase tracking-widest hover:text-rose-500 transition-colors">Hủy bỏ</button>
+            <button onClick={handleSave} className="px-8 py-3 bg-primary text-white font-black rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95">
+              {editingId ? 'Cập nhật' : 'Lưu biến thể'}
+            </button>
           </div>
         </div>
       )}
@@ -270,6 +276,11 @@ const ProductVariantManager = ({ productId }: { productId: string }) => {
 // --- Main Product Manager ---
 
 export const ProductManager: React.FC = () => {
+  const { search } = useLocation();
+  const navigate = useNavigate();
+  const queryParams = new URLSearchParams(search);
+  const stockFilter = queryParams.get('stock');
+
   const entityName = 'product';
   const [params, setParams] = useState({ skip: 0, limit: 10, sort_by: 'id' });
   const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
@@ -288,6 +299,13 @@ export const ProductManager: React.FC = () => {
     remove,
     restore,
   } = useGenericResource(entityName, params);
+
+  const filteredItems = Array.isArray(items) ? items.filter((item: any) => {
+    if (stockFilter === 'low') {
+      return (item.stock || 0) < 10;
+    }
+    return true;
+  }) : [];
 
   const handleCreate = async (data: Record<string, unknown>) => {
     const newProduct = await create(data) as Record<string, unknown>;
@@ -310,14 +328,35 @@ export const ProductManager: React.FC = () => {
     return <div className="p-8 text-center">Loading product environment...</div>;
   }
 
-  const tabClass = (tab: string) => 
+  const tabClass = (tab: string) =>
     `px-6 py-4 font-black text-xs uppercase tracking-widest transition-all border-b-4 ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-600'}`;
 
   return (
     <div className="space-y-8 min-w-0">
+      {stockFilter === 'low' && !isFormOpen && (
+        <div className="flex items-center justify-between bg-amber-50 border border-amber-100 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center shadow-md">
+              <Package size={20} />
+            </div>
+            <div>
+              <p className="text-[13px] font-black text-gray-900">Danh sách sản phẩm sắp hết hàng</p>
+              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">Đang hiển thị các sản phẩm có tồn kho dưới 10</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/admin/manage/product')}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-400 hover:text-rose-500 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm transition-all"
+          >
+            <X size={14} />
+            Xóa bộ lọc
+          </button>
+        </div>
+      )}
+
       {isFormOpen ? (
         <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_60px_rgba(0,0,0,0.03)] animate-in fade-in slide-in-from-bottom-6 duration-500 overflow-hidden">
-          
+
           <div className="flex items-center justify-between px-10 py-6 bg-gray-50/50 border-b border-gray-50">
             <h3 className="text-xl font-black text-gray-900">
               {editingItem ? `Chỉnh sửa: ${editingItem.name || 'Sản phẩm'}` : 'Tạo sản phẩm mới'}
@@ -344,7 +383,7 @@ export const ProductManager: React.FC = () => {
 
           <div className="p-10">
             {activeTab === 'info' && (
-              <DynamicForm 
+              <DynamicForm
                 entityName={entityName}
                 schema={formSchema}
                 initialData={editingItem}
@@ -363,10 +402,10 @@ export const ProductManager: React.FC = () => {
           </div>
         </div>
       ) : (
-        <DynamicTable 
+        <DynamicTable
           entityName={entityName}
           schema={schema}
-          data={items || []}
+          data={filteredItems}
           isLoading={isDataLoading}
           onAdd={() => { setEditingItem(null); setActiveTab('info'); setIsFormOpen(true); }}
           onEdit={(row) => { setEditingItem(row); setActiveTab('info'); setIsFormOpen(true); }}

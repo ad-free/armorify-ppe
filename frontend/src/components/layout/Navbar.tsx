@@ -8,6 +8,7 @@ import { AnimatePresence } from 'framer-motion';
 import { MegaMenu } from './MegaMenu';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
+import { useWishlistStore } from '@/store/wishlistStore';
 import { authToast } from '@/lib/toast';
 
 export const Navbar: React.FC = () => {
@@ -37,6 +38,8 @@ export const Navbar: React.FC = () => {
     const unit = item.unit_price ?? item.product.price;
     return total + unit * item.quantity;
   }, 0);
+
+  const wishlistCount = useWishlistStore((state) => state.items.length);
 
   const formatMoney = (value: number) =>
     new Intl.NumberFormat(i18n.language === 'vi' ? 'vi-VN' : 'en-US', {
@@ -140,12 +143,18 @@ export const Navbar: React.FC = () => {
             </div>
           </div>
 
-          <Link to="/wishlist" className="hidden sm:flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors relative">
-            <div className="relative">
-              <Heart size={26} strokeWidth={1.8} />
-              <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white text-[10px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center font-bold shadow-sm border-2 border-white">0</span>
-            </div>
-          </Link>
+          {user && (
+            <Link to="/wishlist" className="hidden sm:flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors relative">
+              <div className="relative">
+                <Heart size={26} strokeWidth={1.8} />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white text-[10px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center font-bold shadow-sm border-2 border-white">
+                    {wishlistCount}
+                  </span>
+                )}
+              </div>
+            </Link>
+          )}
 
           {user ? (
             <div className="relative" ref={profileRef}>

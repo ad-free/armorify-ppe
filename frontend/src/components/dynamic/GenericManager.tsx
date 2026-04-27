@@ -15,6 +15,24 @@ const humanizeEntity = (value: string) =>
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/\b([a-z])/g, (match) => match.toUpperCase());
 
+const LoadingSpinner = () => {
+  return (
+    <div className="flex flex-col items-center justify-center p-24 space-y-6">
+      <div className="w-14 h-14 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
+      <span className="text-gray-400 font-black text-xs uppercase tracking-[0.2em]">Đang tải cấu hình...</span>
+    </div>
+  );
+};
+
+const ErrorDisplay = ({ message }: { message: string }) => {
+  return (
+    <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-700">
+      <h4 className="font-bold">Lỗi tải cấu hình</h4>
+      <p>{message}</p>
+    </div>
+  );
+};
+
 export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) => {
   const [params, setParams] = useState({ skip: 0, limit: 10, sort_by: 'id' });
   const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
@@ -102,29 +120,6 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
           onSort={(field) => setParams(p => ({ ...p, sort_by: field }))}
         />
       )}
-    </div>
-  );
-};
-
-
-// Simplified UI components for demo
-const LoadingSpinner = () => {
-  const { t } = useTranslation();
-  return (
-    <div className="flex flex-col items-center justify-center p-24 space-y-6">
-      <div className="w-14 h-14 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
-      <span className="text-gray-400 font-black text-xs uppercase tracking-[0.2em]">{t('generic.loadingSchema')}</span>
-    </div>
-  );
-};
-
-
-const ErrorDisplay = ({ message }: { message: string }) => {
-  const { t } = useTranslation();
-  return (
-    <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-700">
-      <h4 className="font-bold">{t('generic.schemaError')}</h4>
-      <p>{message}</p>
     </div>
   );
 };

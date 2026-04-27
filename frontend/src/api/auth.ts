@@ -15,3 +15,9 @@ export const registerUser = (body: RegisterRequest) =>
 
 export const getMe = (token?: string) =>
   GET<UserRead>('/auth/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+
+export const updateMe = (body: any) =>
+  POST<UserRead>('/auth/me', body, { method: 'PATCH' });
+
+export const changePassword = (body: any) =>
+  POST<{ status: string }>('/auth/change-password', body);

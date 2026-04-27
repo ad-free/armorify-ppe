@@ -33,7 +33,7 @@ export const LoginForm: React.FC = () => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full max-w-sm mx-auto p-6 bg-white border rounded-lg shadow-sm">
       <h2 className="text-2xl font-bold text-center mb-6">Đăng Nhập</h2>
-      
+
       <div>
         <label className="block text-sm font-medium mb-1">Số điện thoại</label>
         <input

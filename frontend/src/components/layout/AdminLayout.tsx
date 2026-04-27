@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -44,6 +44,24 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subti
   const location = useLocation();
   const { entityId } = useParams<{ entityId: string }>();
   const { user } = useAuthStore();
+  const [showSearch, setShowSearch] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Close popovers on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearch(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const activeId = entityId || (location.pathname === '/admin' ? 'dashboard' : '');
 
@@ -112,7 +130,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subti
       {/* Right Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header - Fixed Top */}
-        <header className="h-24 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-8 lg:px-12 z-20 sticky top-0">
+        <header className="h-24 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-8 lg:px-12 z-50 sticky top-0">
           <div className="flex items-center gap-8 flex-1">
             <button className="lg:hidden p-3 rounded-xl bg-gray-100 text-gray-600">
               <MenuIcon size={22} />
@@ -128,13 +146,74 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subti
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="w-11 h-11 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-primary/10 hover:text-primary transition-all">
-              <Search size={20} />
-            </button>
-            <button className="w-11 h-11 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-primary/10 hover:text-primary transition-all relative">
-              <Bell size={20} />
-              <span className="absolute top-0 right-0 w-3 h-3 bg-rose-500 border-2 border-white rounded-full"></span>
-            </button>
+            {/* Global Search */}
+            <div className="relative" ref={searchRef}>
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${showSearch ? 'bg-primary text-white' : 'bg-gray-50 text-gray-400 hover:bg-primary/10 hover:text-primary'}`}
+              >
+                <Search size={20} />
+              </button>
+
+              {showSearch && (
+                <div className="absolute right-0 mt-3 w-[300px] md:w-[450px] bg-white border border-gray-100 rounded-3xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200 z-[999]">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Tìm kiếm nhanh hệ thống..."
+                      className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:border-primary transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Notifications */}
+            <div className="relative" ref={notificationRef}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-all relative ${showNotifications ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-gray-50 text-gray-400 hover:bg-primary/10 hover:text-primary'}`}
+              >
+                <Bell size={20} />
+                <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full"></span>
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 mt-3 w-[350px] bg-white border border-gray-100 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[999]">
+                  <div className="px-8 py-6 bg-primary text-white">
+                    <h4 className="font-black text-lg">Thông báo</h4>
+                    <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mt-1">Bạn có 3 thông báo mới</p>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {[
+                      { title: 'Đơn hàng mới #ORD-102', time: '5 phút trước', icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
+                      { title: 'Sản phẩm sắp hết hàng', time: '1 giờ trước', icon: Package, color: 'text-rose-500', bg: 'bg-rose-50' },
+                      { title: 'Yêu cầu báo giá mới', time: '3 giờ trước', icon: FileSignature, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                    ].map((n, i) => {
+                      const Icon = n.icon;
+                      return (
+                        <div key={i} className="px-8 py-5 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer group">
+                          <div className="flex gap-4 items-center">
+                            <div className={`w-12 h-12 rounded-2xl ${n.bg} ${n.color} flex items-center justify-center shrink-0`}>
+                              <Icon size={20} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[13px] font-black text-gray-900 group-hover:text-primary transition-colors">{n.title}</p>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mt-0.5">{n.time}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="p-4 bg-gray-50 text-center">
+                    <button className="text-[10px] font-black text-gray-400 hover:text-primary uppercase tracking-widest transition-colors">Đánh dấu đã đọc tất cả</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
         </header>

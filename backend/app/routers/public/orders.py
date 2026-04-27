@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.core.database import DbSession
 from app.core.settings import settings
@@ -82,8 +83,11 @@ async def create_guest_order(
         )
 
     await db.commit()
-    await db.refresh(order)
-    return order
+
+    # Re-fetch with relationships for proper serialization
+    stmt = select(Order).where(Order.id == order.id).options(selectinload(Order.items).selectinload(OrderItem.product))
+    result = await db.execute(stmt)
+    return result.scalar_one()
 
 
 @router.get("/track", response_model=OrderRead)
@@ -92,10 +96,14 @@ async def track_order(
     order_code: str = Query(..., min_length=5),
     contact_phone: str = Query(..., min_length=6),
 ) -> Order:
-    stmt = select(Order).where(
-        Order.order_code == order_code,
-        Order.contact_phone == contact_phone,
-        Order.is_active.is_(True),
+    stmt = (
+        select(Order)
+        .where(
+            Order.order_code == order_code,
+            Order.contact_phone == contact_phone,
+            Order.is_active.is_(True),
+        )
+        .options(selectinload(Order.items).selectinload(OrderItem.product))
     )
     result = await db.execute(stmt)
     order = result.scalar_one_or_none()
