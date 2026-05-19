@@ -25,7 +25,13 @@ BACKEND_DIR  := backend
 BACKEND_APP  := app.main:app
 BACKEND_ENV  := $(BACKEND_DIR)/.dev.env
 
-BACKEND_LOAD_ENV := set -a && source "$(BACKEND_ENV)" && set +a
+BACKEND_LOAD_ENV := if [ "$$ENVIRONMENT" = "production" ] || [ -n "$$DATABASE_URL" ]; then \
+		:; \
+	elif [ -f "$(BACKEND_ENV)" ]; then \
+		set -a && . "$(BACKEND_ENV)" && set +a; \
+	else \
+		:; \
+	fi
 
 # ─── Colors ────────────────────────────────────────────────────────────────────
 RESET   := \033[0m
@@ -148,14 +154,14 @@ backend-env-check:
 
 backend-init: backend-env-check
 	printf "$(YELLOW)Seeding initial data...$(RESET)\n"
-	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=${ENVIRONMENT:-development} PYTHONPATH=$(BACKEND_DIR) \
 		$(PYTHON) $(BACKEND_DIR)/app/initial_data.py
 	printf "$(GREEN)✓ Initial data loaded$(RESET)\n"
 
 # ─── Development ───────────────────────────────────────────────────────────────
 dev: backend-env-check
 	printf "$(YELLOW)Starting uvicorn$(RESET) $(DIM)(0.0.0.0:8000)$(RESET)\n"
-	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=${ENVIRONMENT:-development} PYTHONPATH=$(BACKEND_DIR) \
 		$(UVICORN) $(BACKEND_APP) --reload --host 0.0.0.0 --port 8000
 
 # ─── Quality ───────────────────────────────────────────────────────────────────
@@ -170,7 +176,7 @@ test:
 # ─── Database migrations ───────────────────────────────────────────────────────
 alembic-upgrade: backend-env-check
 	printf "$(YELLOW)Applying migrations → head...$(RESET)\n"
-	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=${ENVIRONMENT:-development} PYTHONPATH=$(BACKEND_DIR) \
 		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini upgrade head
 	printf "$(GREEN)✓ Database up to date$(RESET)\n"
 
@@ -179,7 +185,7 @@ ifndef REVISION
 	$(error $(B_RED)REVISION required$(RESET) — e.g.  make alembic-downgrade REVISION=-1)
 endif
 	printf "$(YELLOW)Downgrading to $(REVISION)...$(RESET)\n"
-	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=${ENVIRONMENT:-development} PYTHONPATH=$(BACKEND_DIR) \
 		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini downgrade $(REVISION)
 
 alembic-revision: backend-env-check
@@ -187,7 +193,7 @@ ifndef MESSAGE
 	$(error $(B_RED)MESSAGE required$(RESET) — e.g.  make alembic-revision MESSAGE="add users table")
 endif
 	printf "$(YELLOW)Generating migration:$(RESET) $(CYAN)$(MESSAGE)$(RESET)\n"
-	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=${ENVIRONMENT:-development} PYTHONPATH=$(BACKEND_DIR) \
 		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini revision --autogenerate -m "$(MESSAGE)"
 
 alembic-revision-empty:
@@ -200,12 +206,12 @@ endif
 
 alembic-history: backend-env-check
 	printf "$(YELLOW)Migration history:$(RESET)\n"
-	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=${ENVIRONMENT:-development} PYTHONPATH=$(BACKEND_DIR) \
 		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini history --verbose
 
 alembic-current: backend-env-check
 	printf "$(YELLOW)Current revision:$(RESET)\n"
-	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
+	$(BACKEND_LOAD_ENV) && ENVIRONMENT=${ENVIRONMENT:-development} PYTHONPATH=$(BACKEND_DIR) \
 		$(ALEMBIC) -c $(BACKEND_DIR)/alembic.ini current
 
 # ─── Frontend ──────────────────────────────────────────────────────────────────
