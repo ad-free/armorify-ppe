@@ -73,9 +73,13 @@ class Settings(BaseSettings):
     admin_password: str = "admin!!!!"
 
     def model_post_init(self, __context: object) -> None:
-        missing = [f for f in ("database_url", "secret_key", "jwt_secret_key") if not getattr(self, f)]
-        if missing:
-            raise ValueError(f"Missing required environment variables: {', '.join(missing).upper()}")
+        # Only enforce presence of critical secrets in production. During
+        # development we allow loading from .dev.env or using defaults.
+        required = ("database_url", "secret_key", "jwt_secret_key")
+        if self.environment == Environment.PRODUCTION:
+            missing = [f for f in required if not getattr(self, f)]
+            if missing:
+                raise ValueError(f"Missing required environment variables for production: {', '.join(missing).upper()}")
 
 
 def get_settings() -> Settings:
