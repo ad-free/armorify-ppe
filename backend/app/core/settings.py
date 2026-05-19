@@ -73,6 +73,24 @@ class Settings(BaseSettings):
     admin_phone: str = "0971409192"
     admin_password: str = "admin!!!!"
 
+    @staticmethod
+    def _normalize_database_url_value(url: str | None) -> str | None:
+        if not url:
+            return url
+        normalized = url.strip()
+        if normalized.startswith("postgres://"):
+            return "postgresql+asyncpg://" + normalized[len("postgres://"):]
+        if normalized.startswith("postgresql://") and "+" not in normalized.split("://", 1)[1]:
+            return "postgresql+asyncpg://" + normalized[len("postgresql://"):]
+        return normalized
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, v):
+        if isinstance(v, str):
+            return cls._normalize_database_url_value(v)
+        return v
+
     @field_validator("environment", mode="before")
     @classmethod
     def _normalize_environment(cls, v):
