@@ -4,6 +4,7 @@ from enum import Enum
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 
 DEFAULT_ENV_FILE = ".env"
 DEV_ENV_FILE = ".dev.env"
@@ -71,6 +72,16 @@ class Settings(BaseSettings):
     admin_username: str = "0971409192"
     admin_phone: str = "0971409192"
     admin_password: str = "admin!!!!"
+
+    @field_validator("environment", mode="before")
+    @classmethod
+    def _normalize_environment(cls, v):
+        # Accept None or empty strings and normalize to defaults.
+        if v is None:
+            return Environment.DEVELOPMENT
+        if isinstance(v, str):
+            return Environment.from_str(v)
+        return v
 
     def model_post_init(self, __context: object) -> None:
         # Only enforce presence of critical secrets in production. During
