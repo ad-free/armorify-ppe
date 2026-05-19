@@ -132,7 +132,13 @@ install: backend-install
 	printf "$(GREEN)✓ All dependencies installed$(RESET)\n"
 
 backend-env-check:
-	@if [ -f "$(BACKEND_ENV)" ]; then \
+	# Allow skipping .dev.env when running in production or when DATABASE_URL is
+	# already present in the environment (CI/host-managed secrets).
+	@if [ "$$ENVIRONMENT" = "production" ]; then \
+		printf "$(GREEN)✓ Production environment detected — skipping $(BACKEND_ENV) check$(RESET)\n"; \
+	elif [ -n "$$DATABASE_URL" ]; then \
+		printf "$(GREEN)✓ DATABASE_URL present in environment — skipping $(BACKEND_ENV) check$(RESET)\n"; \
+	elif [ -f "$(BACKEND_ENV)" ]; then \
 		printf "$(GREEN)✓ Found $(BACKEND_ENV)$(RESET)\n"; \
 	else \
 		printf "$(B_RED)✗ Missing $(BACKEND_ENV)$(RESET)\n"; \
