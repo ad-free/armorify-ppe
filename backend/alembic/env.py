@@ -54,7 +54,7 @@ _CONFIGURE_KWARGS: dict = {
 }
 
 
-def _normalize_database_url(url: str | None) -> str | None:
+def _normalize_database_url_for_alembic(url: str | None) -> str | None:
     if not url:
         return url
     normalized = url.strip()
@@ -66,7 +66,7 @@ def _normalize_database_url(url: str | None) -> str | None:
 
 
 def run_migrations_offline() -> None:
-    url = _normalize_database_url(os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url"))
+    url = _normalize_database_url_for_alembic(os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url"))
     context.configure(
         url=url,
         literal_binds=True,
@@ -97,7 +97,7 @@ async def _ensure_schema(connection: AsyncConnection) -> None:
 
 def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = _normalize_database_url(os.getenv("DATABASE_URL") or settings.database_url)
+    configuration["sqlalchemy.url"] = _normalize_database_url_for_alembic(os.getenv("DATABASE_URL") or settings.database_url)
 
     connectable = async_engine_from_config(
         configuration,
