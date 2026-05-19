@@ -103,6 +103,7 @@ def run_migrations_online() -> None:
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args={"server_settings": {"search_path": f"{DEFAULT_SCHEMA},public"}},
     )
 
     async def _run_async_migrations() -> None:
