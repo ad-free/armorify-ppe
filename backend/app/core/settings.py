@@ -3,8 +3,8 @@ import os
 from enum import Enum
 from pathlib import Path
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_ENV_FILE = ".env"
 DEV_ENV_FILE = ".dev.env"
@@ -79,9 +79,9 @@ class Settings(BaseSettings):
             return url
         normalized = url.strip()
         if normalized.startswith("postgres://"):
-            return "postgresql+asyncpg://" + normalized[len("postgres://"):]
+            return "postgresql+asyncpg://" + normalized[len("postgres://") :]
         if normalized.startswith("postgresql://") and "+" not in normalized.split("://", 1)[1]:
-            return "postgresql+asyncpg://" + normalized[len("postgresql://"):]
+            return "postgresql+asyncpg://" + normalized[len("postgresql://") :]
         return normalized
 
     @field_validator("database_url", mode="before")
