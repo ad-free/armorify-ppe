@@ -11,3 +11,4 @@ class PaginatedResponse(BaseModel, Generic[T]):
     total: int
     skip: int
     limit: int
+    extra: dict | None = None

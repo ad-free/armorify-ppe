@@ -16,30 +16,47 @@ const VideoPage: React.FC = () => {
   }, [data?.items]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="container mx-auto px-4 py-8 max-w-7xl"
-    >
+    <div className="bg-[#f8fafc] min-h-screen pb-24">
       <SeoHead
         title="Video Review Sản Phẩm Bảo Hộ"
         description="Tổng hợp các video đánh giá, hướng dẫn sử dụng thiết bị bảo hộ lao động thực tế nhất."
       />
 
-      <Breadcrumb
-        items={[
-          { label: 'Trang chủ', href: '/' },
-          { label: 'Video Review' }
-        ]}
-      />
+      {/* Hero Banner with Embedded Breadcrumb */}
+      <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden border-b border-slate-800/80 mb-12">
+        {/* Decorative elements */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-primary rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 right-0 w-80 h-80 bg-teal-500 rounded-full blur-[100px] translate-x-1/3 translate-y-1/3" />
+        </div>
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
 
-      <div className="mb-8 mt-4">
-        <h1 className="text-3xl md:text-4xl font-bold mb-4">Video Đánh Giá Sản Phẩm</h1>
-        <p className="text-muted-foreground text-lg max-w-3xl">
-          Khám phá chi tiết các sản phẩm bảo hộ lao động qua góc nhìn cận cảnh và chân thực nhất.
-        </p>
+        <div className="container mx-auto px-6 max-w-7xl relative z-10">
+          <div className="py-12 md:py-16">
+            <Breadcrumb
+              variant="dark"
+              items={[
+                { label: 'Trang chủ', href: '/' },
+                { label: 'Video Review' }
+              ]}
+            />
+            <div className="mt-6 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+              <div className="space-y-4">
+                <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight uppercase leading-none">
+                  Video Đánh Giá Sản Phẩm
+                </h1>
+                <p className="text-slate-400 max-w-2xl text-xs md:text-sm font-semibold leading-relaxed">
+                  Khám phá chi tiết các sản phẩm bảo hộ lao động qua góc nhìn cận cảnh và chân thực nhất.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <div className="container mx-auto px-6 max-w-7xl">
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -82,7 +99,8 @@ const VideoPage: React.FC = () => {
           ))}
         </div>
       )}
-    </motion.div>
+      </div>
+    </div>
   );
 };
 

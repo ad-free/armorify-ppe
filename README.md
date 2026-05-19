@@ -115,7 +115,27 @@ The project maintains strict code quality standards through automated tools:
 
 ---
 
-## 📂 Project Structure
+## � Deployment Workflow
+
+This repository uses GitHub Actions to run linting and deploy only when relevant folders change:
+
+- `backend/` changes trigger backend linting and deploy to Render on `push` to `master`.
+- `frontend/` changes trigger frontend linting and deploy to GitHub Pages on `push` to `master`.
+- After successful deploys, a release note is created automatically.
+
+### Required repository secrets
+
+- `RENDER_SERVICE_ID` — Render service identifier for backend deployment.
+- `RENDER_API_KEY` — API key to authorize Render deploys.
+
+### Deployment targets
+
+- Backend: Render
+- Frontend: GitHub Pages (`gh-pages` branch)
+
+---
+
+## �📂 Project Structure
 
 ```
 armorify-ppe/

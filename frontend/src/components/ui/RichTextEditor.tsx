@@ -34,7 +34,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
     onChange(e.target.value);
   };
 
-  const ToolbarButton = ({ icon: Icon, action, title }: { icon: any, action: () => void, title: string }) => (
+  const ToolbarButton = ({ icon: Icon, action, title }: { icon: React.ElementType; action: () => void; title: string }) => (
     <button
       type="button"
       onClick={action}

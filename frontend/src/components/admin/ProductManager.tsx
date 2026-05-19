@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Columns, X, Package } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useGenericResource, genericApiClient } from '../../api/generic';
+import { getMediaUrl } from '@/lib/api';
 import { useEntitySchema } from '../../hooks/useSchema';
 import { DynamicTable } from '../dynamic/DynamicTable';
 import { DynamicForm } from '../dynamic/DynamicForm';
@@ -93,7 +94,7 @@ const ProductImageManager = ({ productId }: { productId: string }) => {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
           {productImages.map((img) => (
             <div key={img.id} className="relative group rounded-3xl overflow-hidden border border-gray-100 bg-white aspect-square flex items-center justify-center shadow-sm hover:shadow-xl transition-all">
-              <img src={img.url} alt="Product" className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform" />
+              <img src={getMediaUrl(img.url)} alt="Product" className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform" />
               <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
                 <button
                   type="button"
@@ -300,9 +301,10 @@ export const ProductManager: React.FC = () => {
     restore,
   } = useGenericResource(entityName, params);
 
-  const filteredItems = Array.isArray(items) ? items.filter((item: any) => {
+  const filteredItems = Array.isArray(items) ? items.filter((item) => {
+    const product = item as Record<string, unknown>;
     if (stockFilter === 'low') {
-      return (item.stock || 0) < 10;
+      return Number(product.stock ?? 0) < 10;
     }
     return true;
   }) : [];

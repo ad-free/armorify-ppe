@@ -106,7 +106,18 @@ async def list_products(
     query = select(Product).where(Product.is_active.is_(True))
 
     if category_id:
-        query = query.where(Product.category_id == category_id)
+        # Fetch up to 3 levels of subcategories manually to ensure compatibility across DB drivers
+        cat_ids = [category_id]
+
+        children_res = await db.execute(select(Category.id).where(Category.parent_id == category_id))
+        children_ids = list(children_res.scalars().all())
+
+        if children_ids:
+            cat_ids.extend(children_ids)
+            grandchildren_res = await db.execute(select(Category.id).where(Category.parent_id.in_(children_ids)))
+            cat_ids.extend(grandchildren_res.scalars().all())
+
+        query = query.where(Product.category_id.in_(cat_ids))
 
     if sort_by == "price_desc":
         query = query.order_by(Product.price.desc())

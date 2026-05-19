@@ -1,17 +1,20 @@
 # app/routers/__init__.py
 from .admin import (
+    admin_blog_router,
     admin_brands_router,
     admin_catalog_router,
     admin_cms_router,
     admin_dashboard_router,
+    admin_flash_sale_router,
     admin_orders_router,
     admin_product_images_router,
     admin_quotes_router,
+    admin_reviews_router,
     admin_users_router,
 )
 from .auth import router as auth_router
 from .protected import addresses_router, cart_router, protected_orders_router
-from .public import public_catalog_router, public_cms_router, public_orders_router
+from .public import public_blog_router, public_catalog_router, public_cms_router, public_orders_router
 from .users import router as users_router
 
 __all__ = [
@@ -19,6 +22,7 @@ __all__ = [
     "public_catalog_router",
     "public_cms_router",
     "public_orders_router",
+    "public_blog_router",
     "protected_orders_router",
     "cart_router",
     "addresses_router",
@@ -28,7 +32,10 @@ __all__ = [
     "admin_orders_router",
     "admin_product_images_router",
     "admin_quotes_router",
+    "admin_reviews_router",
     "admin_users_router",
     "admin_dashboard_router",
+    "admin_flash_sale_router",
+    "admin_blog_router",
     "users_router",
 ]

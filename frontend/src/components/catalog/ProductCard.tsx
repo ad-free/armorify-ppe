@@ -5,12 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { ShoppingCart, Heart, Eye } from 'lucide-react';
 import { ProductRead } from '@/types/api';
 import { StarRating } from './StarRating';
-import toast from 'react-hot-toast';
+import { authToast } from '@/lib/toast';
 import { useCartStore } from '@/store/cartStore';
 
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useAuthStore } from '@/store/authStore';
 import { formatCurrency } from '@/lib/currency';
+import { getMediaUrl } from '@/lib/api';
 
 interface ProductCardProps {
   product: ProductRead;
@@ -26,9 +27,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const fmt = (val: number) => formatCurrency(val, { locale: i18n.language === 'vi' ? 'vi-VN' : 'en-US' });
 
   const comparePrice = product.compare_at_price ? Number(product.compare_at_price) : 0;
-  const discount = comparePrice > product.price
-    ? Math.round(((comparePrice - product.price) / comparePrice) * 100)
-    : 0;
+  
+  // Flash Sale Logic
+  const hasFlashSale = Boolean(product.flash_sale_price);
+  const displayPrice = hasFlashSale ? Number(product.flash_sale_price) : product.price;
+  const originalPrice = hasFlashSale ? product.price : (comparePrice || 0);
+  const displayDiscount = hasFlashSale ? product.flash_sale_discount : (comparePrice > product.price ? Math.round(((comparePrice - product.price) / comparePrice) * 100) : 0);
 
   return (
     <motion.div
@@ -39,45 +43,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     >
       {/* Badges Overlay */}
       <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-none">
-        {discount > 0 && (
+        {displayDiscount && displayDiscount > 0 ? (
           <span className="bg-destructive text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow-lg shadow-destructive/20 uppercase tracking-tight">
-            -{discount}%
+            -{displayDiscount}%
           </span>
-        )}
+        ) : null}
         {product.is_new && (
           <span className="bg-secondary text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow-lg shadow-secondary/20 uppercase tracking-tight">
             NEW
           </span>
         )}
-      </div>
-
-      {/* Action Buttons (Floating on hover) */}
-      <div className="absolute top-4 right-4 z-30 flex flex-col gap-2.5 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0 duration-300">
-        {user && (
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleItem(product);
-              if (!isFavorite) {
-                toast.success('Đã thêm vào yêu thích!');
-              }
-            }}
-            className={`w-10 h-10 rounded-xl shadow-xl flex items-center justify-center transition-all duration-300 active:scale-90 ${
-              isFavorite 
-                ? 'bg-destructive text-white' 
-                : 'bg-white text-gray-500 hover:text-white hover:bg-destructive'
-            }`}
-          >
-            <Heart size={20} fill={isFavorite ? "currentColor" : "none"} />
-          </button>
+        {hasFlashSale && (
+          <span className="bg-amber-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-lg shadow-amber-500/20 uppercase tracking-tight flex items-center gap-1">
+             FLASH DEAL
+          </span>
         )}
-        <Link 
-          to={`/products/${product.slug}`}
-          className="w-10 h-10 bg-white text-gray-500 hover:text-white hover:bg-primary rounded-xl shadow-xl flex items-center justify-center transition-all duration-300 active:scale-90"
-        >
-          <Eye size={20} />
-        </Link>
       </div>
 
       {/* Image Section */}
@@ -86,7 +66,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         className="block relative aspect-[4/5] overflow-hidden bg-white group-hover:bg-gray-50 transition-colors duration-500"
       >
         <img
-          src={product.cover_image_url || "https://via.placeholder.com/400x500.png?text=NBE+Hoang+Duy"}
+          src={getMediaUrl(product.cover_image_url) || "https://via.placeholder.com/400x500.png?text=Armorify"}
           alt={product.name}
           className="w-full h-full object-contain p-6 transition-transform duration-1000 group-hover:scale-110 ease-out"
           loading="lazy"
@@ -104,17 +84,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               {product.brand.name}
             </span>
           ) : (
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">NBE Hoang Duy</span>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">Sản phẩm</span>
           )}
 
           <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-100/50">
             <StarRating value={Number(product.rating_avg) || 0} readOnly size="xs" />
-            <span className="text-[10px] font-bold text-amber-700">{Number(product.rating_avg) || 5}</span>
-            {product.rating_count > 0 && (
-              <span className="text-[9px] font-medium text-gray-400 border-l border-amber-200 pl-1.5">
-                {product.rating_count}
-              </span>
-            )}
+            <span className="text-[10px] font-bold text-amber-700">{Number(product.rating_avg) > 0 ? Number(product.rating_avg).toFixed(1) : '0.0'}</span>
+            <span className="text-[9px] font-medium text-gray-400 border-l border-amber-200 pl-1.5 ml-1">
+              {product.rating_count || 0}
+            </span>
           </div>
         </div>
 
@@ -129,12 +107,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="flex flex-col gap-2 mt-auto">
           {/* Main Price Row */}
           <div className="flex items-baseline gap-2">
-            <span className="text-xl md:text-[1.4rem] font-black text-gray-900 tracking-tight leading-none">
-              {fmt(product.price)}
+            <span className={`text-xl md:text-[1.4rem] font-black tracking-tight leading-none ${hasFlashSale ? 'text-destructive' : 'text-gray-900'}`}>
+              {fmt(displayPrice)}
             </span>
-            {discount > 0 && (
+            {originalPrice > displayPrice && (
               <span className="text-[11px] text-gray-400 line-through font-medium">
-                {fmt(comparePrice)}
+                {fmt(originalPrice)}
               </span>
             )}
           </div>
@@ -155,14 +133,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               e.preventDefault();
               e.stopPropagation();
               addItem(product, 1);
-              toast.success(`Đã thêm ${product.name} vào giỏ hàng!`, {
-                icon: '🛒',
-                style: {
-                  borderRadius: '10px',
-                  background: '#333',
-                  color: '#fff',
-                },
-              });
+              authToast.success(
+                'Thêm thành công',
+                `Đã thêm ${product.name} vào giỏ hàng.`
+              );
             }}
             className="w-full py-3 bg-gray-50 text-gray-600 font-black text-[11px] rounded-[1.1rem] flex items-center justify-center gap-2.5 border border-gray-100 group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:shadow-lg group-hover:shadow-primary/30 transition-all duration-300 active:scale-95 uppercase tracking-widest"
           >
@@ -170,6 +144,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             THÊM<span className="hidden sm:inline">VÀO GIỎ</span>
           </button>
         </div>
+      </div>
+
+      {/* Action Buttons (Floating on hover) - Moved here to ensure they are on top */}
+      <div className="absolute top-4 right-4 z-30 flex flex-col gap-2.5 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0 duration-300">
+        {user && (
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleItem(product);
+              if (!isFavorite) {
+                authToast.success('Đã thêm vào yêu thích', product.name);
+              }
+            }}
+            className={`w-10 h-10 rounded-xl shadow-xl flex items-center justify-center transition-all duration-300 active:scale-90 ${
+              isFavorite 
+                ? 'bg-destructive text-white' 
+                : 'bg-white text-gray-500 hover:text-white hover:bg-destructive'
+            }`}
+          >
+            <Heart size={20} fill={isFavorite ? "currentColor" : "none"} />
+          </button>
+        )}
+        <Link 
+          to={`/products/${product.slug}`}
+          className="w-10 h-10 bg-white text-gray-500 hover:text-white hover:bg-primary rounded-xl shadow-xl flex items-center justify-center transition-all duration-300 active:scale-90"
+        >
+          <Eye size={20} />
+        </Link>
       </div>
     </motion.div>
   );

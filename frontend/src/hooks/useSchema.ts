@@ -123,7 +123,7 @@ export const useEntitySchema = (entityName: string, mode: SchemaMode = 'read') =
       // 1. Define explicit mappings for entities that don't follow the pattern
       const entityMap: Record<string, string> = {
         'catalog': 'Category',
-        'blog': 'PageContent',
+        'blog': 'BlogPost',
         'cms': 'PageContent',
         'brand': 'Brand',
         'branch': 'Brand',
@@ -131,6 +131,9 @@ export const useEntitySchema = (entityName: string, mode: SchemaMode = 'read') =
         'product-image': 'ProductImage',
         'quote': 'QuoteRequest',
         'banner': 'Banner',
+        'review': 'Review',
+        'flash-sale': 'FlashSale',
+        'flash_sale': 'FlashSale',
       };
 
       // 2. Identify the base name (either from map or capitalized)

@@ -3,6 +3,43 @@ import { useAuthStore } from '@/store/authStore';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
+/**
+ * The HTTP origin (scheme + host + port) of the backend server, derived from
+ * VITE_API_BASE_URL at build/runtime.  Used to resolve server-relative image
+ * paths so the frontend never hard-codes an IP address.
+ *
+ * Example: "http://192.168.1.3:8000"
+ */
+export const SERVER_ORIGIN = (() => {
+  try {
+    return new URL(BASE_URL).origin;
+  } catch {
+    return 'http://127.0.0.1:8000';
+  }
+})();
+
+/**
+ * Converts any image URL stored in the database to a fully-qualified URL that
+ * works regardless of the current server IP or domain.
+ *
+ * - Absolute URLs  (legacy, stored with an old IP): the pathname is extracted
+ *   and re-attached to the *current* SERVER_ORIGIN.
+ * - Relative paths (new format, e.g. "/static/uploads/abc.jpg"): SERVER_ORIGIN
+ *   is prepended.
+ * - Null / empty   : returns an empty string so <img> renders nothing.
+ */
+export const getMediaUrl = (url: string | null | undefined): string => {
+  if (!url) return '';
+  try {
+    // Handles absolute URLs — rewrite the origin to the current server.
+    const parsed = new URL(url);
+    return `${SERVER_ORIGIN}${parsed.pathname}`;
+  } catch {
+    // Relative path — just prepend the origin.
+    return `${SERVER_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+};
+
 interface FetchOptions extends RequestInit {
   params?: Record<string, string | number | boolean | null | undefined>;
   _retry?: boolean;

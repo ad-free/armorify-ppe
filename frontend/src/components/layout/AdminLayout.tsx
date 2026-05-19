@@ -16,7 +16,8 @@ import {
   Search,
   Tag,
   ImagePlus,
-  FileSignature
+  FileSignature,
+  Star
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
@@ -30,12 +31,14 @@ const ADMIN_MENU = [
   { id: 'dashboard', labelKey: 'admin.menu.dashboard', icon: BarChart3, path: '/admin' },
   { id: 'order', labelKey: 'admin.menu.order', icon: ShoppingBag, path: '/admin/manage/order' },
   { id: 'product', labelKey: 'admin.menu.product', icon: Package, path: '/admin/manage/product' },
+  { id: 'flash-sale', labelKey: 'admin.menu.flash_sale', icon: Zap, path: '/admin/manage/flash-sale' },
   { id: 'catalog', labelKey: 'admin.menu.catalog', icon: Grid, path: '/admin/manage/catalog' },
   { id: 'brand', labelKey: 'admin.menu.brand', icon: Tag, path: '/admin/manage/brand' },
   { id: 'user', labelKey: 'admin.menu.user', icon: Users, path: '/admin/manage/user' },
   { id: 'blog', labelKey: 'admin.menu.blog', icon: FileText, path: '/admin/manage/blog' },
   { id: 'banner', labelKey: 'admin.menu.banner', icon: ImagePlus, path: '/admin/manage/banner' },
   { id: 'quote', labelKey: 'admin.menu.quote', icon: FileSignature, path: '/admin/manage/quote' },
+  { id: 'review', labelKey: 'admin.menu.review', icon: Star, path: '/admin/manage/review' },
 ];
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subtitle: _subtitle }) => {

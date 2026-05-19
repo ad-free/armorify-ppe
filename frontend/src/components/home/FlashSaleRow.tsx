@@ -1,34 +1,21 @@
-// src/components/home/FlashSaleRow.tsx — FastKart green primary style
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Zap, ArrowRight } from 'lucide-react';
 import { ProductCard } from '../catalog/ProductCard';
 import { Link } from 'react-router-dom';
 import type { ProductRead } from '@/types/api';
+import { CountdownTimer } from '../common/CountdownTimer';
 
 interface Props {
   products: ProductRead[];
   loading?: boolean;
+  targetDate?: string;
+  title?: string;
+  onEnd?: () => void;
 }
 
-export const FlashSaleRow: React.FC<Props> = ({ products, loading }) => {
-  const [timeLeft, setTimeLeft] = useState<{h: number, m: number, s: number}>({ h: 11, m: 59, s: 59 });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        let { h, m, s } = prev;
-        s -= 1;
-        if (s < 0) { s = 59; m -= 1; }
-        if (m < 0) { m = 59; h -= 1; }
-        if (h < 0) { h = 23; }
-        return { h, m, s };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const pad = (n: number) => n.toString().padStart(2, '0');
+export const FlashSaleRow: React.FC<Props> = ({ products, loading, targetDate: propTargetDate, title, onEnd }) => {
+  const targetDate = propTargetDate || products.find(p => p.flash_deal_end)?.flash_deal_end;
 
   return (
     <section className="py-6 my-4">
@@ -41,28 +28,20 @@ export const FlashSaleRow: React.FC<Props> = ({ products, loading }) => {
               <Zap className="fill-destructive text-destructive" size={26} />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-gray-900 leading-none tracking-tight">Deal Chớp Nhoáng</h2>
+              <h2 className="text-2xl font-black text-gray-900 leading-none tracking-tight">{title || "Deal Chớp Nhoáng"}</h2>
               <p className="text-sm text-gray-400 font-bold mt-1.5 uppercase tracking-wider">Ưu đãi kết thúc sau:</p>
             </div>
           </div>
 
           {/* Countdown */}
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-2 font-black text-lg">
-              {[
-                { val: pad(timeLeft.h), label: 'H' },
-                { val: pad(timeLeft.m), label: 'M' },
-                { val: pad(timeLeft.s), label: 'S' }
-              ].map((unit, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="bg-destructive text-white px-3 py-2 rounded-xl min-w-[44px] text-center shadow-lg shadow-destructive/20 scale-105">
-                    {unit.val}
-                  </div>
-                  {i < 2 && <span className="text-destructive animate-pulse">:</span>}
-                </div>
-              ))}
-            </div>
-          </div>
+          {targetDate && (
+            <CountdownTimer 
+              targetDate={targetDate} 
+              variant="compact"
+              onEnd={onEnd}
+              className="bg-destructive/5 p-2 rounded-2xl border border-destructive/10" 
+            />
+          )}
         </div>
 
         <Link

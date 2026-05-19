@@ -33,6 +33,7 @@ import { formatCurrency } from '@/lib/currency';
 import { authToast } from '@/lib/toast';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
+import { getMediaUrl } from '@/lib/api';
 
 const ORDER_STATUS_CONFIG = {
   pending: { label: 'Chờ xử lý', color: 'bg-amber-500', icon: Clock, bg: 'bg-amber-50', text: 'text-amber-600', desc: 'Đơn hàng của bạn đang được hệ thống tiếp nhận.' },
@@ -353,7 +354,7 @@ const ProfilePage: React.FC = () => {
                                   >
                                     <div className="w-24 h-24 bg-white rounded-2xl p-3 border border-gray-100 shrink-0 flex items-center justify-center shadow-sm">
                                       <img
-                                        src={item.product?.cover_image_url || '/placeholder.png'}
+                                        src={getMediaUrl(item.product?.cover_image_url) || '/placeholder.png'}
                                         alt={item.product?.name}
                                         className="max-w-full max-h-full object-contain"
                                       />
@@ -397,7 +398,7 @@ const ProfilePage: React.FC = () => {
                                     <div className="flex -space-x-2">
                                       {order.items?.slice(0, 3).map((item, idx) => (
                                         <div key={idx} className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm">
-                                          <img src={item.product?.cover_image_url || '/placeholder.png'} className="w-full h-full object-cover" />
+                                          <img src={getMediaUrl(item.product?.cover_image_url) || '/placeholder.png'} className="w-full h-full object-cover" />
                                         </div>
                                       ))}
                                       {(order.items?.length || 0) > 3 && (
@@ -448,7 +449,7 @@ const ProfilePage: React.FC = () => {
                         {wishlistItems.map((product) => (
                           <div key={product.id} className="flex gap-4 p-4 rounded-2xl border border-gray-100 hover:border-primary/20 transition-all group bg-gray-50/30">
                             <Link to={`/products/${product.slug}`} className="w-20 h-20 rounded-xl bg-white flex items-center justify-center p-2 flex-shrink-0">
-                              <img src={product.cover_image_url || '/placeholder.png'} alt={product.name} className="max-w-full max-h-full object-contain" />
+                              <img src={getMediaUrl(product.cover_image_url) || '/placeholder.png'} alt={product.name} className="max-w-full max-h-full object-contain" />
                             </Link>
                             <div className="flex-1 min-w-0">
                               <h4 className="font-bold text-gray-900 text-sm line-clamp-1 mb-1">{product.name}</h4>
@@ -707,8 +708,9 @@ const ProfilePage: React.FC = () => {
                     });
                     setIsPasswordModalOpen(false);
                     toast.success('Đã đổi mật khẩu thành công!');
-                  } catch (err: any) {
-                    toast.error(err.response?.data?.detail || 'Có lỗi xảy ra.');
+                  } catch (err: unknown) {
+                    const errorResponse = err as { response?: { data?: { detail?: string } } };
+                    toast.error(errorResponse.response?.data?.detail || 'Có lỗi xảy ra.');
                   }
                 }}
                 className="p-8 space-y-5"

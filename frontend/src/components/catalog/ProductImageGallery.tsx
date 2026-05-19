@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ProductImageRead } from '@/types/api';
+import { getMediaUrl } from '@/lib/api';
 
 interface Props {
   images: ProductImageRead[];
@@ -61,7 +62,7 @@ export const ProductImageGallery: React.FC<Props> = ({ images, productName }) =>
             }`}
           >
             <img
-              src={img.url}
+              src={getMediaUrl(img.url)}
               alt={img.alt_text ?? productName}
               loading="lazy"
               className="w-full h-full object-cover"
@@ -79,7 +80,7 @@ export const ProductImageGallery: React.FC<Props> = ({ images, productName }) =>
         <AnimatePresence mode="wait">
           <motion.img
             key={activeIndex}
-            src={mainImage?.url}
+            src={getMediaUrl(mainImage?.url)}
             alt={mainImage?.alt_text ?? productName}
             loading="lazy"
             initial={{ opacity: 0 }}

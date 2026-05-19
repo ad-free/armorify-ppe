@@ -7,6 +7,7 @@ import { genericApiClient } from '../../api/generic';
 import { RichTextEditor } from '../ui/RichTextEditor';
 
 import { authToast } from '../../lib/toast';
+import { getMediaUrl } from '../../lib/api';
 
 interface DynamicFormProps {
   entityName: string;
@@ -42,21 +43,45 @@ const STATIC_SELECT_FIELDS: Record<string, RelationOption[]> = {
 const RELATION_FIELDS: Record<string, { resource: string; placeholder: string; hint: string; emptyMessage: string }> = {
   category_id: {
     resource: 'catalog',
-    placeholder: 'Chon danh muc...',
-    hint: 'Chon danh muc ma san pham nay thuoc ve.',
-    emptyMessage: 'Chua co danh muc. Hay tao danh muc truoc.',
+    placeholder: 'Chọn danh mục...',
+    hint: 'Chọn danh mục mà sản phẩm này thuộc về.',
+    emptyMessage: 'Chưa có danh mục. Hãy tạo danh mục trước.',
+  },
+  brand_id: {
+    resource: 'brand',
+    placeholder: 'Chọn thương hiệu...',
+    hint: 'Chọn thương hiệu đồng hành cho sản phẩm này.',
+    emptyMessage: 'Chưa có thương hiệu. Hãy tạo thương hiệu trước.',
+  },
+  branch_id: {
+    resource: 'brand',
+    placeholder: 'Chọn thương hiệu (Branch)...',
+    hint: 'Chọn thương hiệu đồng hành cho sản phẩm này.',
+    emptyMessage: 'Chưa có thương hiệu. Hãy tạo thương hiệu trước.',
   },
   parent_id: {
     resource: 'catalog',
-    placeholder: 'Khong co danh muc cha',
-    hint: 'Danh muc cha dung de tao cau truc danh muc cap con.',
-    emptyMessage: 'Chua co danh muc de chon danh muc cha.',
+    placeholder: 'Không có danh mục cha',
+    hint: 'Danh mục cha dùng để tạo cấu trúc danh mục cấp con.',
+    emptyMessage: 'Chưa có danh mục để chọn danh mục cha.',
   },
   product_id: {
     resource: 'product',
-    placeholder: 'Chon san pham...',
-    hint: 'Chon san pham ma hinh anh nay thuoc ve.',
-    emptyMessage: 'Chua co san pham. Hay tao san pham truoc.',
+    placeholder: 'Chọn sản phẩm...',
+    hint: 'Chọn sản phẩm mà hình ảnh này thuộc về.',
+    emptyMessage: 'Chưa có sản phẩm. Hãy tạo sản phẩm trước.',
+  },
+  product_ids: {
+    resource: 'product',
+    placeholder: 'Chọn danh sách sản phẩm...',
+    hint: 'Chọn nhiều sản phẩm để tham gia chiến dịch.',
+    emptyMessage: 'Chưa có sản phẩm nào.',
+  },
+  items: {
+    resource: 'product',
+    placeholder: 'Thêm sản phẩm vào deal...',
+    hint: 'Chọn sản phẩm và nhập tỷ lệ % giảm giá.',
+    emptyMessage: 'Chưa có sản phẩm nào.',
   },
 };
 
@@ -64,8 +89,8 @@ const PRICE_FIELDS = new Set(['price', 'dealer_price', 'compare_at_price', 'unit
 
 const SLUG_SOURCE_CANDIDATES = ['name', 'title', 'label'] as const;
 
-const CurrencyInput: React.FC<{ field: any; commonClasses: string }> = ({ field, commonClasses }) => {
-  const formatValue = (val: any) => {
+const CurrencyInput: React.FC<{ field: ControllerRenderProps<FieldValues, string>; commonClasses: string }> = ({ field, commonClasses }) => {
+  const formatValue = (val: string | number | null | undefined) => {
     if (val === undefined || val === null || val === '') return '';
     const num = parseFloat(val.toString().replace(/[^0-9.]/g, ''));
     if (isNaN(num)) return '';
@@ -251,7 +276,21 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
       if (value instanceof File) {
         const uploaded = await genericApiClient.uploadImage(value);
         payload[key] = uploaded.url;
+      } else if (value === '') {
+        // Convert empty strings to null for the backend
+        payload[key] = null;
+      } else if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) {
+        // Convert local datetime-local string to UTC ISO string
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          payload[key] = date.toISOString();
+        }
       }
+    }
+
+    // Special handling for flash-sale items to ensure they are never null if the field exists
+    if (['flash-sale', 'flash_sale'].includes(entityName.toLowerCase()) && payload.items === null) {
+      payload.items = [];
     }
 
     await onSubmit(payload);
@@ -285,6 +324,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
           rules={{ required: schema.required?.includes(key) }}
           render={({ field }) => (
             <FormFieldAdapter
+              entityName={entityName}
               fieldKey={key}
               field={field}
               fieldLabel={fieldLabel}
@@ -530,7 +570,89 @@ const AttributesField = ({
   );
 };
 
+const FlashSaleItemsField = ({
+  field,
+  relationOptions = [],
+  commonClasses,
+}: {
+  field: ControllerRenderProps<FieldValues, string>;
+  relationOptions: RelationOption[];
+  commonClasses: string;
+}) => {
+  const items = Array.isArray(field.value) ? (field.value as Record<string, unknown>[]) : [];
+
+  const handleAddItem = (productId: string) => {
+    if (items.some((item) => (item.product_id as string) === productId)) return;
+    field.onChange([...items, { product_id: productId, discount_percent: 10 }]);
+  };
+
+  const handleRemoveItem = (productId: string) => {
+    field.onChange(items.filter((item) => (item.product_id as string) !== productId));
+  };
+
+  const handleUpdateDiscount = (productId: string, percent: number) => {
+    field.onChange(items.map((item) => 
+      (item.product_id as string) === productId ? { ...item, discount_percent: percent } : item
+    ));
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3">
+        {items.map((item) => {
+          const productId = item.product_id as string;
+          const product = relationOptions.find(o => o.value === productId);
+          return (
+            <div key={item.product_id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm animate-in slide-in-from-left-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-black text-gray-900 truncate">{product?.label || item.product_id}</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Sản phẩm tham gia deal</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={item.discount_percent}
+                    onChange={(e) => handleUpdateDiscount(item.product_id, Number(e.target.value))}
+                    className="w-24 px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm font-black text-primary outline-none focus:border-primary transition-all pr-8"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary">%</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveItem(item.product_id)}
+                  className="p-2 text-gray-300 hover:text-rose-500 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <select
+        className={commonClasses}
+        onChange={(e) => {
+          if (e.target.value) {
+            handleAddItem(e.target.value);
+            e.target.value = '';
+          }
+        }}
+      >
+        <option value="">Thêm sản phẩm vào chiến dịch...</option>
+        {relationOptions.map(opt => (
+          <option key={opt.value} value={opt.value} disabled={items.some((i) => (i.product_id as string) === opt.value)}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
 const FormFieldAdapter = ({
+  entityName,
   fieldKey,
   field,
   fieldLabel,
@@ -539,6 +661,7 @@ const FormFieldAdapter = ({
   onManualEdit,
   error
 }: {
+  entityName: string;
   fieldKey: string;
   fieldLabel: string;
   field: ControllerRenderProps<FieldValues, string>;
@@ -605,7 +728,7 @@ const FormFieldAdapter = ({
         {typeof field.value === 'string' && field.value ? (
           <div className="flex items-center gap-5 p-4 bg-white rounded-3xl border border-gray-100 shadow-sm animate-in fade-in slide-in-from-top-4">
             <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shrink-0 p-1">
-              <img src={field.value} alt="Preview" className="w-full h-full object-contain rounded-xl" />
+              <img src={getMediaUrl(field.value)} alt="Preview" className="w-full h-full object-contain rounded-xl" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -661,6 +784,16 @@ const FormFieldAdapter = ({
     );
   }
 
+  if (fieldKey === 'items' && (entityName === 'flash-sale' || entityName === 'flash_sale')) {
+    return (
+      <FlashSaleItemsField
+        field={field}
+        relationOptions={relationOptions || []}
+        commonClasses={commonClasses}
+      />
+    );
+  }
+
   if (fieldKey === 'attributes' || fieldKey === 'specifications') {
     const isSpecs = fieldKey === 'specifications';
     return (
@@ -703,6 +836,53 @@ const FormFieldAdapter = ({
   // Known relation fields -> Select with friendly labels
   if (RELATION_FIELDS[fieldKey]) {
     const config = RELATION_FIELDS[fieldKey];
+    const isMulti = schema.type === 'array';
+    
+    if (isMulti) {
+      const selectedIds = Array.isArray(field.value) ? field.value : [];
+      return (
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2 p-4 bg-gray-50/50 rounded-2xl border border-gray-100 min-h-[100px]">
+            {selectedIds.length === 0 && (
+              <span className="text-gray-300 text-xs font-bold italic">Chưa chọn sản phẩm nào...</span>
+            )}
+            {selectedIds.map((id: string) => {
+              const opt = (relationOptions || []).find(o => o.value === id);
+              return (
+                <div key={id} className="bg-white px-3 py-1.5 rounded-xl border border-primary/20 flex items-center gap-2 shadow-sm animate-in zoom-in-95">
+                  <span className="text-xs font-black text-gray-900">{opt?.label || id}</span>
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(selectedIds.filter((i: string) => i !== id))}
+                    className="text-gray-400 hover:text-rose-500 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <select
+            className={commonClasses}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val && !selectedIds.includes(val)) {
+                field.onChange([...selectedIds, val]);
+              }
+              e.target.value = '';
+            }}
+          >
+            <option value="">{config.placeholder}</option>
+            {(relationOptions || []).map((opt) => (
+              <option key={opt.value} value={opt.value} disabled={selectedIds.includes(opt.value)}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+
     return (
       <select
         {...field}

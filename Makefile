@@ -148,12 +148,7 @@ backend-init: backend-env-check
 
 # ─── Development ───────────────────────────────────────────────────────────────
 dev: backend-env-check
-	printf "$(YELLOW)Starting FastAPI dev server$(RESET) $(DIM)(http://127.0.0.1:8000)$(RESET)\n"
-	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
-		$(FASTAPI) dev $(BACKEND_DIR)/app/main.py
-
-dev-uvicorn: backend-env-check
-	printf "$(YELLOW)Starting uvicorn$(RESET) $(DIM)(--reload, 0.0.0.0:8000)$(RESET)\n"
+	printf "$(YELLOW)Starting uvicorn$(RESET) $(DIM)(0.0.0.0:8000)$(RESET)\n"
 	$(BACKEND_LOAD_ENV) && ENVIRONMENT=development PYTHONPATH=$(BACKEND_DIR) \
 		$(UVICORN) $(BACKEND_APP) --reload --host 0.0.0.0 --port 8000
 

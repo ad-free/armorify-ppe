@@ -10,6 +10,7 @@ import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { UserCheck, ShoppingBag, Truck, CreditCard, ChevronRight } from 'lucide-react';
+import { getMediaUrl } from '@/lib/api';
 
 type GuestOrderFormValues = z.infer<typeof guestOrderSchema>;
 
@@ -215,7 +216,7 @@ export const GuestOrderForm: React.FC = () => {
                 <div key={idx} className="flex gap-3">
                   <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 overflow-hidden shrink-0">
                     <img
-                      src={item.product.cover_image_url || 'https://via.placeholder.com/56'}
+                      src={getMediaUrl(item.product.cover_image_url) || 'https://via.placeholder.com/56'}
                       alt={item.product.name}
                       className="w-full h-full object-contain p-1 bg-white"
                     />

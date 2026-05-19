@@ -7,6 +7,7 @@ import { SeoHead } from '@/components/common/SeoHead';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { useCartStore } from '@/store/cartStore';
 import { formatCurrency } from '@/lib/currency';
+import { getMediaUrl } from '@/lib/api';
 
 const CartPage: React.FC = () => {
   const { items, removeItem, updateQuantity, getTotalPrice } = useCartStore();
@@ -72,7 +73,7 @@ const CartPage: React.FC = () => {
                 >
                   <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden border border-gray-200">
                     <img 
-                      src={item.product.cover_image_url || "https://via.placeholder.com/200"} 
+                      src={getMediaUrl(item.product.cover_image_url) || "https://via.placeholder.com/200"} 
                       alt={item.product.name} 
                       className="w-full h-full object-contain p-2 bg-white"
                     />

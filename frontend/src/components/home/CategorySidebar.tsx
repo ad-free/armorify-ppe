@@ -1,7 +1,7 @@
 // src/components/home/CategorySidebar.tsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, HardHat, Shirt, Shield, Glasses, Wrench, Zap, Footprints, Headphones } from 'lucide-react';
+import { ChevronRight, HardHat, Shirt, Shield, Glasses, Wrench, Zap, Footprints, Headphones, Eye, Activity, Heart, Hammer, Cpu, Factory } from 'lucide-react';
 import { useCategories } from '@/hooks/useCatalog';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -9,11 +9,25 @@ const ICON_MAP: Record<string, React.ElementType> = {
   'mu-bao-ho': HardHat,
   'quan-ao-bao-ho': Shirt,
   'gang-tay': Shield,
+  'gang-tay-bao-ho': Shield,
   'kinh-bao-ho': Glasses,
   'giay-bao-ho': Footprints,
   'thiet-bi-dien': Zap,
   'dung-cu': Wrench,
   'chong-on': Headphones,
+};
+
+const FALLBACK_ICONS = [
+  Shield, Eye, Activity, Heart, Hammer, Cpu, Factory, HardHat, Glasses, Footprints
+];
+
+const getCategoryIcon = (slug: string) => {
+  if (ICON_MAP[slug]) return ICON_MAP[slug];
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = slug.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return FALLBACK_ICONS[Math.abs(hash) % FALLBACK_ICONS.length];
 };
 
 interface CategoryNode {
@@ -55,7 +69,7 @@ export const CategorySidebar: React.FC = () => {
       <div className="py-2">
 
         {tree.map((cat) => {
-          const Icon = ICON_MAP[cat.slug] || Shield;
+          const Icon = getCategoryIcon(cat.slug);
           const isHovered = hoveredId === cat.id;
 
           return (

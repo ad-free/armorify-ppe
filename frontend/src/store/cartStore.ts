@@ -27,7 +27,7 @@ export const useCartStore = create<CartState>()(
       items: [],
       addItem: (product, quantity = 1, variant_id, unit_price) => {
         set((state) => {
-          const linePrice = unit_price ?? product.price;
+          const linePrice = unit_price ?? (product.flash_sale_price ? Number(product.flash_sale_price) : product.price);
           const existingItemIndex = state.items.findIndex(
             (item) => item.product.id === product.id && item.variant_id === variant_id
           );
@@ -63,7 +63,7 @@ export const useCartStore = create<CartState>()(
       },
       getTotalPrice: () => {
         return get().items.reduce((total, item) => {
-          const unit = item.unit_price ?? item.product.price;
+          const unit = item.unit_price ?? (item.product.flash_sale_price ? Number(item.product.flash_sale_price) : item.product.price);
           return total + unit * item.quantity;
         }, 0);
       },

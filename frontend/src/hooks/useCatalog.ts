@@ -10,8 +10,12 @@ import {
   listProductVariants,
   listProducts,
   submitReview,
+  getActiveFlashSale,
 } from '@/api/catalog';
 import type { ReviewCreate } from '@/types/api';
+
+export const useActiveFlashSale = () =>
+  useQuery({ queryKey: ['active-flash-sale'], queryFn: getActiveFlashSale, staleTime: 60_000 });
 
 export const useBrands = () =>
   useQuery({ queryKey: ['brands'], queryFn: getBrands, staleTime: 5 * 60_000 });
@@ -50,11 +54,12 @@ export const useSubmitReview = (productId: string) => {
   });
 };
 
-export const useProducts = (params: Parameters<typeof listProducts>[0]) =>
+export const useProducts = (params: Parameters<typeof listProducts>[0], options?: { enabled?: boolean }) =>
   useQuery({
     queryKey: ['products', params],
     queryFn: () => listProducts(params),
-    staleTime: 5 * 60_000
+    staleTime: 5 * 60_000,
+    ...options
   });
 
 export const useProductBySlug = (slug: string | undefined) =>

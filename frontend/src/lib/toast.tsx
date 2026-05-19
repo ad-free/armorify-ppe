@@ -1,6 +1,6 @@
 import React from 'react';
-import toast, { Toast } from 'react-hot-toast';
-import { AlertCircle, CheckCircle2, LogOut, Info, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { AlertCircle, CheckCircle2, LogOut, Info } from 'lucide-react';
 import i18n from '../i18n';
 
 type ToastKind = 'success' | 'error' | 'info' | 'logout';
@@ -32,69 +32,39 @@ const TOAST_CONFIG: Record<ToastKind, { icon: React.ElementType; color: string; 
   },
 };
 
-const activeToasts = new Set<string>();
+let lastToastTime = 0;
 
 const showPremiumToast = (kind: ToastKind, title: string, description?: string) => {
-  // Sử dụng một ID cố định duy nhất cho tất cả premium toasts 
-  // Điều này đảm bảo CHỈ CÓ TỐI ĐA 1 thông báo trên màn hình, xóa bỏ hoàn toàn việc lặp lại.
-  const toastId = 'armorify-premium-toast-singleton';
-  
-  if (activeToasts.has(toastId)) {
-    toast.dismiss(toastId);
+  const now = Date.now();
+  if (now - lastToastTime < 500) {
+    return; // Ignore duplicate calls within 500ms
   }
-  activeToasts.add(toastId);
+  lastToastTime = now;
+
+  toast.dismiss(); // Softly clear existing toasts
+
+  const content = (
+    <div className="flex flex-col text-left">
+      <span className="font-bold text-[13px] leading-snug">{title}</span>
+      {description && <span className="text-[11px] font-bold text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">{description}</span>}
+    </div>
+  );
 
   const duration = kind === 'error' ? 4000 : 2500;
+  const options = { duration, position: 'top-right' as const };
 
-  setTimeout(() => activeToasts.delete(toastId), duration + 500);
-
-  const config = TOAST_CONFIG[kind];
-  const Icon = config.icon;
-
-  return toast.custom(
-    (t: Toast) => (
-      <div
-        className={`${t.visible
-          ? 'animate-in fade-in slide-in-from-right-5 duration-300'
-          : 'animate-out fade-out slide-out-to-right-5 duration-200'
-          } pointer-events-auto flex w-full max-w-[320px] rounded-2xl bg-white/95 backdrop-blur-md border ${config.border} shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-3.5 transition-all`}
-      >
-        <div className="flex items-start gap-3 w-full">
-          <div
-            className={`flex-shrink-0 w-9 h-9 rounded-xl ${config.bg} flex items-center justify-center mt-0.5`}
-          >
-            <Icon size={18} style={{ color: config.color }} strokeWidth={3} />
-          </div>
-
-          <div className="flex-1 min-w-0 pt-0.5">
-            <h3 className="text-[13px] font-black text-gray-900 leading-snug">
-              {title}
-            </h3>
-            {description && (
-              <p className="text-[11px] font-bold text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">
-                {description}
-              </p>
-            )}
-          </div>
-
-          <button
-            onClick={() => {
-              toast.dismiss(t.id);
-              activeToasts.delete(toastId);
-            }}
-            className="flex-shrink-0 p-1 rounded-lg text-gray-300 hover:text-gray-400 transition-all"
-          >
-            <X size={14} strokeWidth={3} />
-          </button>
-        </div>
-      </div>
-    ),
-    {
-      id: toastId,
-      duration,
-      position: 'top-right',
-    }
-  );
+  if (kind === 'success') {
+    return toast.success(content, options);
+  } else if (kind === 'error') {
+    return toast.error(content, options);
+  } else {
+    const config = TOAST_CONFIG[kind];
+    const Icon = config.icon;
+    return toast(content, {
+      ...options,
+      icon: <Icon size={18} style={{ color: config.color }} strokeWidth={3} />
+    });
+  }
 };
 
 export const authToast = {

@@ -1,7 +1,7 @@
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 
 from app.core.database import DbSession
 from app.crud.base import CRUDBase
@@ -74,7 +74,7 @@ async def create_product(payload: ProductCreate, db: DbSession) -> Product:
 
 
 @router.post("/uploads/images", status_code=status.HTTP_201_CREATED)
-async def upload_product_image(request: Request, file: UploadFile = File(...)) -> dict[str, str]:
+async def upload_product_image(file: UploadFile = File(...)) -> dict[str, str]:
     static_root = Path(__file__).resolve().parents[3] / "static" / "uploads"
     static_root.mkdir(parents=True, exist_ok=True)
 
@@ -85,7 +85,7 @@ async def upload_product_image(request: Request, file: UploadFile = File(...)) -
     contents = await file.read()
     destination.write_bytes(contents)
 
-    image_url = str(request.url_for("static", path=f"uploads/{safe_filename}"))
+    image_url = f"/static/uploads/{safe_filename}"
     return {"url": image_url}
 
 

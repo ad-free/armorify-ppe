@@ -1,4 +1,4 @@
-name: CI
+name: CI & Deploy
 
 on:
   push:
@@ -7,8 +7,30 @@ on:
     branches-ignore: [release/*]
 
 jobs:
-  lint:
-    name: Backend Lint (Python)
+  filter:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
+  backend-lint:
+    name: Backend Lint
+    needs: filter
+    if: needs.filter.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -17,7 +39,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12" # Downgraded to a widely available version in runners
+          python-version: '3.12'
 
       - name: Cache pip dependencies
         uses: actions/cache@v3
@@ -36,8 +58,27 @@ jobs:
       - name: Run pre-commit
         run: pre-commit run --all-files --show-diff-on-failure
 
+  backend-deploy:
+    name: Deploy Backend to Render
+    needs: backend-lint
+    if: needs.filter.outputs.backend == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy backend to Render
+        env:
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -X POST "https://api.render.com/deploy/${RENDER_SERVICE_ID}" \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
+
   frontend-lint:
-    name: Frontend Lint (React/TS)
+    name: Frontend Lint
+    needs: filter
+    if: needs.filter.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -49,7 +90,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -58,3 +99,59 @@ jobs:
 
       - name: Run linting
         run: npm run lint
+
+  frontend-deploy:
+    name: Deploy Frontend to GitHub Pages
+    needs: frontend-lint
+    if: needs.filter.outputs.frontend == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: frontend/dist
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: 'Deploy frontend to GitHub Pages'
+
+  release-note:
+    name: Create Release Note
+    needs:
+      - backend-deploy
+      - frontend-deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && (needs.backend-deploy.result == 'success' || needs.frontend-deploy.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release note
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: release-${{ github.run_number }}
+          name: Release ${{ github.run_number }}
+          body: |
+            Deployment completed on master.
+
+            Backend deployed: ${{ needs.backend-deploy.result == 'success' }}
+            Frontend deployed: ${{ needs.frontend-deploy.result == 'success' }}
+
+            This release was generated automatically after deployment.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

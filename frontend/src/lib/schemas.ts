@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const reviewSchema = z.object({
-  author_name: z.string().min(2, 'Nhập tên của bạn'),
+  author_name: z.string().optional(),
   rating: z.number().min(1, 'Chọn số sao').max(5),
   body: z.string().max(1000).optional()
 });

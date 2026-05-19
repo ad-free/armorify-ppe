@@ -34,7 +34,7 @@ const sideBanners = [
   {
     title: 'An Toàn Công Trường',
     subtitle: 'Giảm đến 50% thiết bị bảo hộ',
-    link: '/sale',
+    link: '/categories?is_featured=true',
     bg: '#000',
     image: '/shoes_banner.png',
     accent: '#0da487'

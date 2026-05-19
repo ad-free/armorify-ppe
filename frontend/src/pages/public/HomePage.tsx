@@ -5,38 +5,63 @@ import { HeroSlider } from '@/components/home/HeroSlider';
 import { TrustBar } from '@/components/home/TrustBar';
 import { FlashSaleRow } from '@/components/home/FlashSaleRow';
 import { CategoryFloor } from '@/components/home/CategoryFloor';
+import { TabbedCategorySection } from '@/components/home/TabbedCategorySection';
 import { LatestBlogSection } from '@/components/home/LatestBlogSection';
 import { BrandSection } from '@/components/home/BrandSection';
-import { useProducts } from '@/hooks/useCatalog';
+import { useProducts, useActiveFlashSale, useCategories } from '@/hooks/useCatalog';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 
 const MidBanner: React.FC<{
-  bg: string; emoji: string; title: string; sub: string; to: string; btnColor: string;
-}> = ({ bg, emoji, title, sub, to, btnColor }) => (
+  bg: string; image: string; title: string; sub: string; to: string; btnColor: string; eyebrow?: string;
+}> = ({ bg, image, title, sub, to, btnColor, eyebrow = 'Bộ Sưu Tập' }) => (
   <Link
     to={to}
-    className="relative rounded-[3rem] overflow-hidden group flex items-center px-12 py-12 min-h-[200px] transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl active:scale-[0.98]"
+    className="relative rounded-[2.5rem] overflow-hidden group flex items-center px-8 md:px-12 py-12 min-h-[280px] transition-all duration-700 hover:-translate-y-2 hover:shadow-2xl active:scale-[0.98]"
     style={{ background: bg }}
   >
+    <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-700" />
     <div className="flex-1 z-10 relative">
-      <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Ưu đãi độc quyền</p>
-      <h3 className="text-white font-black text-3xl leading-tight mb-4 whitespace-pre-line tracking-tight">{title}</h3>
-      <p className="text-white/70 text-sm mb-8 font-medium max-w-[240px] leading-relaxed">{sub}</p>
-      <span className={`inline-flex items-center gap-3 text-white font-black text-xs px-8 py-3.5 rounded-2xl transition-all shadow-xl ${btnColor}`}>
-        Xem ngay <ChevronRight size={16} strokeWidth={3} />
+      <p className="text-white/90 text-[11px] font-black uppercase tracking-[0.3em] mb-4 drop-shadow-md">{eyebrow}</p>
+      <h3 className="text-white font-black text-3xl md:text-4xl leading-[1.2] mb-4 whitespace-pre-line tracking-tight drop-shadow-md">{title}</h3>
+      <p className="text-white/90 text-sm mb-8 font-medium max-w-[260px] leading-relaxed drop-shadow-sm">{sub}</p>
+      <span className={`inline-flex items-center gap-2 text-white font-black text-xs px-8 py-3.5 rounded-xl transition-all shadow-lg ${btnColor}`}>
+        XEM NGAY <ChevronRight size={16} strokeWidth={3} />
       </span>
     </div>
-    <div className="absolute right-[-20px] bottom-[-20px] flex items-center opacity-10 text-[220px] leading-none select-none pointer-events-none group-hover:opacity-20 transition-all group-hover:scale-110 group-hover:rotate-12 duration-700">
-      {emoji}
+    <div className="absolute right-[-5%] bottom-[-10%] w-[55%] h-[120%] flex items-center justify-center select-none pointer-events-none group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-700">
+      {image.startsWith('http') || image.startsWith('/') ? (
+        <img src={image} alt="Banner" className="w-full h-full object-contain drop-shadow-2xl filter contrast-125" />
+      ) : (
+        <div className="text-[160px] opacity-20 filter blur-[2px]">{image}</div>
+      )}
     </div>
   </Link>
 );
 
 const HomePage: React.FC = () => {
-  const { data: shoesData, isLoading: shoesLoading } = useProducts({ limit: 8 });
-  const { data: helmetData, isLoading: helmetLoading } = useProducts({ limit: 8, skip: 8 });
-  const { data: flashData, isLoading: flashLoading } = useProducts({ limit: 5, skip: 5 });
+  const queryClient = useQueryClient();
+  const { data: categories } = useCategories();
+  
+  const shoesCategoryId = categories?.find(c => c.slug === 'giay-bao-ho')?.id;
+  const helmetCategoryId = categories?.find(c => c.slug === 'mu-bao-ho')?.id;
+
+  const { data: shoesData, isLoading: shoesLoading } = useProducts(
+    { category_id: shoesCategoryId, limit: 8 },
+    { enabled: !!shoesCategoryId }
+  );
+  
+  const { data: helmetData, isLoading: helmetLoading } = useProducts(
+    { category_id: helmetCategoryId, limit: 8 },
+    { enabled: !!helmetCategoryId }
+  );
+  
+  const { data: activeFlash, isLoading: flashLoading } = useActiveFlashSale();
+
+  const handleFlashEnd = () => {
+    queryClient.invalidateQueries({ queryKey: ['active-flash-sale'] });
+  };
 
   return (
     <div className="bg-[#f4f7f7]">
@@ -54,32 +79,40 @@ const HomePage: React.FC = () => {
       <TrustBar />
 
       {/* ③ Flash Sale Section (Urgency) */}
-      <div className="bg-white py-12 border-y border-gray-100">
-        <div className="container mx-auto">
-          <FlashSaleRow products={flashData?.items || []} loading={flashLoading} />
+      {activeFlash && (
+        <div className="bg-white py-12 border-y border-gray-100 animate-in fade-in duration-700">
+          <div className="container mx-auto">
+            <FlashSaleRow
+              products={activeFlash.products || []}
+              loading={flashLoading}
+              targetDate={activeFlash.end_at}
+              title={activeFlash.name}
+              onEnd={handleFlashEnd}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ⑤ Mid Promo Banners — 2 column (Curated Content) */}
       <div className="container mx-auto py-20 px-4 md:px-0">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <MidBanner
-            bg="linear-gradient(135deg, #0da487 0%, #007d64 100%)"
-            emoji="🔖"
-            title={`Săn Deal Hãng 3M
-Giảm Tới 30%`}
-            sub="Trọn bộ trang bị phòng sạch và chống độc tiên tiến nhất 2026."
-            to="/sale"
-            btnColor="bg-white/20 hover:bg-white/30 backdrop-blur-md"
+            bg="linear-gradient(135deg, #059669 0%, #064e3b 100%)"
+            image="https://res.cloudinary.com/dpvjfqm1u/image/upload/v1738734612/3m-respirator_yxg00w.png"
+            eyebrow="Phân Phối Chính Hãng"
+            title={`Giải Pháp An Toàn\nTừ Hãng 3M`}
+            sub="Trang bị mặt nạ phòng độc và thiết bị bảo hộ tiên tiến nhất hiện nay."
+            to="/categories"
+            btnColor="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20"
           />
           <MidBanner
-            bg="linear-gradient(135deg, #1e3a8a 0%, #1e1b4b 100%)"
-            emoji="⛑️"
-            title={`Mũ Bảo Hộ
-Chuẩn EU`}
-            sub="Vỏ nhựa ABS chịu lực cao, siêu bền bỉ trong mọi điều kiện thời tiết."
+            bg="linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)"
+            image="https://res.cloudinary.com/dpvjfqm1u/image/upload/v1738734612/safety-helmet_j55w0j.png"
+            eyebrow="Tiêu Chuẩn Châu Âu"
+            title={`Mũ Bảo Hộ\nChống Va Đập`}
+            sub="Vỏ nhựa ABS chịu lực cao, thiết kế tối ưu cho mọi công trình và điều kiện khắc nghiệt."
             to="/categories/mu-bao-ho"
-            btnColor="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+            btnColor="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/30"
           />
         </div>
       </div>
@@ -112,36 +145,14 @@ Chuẩn EU`}
         </div>
       </div>
 
-      {/* ⑧ Knowledge Section (Value Content) */}
+      {/* ⑧ Tabbed Category Floor (All Other Categories) */}
+      <TabbedCategorySection excludeSlugs={['giay-bao-ho', 'mu-bao-ho']} />
+
+      {/* ⑨ Knowledge Section (Value Content) */}
       <LatestBlogSection />
 
-      {/* ⑨ Partnership Section (Authority) */}
+      {/* ⑩ Partnership Section (Authority) */}
       <BrandSection />
-
-      {/* ⑩ Newsletter / CTA (Community) */}
-      <div className="bg-gray-900 py-24 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-          <div className="absolute -top-48 -left-48 w-[600px] h-[600px] bg-primary rounded-full blur-[180px]" />
-          <div className="absolute -bottom-48 -right-48 w-[600px] h-[600px] bg-secondary rounded-full blur-[180px]" />
-        </div>
-        <div className="container mx-auto text-center text-white relative z-10 px-6">
-          <span className="text-primary font-black text-[11px] tracking-[0.4em] uppercase mb-4 block">Subscribe</span>
-          <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tighter">Gia Nhập Cộng Đồng NBE Hoang Duy</h2>
-          <p className="text-gray-400 mb-12 text-base md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
-            Nhận mã giảm giá <span className="text-primary font-black">20%</span> cho đơn hàng đầu tiên và cẩm nang an toàn lao động miễn phí.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-5 max-w-2xl mx-auto bg-white/5 p-3 rounded-[3rem] border border-white/10 backdrop-blur-2xl shadow-2xl">
-            <input
-              type="email"
-              placeholder="Nhập địa chỉ email của bạn..."
-              className="flex-1 px-10 py-5 rounded-full bg-transparent text-white placeholder-gray-500 font-bold focus:outline-none text-lg"
-            />
-            <button className="px-12 py-5 bg-primary text-white font-black rounded-full hover:bg-primary/90 transition-all hover:shadow-2xl hover:shadow-primary/40 whitespace-nowrap active:scale-95 text-sm uppercase tracking-widest">
-              Đăng Ký Ngay
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

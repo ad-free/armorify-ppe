@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { useTranslation } from 'react-i18next';
 import { Toaster } from 'react-hot-toast';
 import { FloatingContact } from './components/common/FloatingContact';
+import ScrollToTop from './components/common/ScrollToTop';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { useAuthStore } from './store/authStore';
@@ -14,14 +15,18 @@ const HomePage = React.lazy(() => import('./pages/public/HomePage'));
 const BlogList = React.lazy(() => import('./pages/public/BlogList'));
 const BlogDetail = React.lazy(() => import('./pages/public/BlogDetail'));
 const BrandPage = React.lazy(() => import('./pages/public/BrandPage'));
+const BrandsPage = React.lazy(() => import('./pages/public/BrandsPage'));
 const DealerPage = React.lazy(() => import('./pages/public/DealerPage'));
 const VideoPage = React.lazy(() => import('./pages/public/VideoPage'));
 const AboutPage = React.lazy(() => import('./pages/public/AboutPage'));
 const ContactPage = React.lazy(() => import('./pages/public/ContactPage'));
 const NotFoundPage = React.lazy(() => import('./pages/public/NotFoundPage'));
 const OrderSuccessPage = React.lazy(() => import('./pages/public/OrderSuccessPage'));
+const ShippingPolicyPage = React.lazy(() => import('./pages/public/ShippingPolicyPage'));
+const ReturnsPolicyPage = React.lazy(() => import('./pages/public/ReturnsPolicyPage'));
 
 const CategoryPage = React.lazy(() => import('./pages/public/CategoryPage'));
+const SearchPage = React.lazy(() => import('./pages/public/SearchPage'));
 const ProductDetail = React.lazy(() => import('./pages/public/ProductDetail'));
 const CartPage = React.lazy(() => import('./pages/public/CartPage'));
 const CheckoutPage = React.lazy(() => import('./pages/public/CheckoutPage'));
@@ -180,19 +185,25 @@ function App() {
     <ErrorBoundary>
       <GlobalToaster />
       <BrowserRouter>
+        <ScrollToTop />
         <AppLayout t={t}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/blog" element={<BlogList />} />
             <Route path="/blog/:slug" element={<BlogDetail />} />
+            <Route path="/brand" element={<BrandsPage />} />
+            <Route path="/brands" element={<Navigate to="/brand" replace />} />
             <Route path="/brand/:slug" element={<BrandPage />} />
             <Route path="/dealer" element={<DealerPage />} />
             <Route path="/video" element={<VideoPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/order-success" element={<OrderSuccessPage />} />
+            <Route path="/policy/shipping" element={<ShippingPolicyPage />} />
+            <Route path="/policy/returns" element={<ReturnsPolicyPage />} />
             <Route path="/categories/:slug" element={<CategoryPage />} />
             <Route path="/categories" element={<CategoryPage />} />
+            <Route path="/search" element={<SearchPage />} />
             <Route path="/products/:slug" element={<ProductDetail />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/wishlist" element={<WishlistPage />} />

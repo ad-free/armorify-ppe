@@ -25,7 +25,13 @@ import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
 import { motion } from 'framer-motion';
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value?: number | string }>;
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white/90 backdrop-blur-md border border-gray-100 p-4 rounded-2xl shadow-xl">
@@ -251,7 +257,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Chưa có giao dịch</p>
               </div>
             ) : (
-              dashboard.recent_orders.map((order, i) => (
+              dashboard.recent_orders.map((order) => (
                 <div key={order.id} className="px-8 py-5 border-b border-gray-50 hover:bg-gray-50/50 transition-colors flex items-center justify-between group cursor-pointer">
                   <div className="flex gap-4 items-center min-w-0">
                     <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 border border-gray-100 group-hover:bg-primary/10 group-hover:text-primary group-hover:border-primary/20 transition-all flex-shrink-0">

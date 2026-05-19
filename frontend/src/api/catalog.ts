@@ -9,6 +9,7 @@ import type {
   ProductVariantRead,
   ReviewCreate,
   ReviewRead,
+  FlashSalePublicRead,
 } from '@/types/api';
 
 export const getBrands = async (): Promise<PaginatedResponse<BrandRead>> => {
@@ -54,10 +55,15 @@ export const listProducts = (params: {
   brand_id?: string;
   is_featured?: boolean;
   is_new?: boolean;
+  is_flash_deal?: boolean;
   price_min?: number;
   price_max?: number;
   sort_by?: 'newest' | 'price_asc' | 'price_desc' | 'featured';
   skip?: number;
   limit?: number;
   q?: string;
+  rating_min?: number;
 }) => GET<PaginatedResponse<ProductRead>>('/api/v1/catalog/products', { params });
+
+export const getActiveFlashSale = () =>
+  GET<FlashSalePublicRead>('/api/v1/catalog/flash-sale');

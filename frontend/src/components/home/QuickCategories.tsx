@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HardHat, Shirt, Shield, Glasses, Headphones, Zap, Footprints, Wrench } from 'lucide-react';
+import { HardHat, Shirt, Shield, Glasses, Headphones, Zap, Footprints, Wrench, Eye, Activity, Heart, Hammer, Cpu, Factory } from 'lucide-react';
 import { useCategories } from '@/hooks/useCatalog';
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -16,6 +16,10 @@ const ICON_MAP: Record<string, React.ElementType> = {
   'chong-on': Headphones,
 };
 
+const FALLBACK_ICONS = [
+  Shield, Eye, Activity, Heart, Hammer, Cpu, Factory, HardHat, Glasses, Footprints
+];
+
 const BG_COLORS: Record<string, string> = {
   'mu-bao-ho': 'bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white',
   'quan-ao-bao-ho': 'bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white',
@@ -24,7 +28,34 @@ const BG_COLORS: Record<string, string> = {
   'giay-bao-ho': 'bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white',
 };
 
-const DEFAULT_COLOR = 'bg-gray-50 text-gray-500 hover:bg-primary hover:text-white';
+const FALLBACK_BG_COLORS = [
+  'bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white',
+  'bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white',
+  'bg-purple-50 text-purple-500 hover:bg-purple-500 hover:text-white',
+  'bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white',
+  'bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white',
+  'bg-indigo-50 text-indigo-500 hover:bg-indigo-500 hover:text-white',
+  'bg-teal-50 text-teal-500 hover:bg-teal-500 hover:text-white',
+  'bg-cyan-50 text-cyan-500 hover:bg-cyan-500 hover:text-white',
+];
+
+const getCategoryIcon = (slug: string) => {
+  if (ICON_MAP[slug]) return ICON_MAP[slug];
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = slug.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return FALLBACK_ICONS[Math.abs(hash) % FALLBACK_ICONS.length];
+};
+
+const getCategoryBgColor = (slug: string) => {
+  if (BG_COLORS[slug]) return BG_COLORS[slug];
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = slug.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return FALLBACK_BG_COLORS[Math.abs(hash) % FALLBACK_BG_COLORS.length];
+};
 
 export const QuickCategories: React.FC = () => {
   const { data: categories } = useCategories();
@@ -51,8 +82,8 @@ export const QuickCategories: React.FC = () => {
         </div>
         <div className="flex gap-8 overflow-x-auto pt-6 pb-6 scrollbar-hide">
           {items.map((cat, idx) => {
-            const Icon = ICON_MAP[cat.slug] || Shield;
-            const colorClass = BG_COLORS[cat.slug] || DEFAULT_COLOR;
+            const Icon = getCategoryIcon(cat.slug);
+            const colorClass = getCategoryBgColor(cat.slug);
             return (
               <motion.div
                 key={cat.slug + idx}

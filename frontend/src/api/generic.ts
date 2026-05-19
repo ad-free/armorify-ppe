@@ -16,7 +16,7 @@ const RESOURCE_PATH_MAP: Record<string, string> = {
   'product': 'admin/catalog/products',
   'catalog': 'admin/catalog/categories',
   'category': 'admin/catalog/categories',
-  'blog': 'admin/cms/pages',
+  'blog': 'admin/blog/posts',
   'banner': 'admin/cms/banners',
   'brand': 'admin/catalog/brands',
   'branch': 'admin/catalog/brands',
@@ -24,6 +24,9 @@ const RESOURCE_PATH_MAP: Record<string, string> = {
   'product-image': 'admin/catalog/product-images',
   'variant': 'admin/catalog/variants',
   'quote': 'admin/quotes/requests',
+  'review': 'admin/reviews',
+  'flash-sale': 'admin/flash-sales',
+  'flash_sale': 'admin/flash-sales',
 };
 
 const getResourcePath = (entity: string) => {
@@ -117,6 +120,11 @@ export const useGenericResource = (entityName: string, params: QueryParams = { s
       related.push(['products']);
       related.push(['product-images']);
     }
+    if (lowerName === 'flash_sale' || lowerName === 'flash-sale') {
+      related.push(['active-flash-sale']);
+      related.push(['products']);
+      related.push(['product']);
+    }
 
     return related;
   };
@@ -171,8 +179,15 @@ export const useGenericResource = (entityName: string, params: QueryParams = { s
     }
   });
 
+  const rawData = listQuery.data;
+  const itemsList = Array.isArray(rawData)
+    ? rawData
+    : rawData && typeof rawData === 'object' && rawData !== null && 'items' in rawData
+      ? (rawData as { items: unknown[] }).items
+      : [];
+
   return {
-    items: listQuery.data,
+    items: itemsList,
     isLoading: listQuery.isLoading,
     error: listQuery.error,
     create: createMutation.mutateAsync,

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { loginUser, registerUser, getMe, updateMe, changePassword } from '@/api/auth';
-import type { LoginRequest, RegisterRequest } from '@/types/api';
+import type { LoginRequest, RegisterRequest, MeUpdate, PasswordChangeRequest } from '@/types/api';
 import { useAuthStore } from '@/store/authStore';
 
 export const useLogin = () => {
@@ -44,7 +44,7 @@ export const useUpdateMe = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (body: any) => updateMe(body),
+    mutationFn: (body: MeUpdate) => updateMe(body),
     onSuccess: (user) => {
       setUser(user);
       queryClient.invalidateQueries({ queryKey: ['auth-me'] });
@@ -54,6 +54,6 @@ export const useUpdateMe = () => {
 
 export const useChangePassword = () => {
   return useMutation({
-    mutationFn: (body: any) => changePassword(body)
+    mutationFn: (body: PasswordChangeRequest) => changePassword(body)
   });
 };

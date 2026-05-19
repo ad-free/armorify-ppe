@@ -12,17 +12,21 @@ from app.core.middleware import SecurityMiddleware
 from app.core.settings import settings
 from app.routers import (
     addresses_router,
+    admin_blog_router,
     admin_brands_router,
     admin_catalog_router,
     admin_cms_router,
     admin_dashboard_router,
+    admin_flash_sale_router,
     admin_orders_router,
     admin_product_images_router,
     admin_quotes_router,
+    admin_reviews_router,
     admin_users_router,
     auth_router,
     cart_router,
     protected_orders_router,
+    public_blog_router,
     public_catalog_router,
     public_cms_router,
     public_orders_router,
@@ -74,6 +78,7 @@ app.include_router(public_related_products_router)
 app.include_router(public_product_reviews_router)
 app.include_router(public_cms_router, prefix="/api/v1")
 app.include_router(public_orders_router, prefix="/api/v1")
+app.include_router(public_blog_router, prefix="/api/v1")
 
 # ── Protected (any authenticated user) ───────────────────────────────────────
 _auth = [Depends(get_current_user)]
@@ -88,6 +93,9 @@ app.include_router(admin_catalog_router, prefix="/api/v1", dependencies=_staff)
 app.include_router(admin_brands_router, prefix="/api/v1", dependencies=_staff)
 app.include_router(admin_cms_router, prefix="/api/v1", dependencies=_staff)
 app.include_router(admin_product_images_router, prefix="/api/v1", dependencies=_staff)
+app.include_router(admin_reviews_router, prefix="/api/v1", dependencies=_staff)
+app.include_router(admin_flash_sale_router, prefix="/api/v1", dependencies=_staff)
+app.include_router(admin_blog_router, prefix="/api/v1", dependencies=_staff)
 
 # ── Admin only ────────────────────────────────────────────────────────────────
 _admin = [Depends(require_admin)]

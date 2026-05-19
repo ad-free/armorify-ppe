@@ -37,17 +37,18 @@ class CategoryRead(CategoryBase):
 
 
 class ProductBase(BaseModel):
-    name: str
-    slug: str
-    description: str | None = Field(default=None, json_schema_extra={"x-ui-widget": "rich-text"})
-    price: Decimal
-    dealer_price: Optional[Decimal] = None
-    compare_at_price: Optional[Decimal] = None
-    stock: Optional[int] = 0
-    is_featured: Optional[bool] = False
-    category_id: UUID
-    specifications: Optional[dict[str, Any]] = None
-    cover_image_url: str | None = None
+    name: str = Field(title="Name")
+    slug: str = Field(title="Slug")
+    description: str | None = Field(default=None, title="Description", json_schema_extra={"x-ui-widget": "rich-text"})
+    price: Decimal = Field(title="Price")
+    dealer_price: Optional[Decimal] = Field(default=None, title="Dealer Price")
+    compare_at_price: Optional[Decimal] = Field(default=None, title="Compare At Price")
+    stock: Optional[int] = Field(default=0, title="Stock")
+    is_featured: Optional[bool] = Field(default=False, title="Featured")
+    category_id: UUID = Field(title="Category")
+    brand_id: UUID | None = Field(default=None, title="Brand")
+    specifications: Optional[dict[str, Any]] = Field(default=None, title="Specifications")
+    cover_image_url: str | None = Field(default=None, title="Cover Image")
 
 
 class ProductCreate(ProductBase):
@@ -64,6 +65,7 @@ class ProductUpdate(BaseModel):
     stock: Optional[int] = None
     is_featured: Optional[bool] = None
     category_id: UUID | None = None
+    brand_id: UUID | None = None
     specifications: Optional[dict[str, Any]] = None
     cover_image_url: str | None = None
 
@@ -93,6 +95,10 @@ class ProductRead(ProductBase):
     rating_avg: Decimal | None = None
     rating_count: int = 0
     brand: ProductBrandRead | None = None
+    flash_sale_price: Optional[Decimal] = None
+    flash_sale_discount: Optional[float] = None
+    is_flash_deal: bool = False
+    flash_deal_end: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 

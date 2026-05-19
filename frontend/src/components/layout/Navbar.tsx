@@ -17,6 +17,7 @@ export const Navbar: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = React.useRef<HTMLDivElement>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleCategoryMenuOpen = () => {
     if (categoryMenuTimeoutRef.current) clearTimeout(categoryMenuTimeoutRef.current);
@@ -82,24 +83,31 @@ export const Navbar: React.FC = () => {
     setIsProfileOpen(false);
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   return (
     <header className={`w-full bg-white flex flex-col z-50 sticky top-0 font-sans transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_24px_rgba(0,0,0,0.08)]' : ''}`}>
       {/* Top Utility Bar (FastKart style: light grey, thin) */}
       <div className="bg-[#f8f8f8] py-2 border-b border-gray-200 hidden md:block">
         <div className="container mx-auto px-4 max-w-7xl flex flex-wrap justify-between items-center text-[13px] text-gray-500 font-medium">
           <div className="flex gap-6">
-            <span className="flex items-center gap-1.5"><MapPin size={14} className="text-primary"/> 123 Đường Báo Hộ, TP.HCM</span>
-            <span className="flex items-center gap-1.5"><Mail size={14} className="text-primary"/> {t('topBar.email')}</span>
+            <span className="flex items-center gap-1.5"><MapPin size={14} className="text-primary"/> {t('navbar.address')}</span>
+            <span className="flex items-center gap-1.5"><Mail size={14} className="text-primary"/> {t('navbar.email')}</span>
           </div>
           <div className="flex items-center gap-6">
             <div className="flex gap-4 border-r border-gray-300 pr-6">
-              <Link to="/about" className="hover:text-primary transition-colors">{t('topBar.about')}</Link>
-              <Link to="/contact" className="hover:text-primary transition-colors">{t('topBar.contact')}</Link>
+              <Link to="/about" className="hover:text-primary transition-colors">{t('navbar.about')}</Link>
+              <Link to="/contact" className="hover:text-primary transition-colors">{t('navbar.contact')}</Link>
               <span className="text-gray-300">|</span>
               <button onClick={() => handleLanguageChange('vi')} className={`hover:text-primary transition-colors ${i18n.language === 'vi' ? 'text-primary font-bold' : ''}`}>VN</button>
               <button onClick={() => handleLanguageChange('en')} className={`hover:text-primary transition-colors ${i18n.language === 'en' ? 'text-primary font-bold' : ''}`}>EN</button>
             </div>
-            <span className="flex items-center gap-1.5 font-semibold text-gray-700">Miễn phí giao hàng đơn từ 500k!</span>
+            <span className="flex items-center gap-1.5 font-semibold text-gray-700">{t('navbar.freeShipping')}</span>
           </div>
         </div>
       </div>
@@ -116,20 +124,22 @@ export const Navbar: React.FC = () => {
           </span>
         </Link>
 
-        {/* Search Bar - FastKart Style */}
-        <div className="flex-1 max-w-2xl hidden lg:flex items-center bg-[#f3f7f7] rounded-xl p-1 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/20 transition-all border border-transparent focus-within:border-primary/30">
-          <div className="px-5 py-2.5 border-r border-gray-200 text-sm font-bold text-gray-700 whitespace-nowrap min-w-[150px] flex items-center justify-between cursor-pointer group hover:text-primary">
-            {t('navigation.categories')} <Menu size={16} className="text-gray-400 group-hover:text-primary ml-2" />
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden lg:flex items-center bg-[#f4f7f6] rounded-2xl p-1.5 focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10 transition-all border border-transparent focus-within:border-primary/20 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
+          <div className="pl-5 pr-2 text-gray-400">
+            <Search size={20} />
           </div>
           <input 
             type="text" 
-            placeholder="Tìm kiếm mũ, giày, găng tay bảo hộ..." 
-            className="flex-1 px-5 py-2.5 bg-transparent border-none outline-none text-[15px] text-gray-800 placeholder-gray-400 font-medium"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('navbar.searchPlaceholder')}
+            className="flex-1 px-2 py-2.5 bg-transparent border-none outline-none text-[15px] text-gray-800 placeholder-gray-400 font-medium"
           />
-          <button className="w-12 h-12 bg-primary text-white rounded-lg flex items-center justify-center hover:bg-primary/90 transition-all shadow-md active:scale-95">
-            <Search size={22} />
+          <button type="submit" className="px-6 h-11 bg-primary text-white rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-sm active:scale-95 font-bold text-[14px]">
+            {t('navbar.searchButton')}
           </button>
-        </div>
+        </form>
 
         {/* Actions - FastKart Style */}
         <div className="flex items-center gap-4 sm:gap-7">
@@ -138,7 +148,7 @@ export const Navbar: React.FC = () => {
               <Phone size={20} className="group-hover:text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">Hỗ trợ 24/7</span>
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.support')}</span>
               <span className="text-[15px] font-bold text-slate-700 leading-none">1900 1234</span>
             </div>
           </div>
@@ -166,7 +176,7 @@ export const Navbar: React.FC = () => {
                   <User size={22} strokeWidth={2} />
                 </div>
                 <div className="hidden sm:flex flex-col text-left">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">Tài khoản</span>
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.account')}</span>
                   <span className="text-sm font-bold text-slate-700 leading-none">{user.firstname}</span>
                 </div>
               </button>
@@ -203,8 +213,8 @@ export const Navbar: React.FC = () => {
                 <User size={22} strokeWidth={2} />
               </div>
               <div className="hidden sm:flex flex-col text-left">
-                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">Đăng nhập</span>
-                <span className="text-sm font-black text-gray-900 leading-none">Tài khoản</span>
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.login')}</span>
+                <span className="text-sm font-black text-gray-900 leading-none">{t('navbar.account')}</span>
               </div>
             </Link>
           )}
@@ -219,7 +229,7 @@ export const Navbar: React.FC = () => {
               </span>
             </div>
             <div className="hidden sm:flex flex-col text-left">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">Giỏ hàng</span>
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.cart')}</span>
               <span className="text-[15px] font-black text-gray-900 leading-none group-hover:text-primary transition-colors">{formatMoney(totalPrice)}</span>
             </div>
           </Link>
@@ -243,7 +253,7 @@ export const Navbar: React.FC = () => {
                 className="flex items-center gap-3 bg-primary text-white cursor-pointer py-3.5 px-6 rounded-tr-3xl relative z-[60] transition-all hover:bg-primary/95 w-[280px] active:scale-95 flex-shrink-0"
               >
                 <Menu size={20} strokeWidth={3} />
-                <span className="font-black tracking-tight text-sm uppercase">All Categories</span>
+                <span className="font-black tracking-tight text-sm uppercase">{t('navbar.allCategories')}</span>
               </button>
               
               {/* The Mega Menu */}
@@ -260,12 +270,12 @@ export const Navbar: React.FC = () => {
             {/* Quick Links */}
             <nav className="flex items-center gap-8 ml-10">
               {[
-                { to: '/', label: 'Trang Chủ', end: true },
-                { to: '/categories', label: 'Sản Phẩm', end: false },
-                { to: '/brand', label: 'Thương Hiệu', end: false },
-                { to: '/dealer', label: 'Đại Lý', end: false },
-                { to: '/blog', label: 'Tin Tức', end: false },
-                { to: '/contact', label: 'Liên Hệ', end: false },
+                { to: '/', label: t('navbar.navHome'), end: true },
+                { to: '/categories', label: t('navbar.navCategories'), end: false },
+                { to: '/brand', label: t('navbar.navBrands'), end: false },
+                { to: '/dealer', label: t('navbar.navDealer'), end: false },
+                { to: '/blog', label: t('navbar.navBlog'), end: false },
+                { to: '/contact', label: t('navbar.navContact'), end: false },
               ].map((link) => (
                 <NavLink
                   key={link.to}
