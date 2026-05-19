@@ -31,7 +31,7 @@ class FlashSaleItem(BaseMixin, Base):
 
     flash_sale_id: Mapped[_UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("flash_sales.id", ondelete="CASCADE"))
     product_id: Mapped[_UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"))
-    
+
     discount_percent: Mapped[float] = mapped_column(default=0.0, server_default=text("0.0"))
     sale_price: Mapped[float | None] = mapped_column(nullable=True)
 
