@@ -66,7 +66,7 @@ jobs:
   backend-deploy:
     name: Deploy Backend to Render
     needs: backend-lint
-    if: needs.filter.outputs.backend == 'true' && github.event_name == 'push'
+    if: needs.filter.outputs.backend == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy backend to Render
@@ -107,29 +107,27 @@ jobs:
 
   frontend-deploy:
     name: Deploy Frontend to GitHub Pages
-    needs: frontend-lint
-    if: needs.filter.outputs.frontend == 'true' && github.event_name == 'push'
+    needs: [filter, frontend-lint]          # ← fix: add filter
+    if: needs.filter.outputs.frontend == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '25'
+          cache: 'npm'                       # ← add caching
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
+        run: npm ci
+        working-directory: frontend          # ← cleaner than cd
 
       - name: Build frontend
         env:
           VITE_API_BASE_URL: https://armorify-ppe.onrender.com
-        run: |
-          cd frontend
-          npm run build
+        run: npm run build
+        working-directory: frontend
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -148,17 +146,61 @@ jobs:
     if: github.event_name == 'push' && (needs.backend-deploy.result == 'success' || needs.frontend-deploy.result == 'success')
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0                # ← REQUIRED: fetch full git history
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          # Get the previous tag (if none, use first commit)
+          PREV_TAG=$(git tag --sort=-creatordate | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+
+          # Collect commits since last release
+          COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+
+          # Categorize by conventional commit prefix
+          FEATURES=$(echo "$COMMITS"     | grep -E "^\- feat"     || echo "")
+          FIXES=$(echo "$COMMITS"        | grep -E "^\- fix"      || echo "")
+          CHORES=$(echo "$COMMITS"       | grep -E "^\- chore"    || echo "")
+          OTHERS=$(echo "$COMMITS"       | grep -vE "^\- (feat|fix|chore)" || echo "")
+
+          # Build the body
+          BODY=""
+
+          if [ -n "$FEATURES" ]; then
+            BODY="${BODY}### ✨ New Features\n${FEATURES}\n\n"
+          fi
+          if [ -n "$FIXES" ]; then
+            BODY="${BODY}### 🐛 Bug Fixes\n${FIXES}\n\n"
+          fi
+          if [ -n "$CHORES" ]; then
+            BODY="${BODY}### 🔧 Chores\n${CHORES}\n\n"
+          fi
+          if [ -n "$OTHERS" ]; then
+            BODY="${BODY}### 📦 Other Changes\n${OTHERS}\n\n"
+          fi
+
+          # Deployment summary
+          BODY="${BODY}---\n### 🚀 Deployment Status\n"
+          BODY="${BODY}- Backend: ${{ needs.backend-deploy.result }}\n"
+          BODY="${BODY}- Frontend: ${{ needs.frontend-deploy.result }}\n"
+          BODY="${BODY}\n**Commit:** ${{ github.sha }}\n"
+          BODY="${BODY}**Triggered by:** ${{ github.actor }}\n"
+
+          # Save to file to avoid quoting issues
+          printf "$BODY" > release_notes.md
+          cat release_notes.md
+
       - name: Create release note
         uses: softprops/action-gh-release@v1
         with:
           tag_name: release-${{ github.run_number }}
-          name: Release ${{ github.run_number }}
-          body: |
-            Deployment completed on master.
-
-            Backend deployed: ${{ needs.backend-deploy.result == 'success' }}
-            Frontend deployed: ${{ needs.frontend-deploy.result == 'success' }}
-
-            This release was generated automatically after deployment.
+          name: Release ${{ github.run_number }} — ${{ github.ref_name }}
+          body_path: release_notes.md        # ← use file instead of inline body
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
