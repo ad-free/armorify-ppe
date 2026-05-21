@@ -126,7 +126,10 @@ jobs:
       - name: Build frontend
         env:
           VITE_API_BASE_URL: https://armorify-ppe.onrender.com
-        run: npm run build
+          VITE_BASE_PATH: /armorify-ppe/     # ← set base path for GitHub Pages
+        run: |
+          npm run build
+          cp dist/index.html dist/404.html       # ← SPA fallback
         working-directory: frontend
 
       - name: Deploy to GitHub Pages
