@@ -1,21 +1,15 @@
 // src/pages/public/WishlistPage.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Heart, ShoppingBag, ArrowRight, Trash2 } from 'lucide-react';
 import { useWishlistStore } from '@/store/wishlistStore';
-import { useCartStore } from '@/store/cartStore';
 import { ProductCard } from '@/components/catalog/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SeoHead } from '@/components/common/SeoHead';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
-import { formatCurrency } from '@/lib/currency';
 
 const WishlistPage: React.FC = () => {
-  const { t, i18n } = useTranslation();
   const { items, clearWishlist } = useWishlistStore();
-  
-  const formatMoney = (val: number) => formatCurrency(val, { locale: i18n.language === 'vi' ? 'vi-VN' : 'en-US' });
 
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-24">

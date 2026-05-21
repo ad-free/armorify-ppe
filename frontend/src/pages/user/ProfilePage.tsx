@@ -341,7 +341,7 @@ const ProfilePage: React.FC = () => {
                                 </div>
                                 <div className="text-right hidden sm:block">
                                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Mã đơn hàng</p>
-                                  <p className="text-sm font-bold text-gray-900">#{order.order_code}</p>
+                                  <p className="text-sm font-bold text-gray-900">#{order.id}</p>
                                 </div>
                               </div>
 
@@ -490,7 +490,7 @@ const ProfilePage: React.FC = () => {
                         { label: 'Họ và tên', value: `${user.firstname} ${user.lastname}`, icon: UserIcon },
                         { label: 'Số điện thoại', value: user.phone, icon: Phone },
                         { label: 'Email', value: user.email || 'Chưa cập nhật', icon: Mail },
-                        { label: 'Ngày tham gia', value: new Date(user.created_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }), icon: Calendar },
+                        { label: 'Ngày tham gia', value: user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }) : 'Chưa cập nhật', icon: Calendar },
                       ].map((field, i) => {
                         const Icon = field.icon;
                         return (
@@ -647,11 +647,11 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-gray-500 uppercase">Email</label>
-                  <input name="email" type="email" defaultValue={user.email} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium" />
+                  <input name="email" type="email" defaultValue={user.email || ''} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-gray-500 uppercase">Địa chỉ</label>
-                  <input name="address" defaultValue={user.address} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium" />
+                  <input name="address" defaultValue={user.address || ''} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium" />
                 </div>
                 <div className="pt-4 flex gap-3">
                   <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-3.5 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors">

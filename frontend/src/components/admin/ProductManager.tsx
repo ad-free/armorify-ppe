@@ -30,7 +30,7 @@ const ProductImageManager = ({ productId }: { productId: string }) => {
   const [uploading, setUploading] = useState(false);
 
   // Filter items manually since we don't have exact nested routes without specific query params on backend
-  const productImages = (items || []).filter((i: Record<string, unknown>) => (i as unknown as ProductImageNode).product_id === productId) as unknown as ProductImageNode[];
+  const productImages = ((items || []) as ProductImageNode[]).filter((i) => i.product_id === productId);
 
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,7 +121,7 @@ const ProductVariantManager = ({ productId }: { productId: string }) => {
   const [color, setColor] = useState('');
   const [stock, setStock] = useState(0);
 
-  const productVariants = (items || []).filter((v: Record<string, unknown>) => (v as unknown as ProductVariantNode).product_id === productId) as unknown as ProductVariantNode[];
+  const productVariants = ((items || []) as ProductVariantNode[]).filter((v) => v.product_id === productId);
 
   const handleSave = async () => {
     if (!sku) return;
@@ -407,7 +407,7 @@ export const ProductManager: React.FC = () => {
         <DynamicTable
           entityName={entityName}
           schema={schema}
-          data={filteredItems}
+          data={filteredItems as Record<string, unknown>[]}
           isLoading={isDataLoading}
           onAdd={() => { setEditingItem(null); setActiveTab('info'); setIsFormOpen(true); }}
           onEdit={(row) => { setEditingItem(row); setActiveTab('info'); setIsFormOpen(true); }}

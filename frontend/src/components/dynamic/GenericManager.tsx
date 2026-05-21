@@ -111,7 +111,7 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
         <DynamicTable 
           entityName={entityName}
           schema={schema}
-          data={items || []}
+          data={(items || []) as Record<string, unknown>[]}
           isLoading={isDataLoading}
           onAdd={() => { setEditingItem(null); setIsFormOpen(true); }}
           onEdit={(row) => { setEditingItem(row); setIsFormOpen(true); }}

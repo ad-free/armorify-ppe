@@ -1,5 +1,5 @@
 // src/api/auth.ts
-import { GET, POST } from '@/lib/api';
+import { GET, POST, PATCH } from '@/lib/api';
 import type { 
   LoginRequest, 
   RegisterRequest, 
@@ -19,7 +19,7 @@ export const getMe = (token?: string) =>
   GET<UserRead>('/auth/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
 
 export const updateMe = (body: MeUpdate) =>
-  POST<UserRead>('/auth/me', body, { method: 'PATCH' });
+  PATCH<UserRead>('/auth/me', body);
 
 export const changePassword = (body: PasswordChangeRequest) =>
   POST<{ status: string }>('/auth/change-password', body);

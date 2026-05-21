@@ -599,8 +599,8 @@ const FlashSaleItemsField = ({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3">
-        {items.map((item) => {
-          const productId = item.product_id as string;
+        {(items as Array<{ product_id: string; discount_percent: number }>).map((item) => {
+          const productId = item.product_id;
           const product = relationOptions.find(o => o.value === productId);
           return (
             <div key={item.product_id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm animate-in slide-in-from-left-2">

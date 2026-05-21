@@ -88,7 +88,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
           onInput={handleChange}
           onBlur={handleChange}
           className="w-full min-h-[250px] max-h-[500px] overflow-y-auto p-5 outline-none prose prose-sm max-w-none prose-slate focus:outline-none"
-          placeholder={placeholder}
+          data-placeholder={placeholder}
         />
       )}
     </div>
