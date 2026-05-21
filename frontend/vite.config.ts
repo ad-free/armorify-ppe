@@ -1,9 +1,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'               // ← add this
 
 export default defineConfig(() => ({
   plugins: [react()],
-  base: process.env.VITE_BASE_PATH ?? '/',   // ← driven by env
+  base: '/armorify-ppe/',
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),   // ← add this
+    },
+  },
   build: {
     outDir: 'dist',
     sourcemap: true,
@@ -22,5 +28,5 @@ export default defineConfig(() => ({
         entryFileNames: 'assets/js/[name].[hash].js',
       },
     },
-  }
+  },
 }))
