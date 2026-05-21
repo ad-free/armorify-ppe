@@ -66,7 +66,7 @@ jobs:
   backend-deploy:
     name: Deploy Backend to Render
     needs: backend-lint
-    if: needs.filter.outputs.backend == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: needs.filter.outputs.backend == 'true' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy backend to Render
@@ -108,7 +108,7 @@ jobs:
   frontend-deploy:
     name: Deploy Frontend to GitHub Pages
     needs: [filter, frontend-lint]          # ← fix: add filter
-    if: needs.filter.outputs.frontend == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: needs.filter.outputs.frontend == 'true' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
