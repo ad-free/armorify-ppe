@@ -1,4 +1,5 @@
 # app/core/settings.py
+import json
 import os
 from enum import Enum
 from pathlib import Path
@@ -109,7 +110,7 @@ class Settings(BaseSettings):
             return v
         if isinstance(v, str):
             # Try parsing as JSON array
-            import json
+
             try:
                 parsed = json.loads(v)
                 if isinstance(parsed, list):
