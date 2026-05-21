@@ -61,7 +61,7 @@ jobs:
   backend-deploy:
     name: Deploy Backend to Render
     needs: backend-lint
-    if: needs.filter.outputs.backend == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: needs.filter.outputs.backend == 'true' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy backend to Render
@@ -103,7 +103,7 @@ jobs:
   frontend-deploy:
     name: Deploy Frontend to GitHub Pages
     needs: frontend-lint
-    if: needs.filter.outputs.frontend == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: needs.filter.outputs.frontend == 'true' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -120,6 +120,8 @@ jobs:
           npm ci
 
       - name: Build frontend
+        env:
+          VITE_API_BASE_URL: https://armorify-ppe.onrender.com
         run: |
           cd frontend
           npm run build
@@ -138,7 +140,7 @@ jobs:
     needs:
       - backend-deploy
       - frontend-deploy
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && (needs.backend-deploy.result == 'success' || needs.frontend-deploy.result == 'success')
+    if: github.event_name == 'push' && (needs.backend-deploy.result == 'success' || needs.frontend-deploy.result == 'success')
     runs-on: ubuntu-latest
     steps:
       - name: Create release note

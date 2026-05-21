@@ -61,7 +61,7 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 app.add_middleware(SecurityMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://ad-free.github.io", "*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
