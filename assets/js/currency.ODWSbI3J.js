@@ -1,0 +1,2 @@
+const s=(r,c={})=>{if(r==null||r==="")return"0";const t=typeof r=="string"?parseFloat(r):r;if(isNaN(t))return"0";const{currency:e="VND",locale:n=e==="VND"?"vi-VN":"en-US",showSymbol:i=!0}=c;try{return new Intl.NumberFormat(n,{style:i?"currency":"decimal",currency:e,maximumFractionDigits:e==="VND"?0:2}).format(t)}catch(o){return console.error("Error formatting currency:",o),t.toString()}};export{s as f};
+//# sourceMappingURL=currency.ODWSbI3J.js.map
