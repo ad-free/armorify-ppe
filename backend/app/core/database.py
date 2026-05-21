@@ -18,7 +18,10 @@ engine: AsyncEngine = create_async_engine(
     DATABASE_URL,
     future=True,
     echo=False,
-    connect_args={"server_settings": {"search_path": f"{DB_SCHEMA},public"}},
+    connect_args={
+        "server_settings": {"search_path": f"{DB_SCHEMA},public"},
+        "statement_cache_size": 0,
+    },
 )
 
 AsyncSessionLocal = async_sessionmaker(
