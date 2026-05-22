@@ -29,3 +29,10 @@ class ProductImageRead(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ProductImageAdminCreate(BaseModel):
+    product_id: UUID
+    url: str
+    alt_text: str | None = None
+    position: int = 0

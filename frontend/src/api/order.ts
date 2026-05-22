@@ -10,3 +10,6 @@ export const createGuestOrder = (body: GuestOrderCreate) =>
 
 export const trackOrder = (order_code: string, contact_phone: string) =>
   GET<OrderRead>('/orders/track', { params: { order_code, contact_phone } });
+
+export const getMyOrders = () =>
+  GET<OrderRead[]>('/orders/');

@@ -1,176 +1,308 @@
 // src/components/layout/Navbar.tsx
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, Phone, Mail, LogOut, LayoutDashboard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import { Search, ShoppingCart, User, Menu, Phone, Mail, LogOut, LayoutDashboard, MapPin, Zap, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { AnimatePresence } from 'framer-motion';
 import { MegaMenu } from './MegaMenu';
 import { useAuthStore } from '@/store/authStore';
+import { useCartStore } from '@/store/cartStore';
+import { useWishlistStore } from '@/store/wishlistStore';
+import { authToast } from '@/lib/toast';
 
 export const Navbar: React.FC = () => {
   const [isCategoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const categoryMenuTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = React.useRef<HTMLDivElement>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleCategoryMenuOpen = () => {
+    if (categoryMenuTimeoutRef.current) clearTimeout(categoryMenuTimeoutRef.current);
+    setCategoryMenuOpen(true);
+  };
+
+  const handleCategoryMenuClose = () => {
+    categoryMenuTimeoutRef.current = setTimeout(() => {
+      setCategoryMenuOpen(false);
+    }, 150);
+  };
+  const { t, i18n } = useTranslation();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const items = useCartStore((state) => state.items);
+  
+  const totalItems = items.reduce((total, item) => total + item.quantity, 0);
+  const totalPrice = items.reduce((total, item) => {
+    const unit = item.unit_price ?? item.product.price;
+    return total + unit * item.quantity;
+  }, 0);
+
+  const wishlistCount = useWishlistStore((state) => state.items.length);
+
+  const formatMoney = (value: number) =>
+    new Intl.NumberFormat(i18n.language === 'vi' ? 'vi-VN' : 'en-US', {
+      style: 'currency',
+      currency: 'VND',
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  // Close profile dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+    if (isProfileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileOpen]);
+
+  // Sticky scroll detection
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleLanguageChange = (lang: 'vi' | 'en') => {
+    localStorage.setItem('armorify-lang', lang);
+    void i18n.changeLanguage(lang);
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/');
+    authToast.logoutSuccess();
     setIsProfileOpen(false);
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   return (
-    <header className="w-full bg-white shadow-sm flex flex-col z-50 relative">
-      {/* Top Utility Bar */}
-      <div className="bg-gray-100 py-1 hidden lg:block">
-        <div className="container mx-auto px-4 max-w-7xl flex justify-between items-center text-xs text-gray-600 font-medium">
-          <div className="flex gap-4">
-            <span className="flex items-center gap-1"><Phone size={12}/> Hotline: 0372371668</span>
-            <span className="flex items-center gap-1"><Mail size={12}/> Email: info@nbehoangduy.vn</span>
+    <header className={`w-full bg-white flex flex-col z-50 sticky top-0 font-sans transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_24px_rgba(0,0,0,0.08)]' : ''}`}>
+      {/* Top Utility Bar (FastKart style: light grey, thin) */}
+      <div className="bg-[#f8f8f8] py-2 border-b border-gray-200 hidden md:block">
+        <div className="container mx-auto px-4 max-w-7xl flex flex-wrap justify-between items-center text-[13px] text-gray-500 font-medium">
+          <div className="flex gap-6">
+            <span className="flex items-center gap-1.5"><MapPin size={14} className="text-primary"/> {t('navbar.address')}</span>
+            <span className="flex items-center gap-1.5"><Mail size={14} className="text-primary"/> {t('navbar.email')}</span>
           </div>
-          <div className="flex gap-4">
-            <Link to="/about" className="hover:text-primary">Giới thiệu</Link>
-            <Link to="/contact" className="hover:text-primary">Liên hệ</Link>
-            <Link to="/dealer" className="hover:text-primary">Tuyển đại lý</Link>
+          <div className="flex items-center gap-6">
+            <div className="flex gap-4 border-r border-gray-300 pr-6">
+              <Link to="/about" className="hover:text-primary transition-colors">{t('navbar.about')}</Link>
+              <Link to="/contact" className="hover:text-primary transition-colors">{t('navbar.contact')}</Link>
+              <span className="text-gray-300">|</span>
+              <button onClick={() => handleLanguageChange('vi')} className={`hover:text-primary transition-colors ${i18n.language === 'vi' ? 'text-primary font-bold' : ''}`}>VN</button>
+              <button onClick={() => handleLanguageChange('en')} className={`hover:text-primary transition-colors ${i18n.language === 'en' ? 'text-primary font-bold' : ''}`}>EN</button>
+            </div>
+            <span className="flex items-center gap-1.5 font-semibold text-gray-700">{t('navbar.freeShipping')}</span>
           </div>
         </div>
       </div>
 
-      {/* Main Bar */}
-      <div className="container mx-auto px-4 py-4 max-w-7xl flex items-center justify-between gap-4 md:gap-8">
+      {/* Main Bar (FastKart style: white bg, massive search bar) */}
+      <div className="container mx-auto flex items-center justify-between gap-8 py-5">
         {/* Logo */}
         <Link to="/" className="flex-shrink-0 flex items-center gap-2">
-          <div className="w-10 h-10 bg-primary text-white flex items-center justify-center rounded-lg font-bold text-xl">A</div>
-          <span className="text-2xl font-black text-gray-900 tracking-tight hidden sm:block">
-            NBE <span className="text-primary">Hoang Duy</span>
+          <div className="w-10 h-10 bg-primary text-white flex items-center justify-center rounded-xl font-black text-xl shadow-sm">
+            <Zap size={22} className="fill-white" />
+          </div>
+          <span className="text-2xl font-black text-gray-900 tracking-tighter hidden sm:block">
+            NBE Hoang Duy<span className="text-primary">.</span>
           </span>
         </Link>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-2xl hidden md:flex">
-          <div className="relative w-full">
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm giày bảo hộ, dây đai an toàn..."
-              className="w-full pl-4 pr-12 py-2.5 rounded-l-md border-y border-l border-gray-300 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm shadow-sm"
-            />
-            <button className="absolute right-0 top-0 bottom-0 px-4 bg-primary text-white rounded-r-md hover:bg-primary/90 flex items-center justify-center">
-              <Search size={20} />
-            </button>
+        <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden lg:flex items-center bg-[#f4f7f6] rounded-2xl p-1.5 focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10 transition-all border border-transparent focus-within:border-primary/20 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
+          <div className="pl-5 pr-2 text-gray-400">
+            <Search size={20} />
           </div>
-        </div>
+          <input 
+            type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('navbar.searchPlaceholder')}
+            className="flex-1 px-2 py-2.5 bg-transparent border-none outline-none text-[15px] text-gray-800 placeholder-gray-400 font-medium"
+          />
+          <button type="submit" className="px-6 h-11 bg-primary text-white rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-sm active:scale-95 font-bold text-[14px]">
+            {t('navbar.searchButton')}
+          </button>
+        </form>
 
-        {/* Actions */}
-        <div className="flex items-center gap-6">
+        {/* Actions - FastKart Style */}
+        <div className="flex items-center gap-4 sm:gap-7">
+          <div className="hidden xl:flex items-center gap-3 border-r border-gray-100 pr-7">
+            <div className="w-11 h-11 rounded-full bg-primary/5 flex items-center justify-center text-primary group cursor-pointer hover:bg-primary transition-colors">
+              <Phone size={20} className="group-hover:text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.support')}</span>
+              <span className="text-[15px] font-bold text-slate-700 leading-none">1900 1234</span>
+            </div>
+          </div>
+
+          {user && (
+            <Link to="/wishlist" className="hidden sm:flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors relative">
+              <div className="relative">
+                <Heart size={26} strokeWidth={1.8} />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white text-[10px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center font-bold shadow-sm border-2 border-white">
+                    {wishlistCount}
+                  </span>
+                )}
+              </div>
+            </Link>
+          )}
+
           {user ? (
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex flex-col items-center gap-1 text-gray-700 hover:text-primary transition-colors focus:outline-none"
+                className="flex items-center gap-2.5 text-gray-500 hover:text-primary transition-colors focus:outline-none"
               >
-                <div className="bg-gray-100 p-2 rounded-full cursor-pointer">
-                  <User size={20} strokeWidth={2}/>
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                  <User size={22} strokeWidth={2} />
                 </div>
-                <span className="text-xs font-semibold hidden lg:block">
-                  {user.firstname}
-                </span>
+                <div className="hidden sm:flex flex-col text-left">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.account')}</span>
+                  <span className="text-sm font-bold text-slate-700 leading-none">{user.firstname}</span>
+                </div>
               </button>
 
               {/* Profile Submenu */}
               {isProfileOpen && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setIsProfileOpen(false)}
-                  ></div>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in duration-200 origin-top-right">
-                    <div className="px-4 py-2 border-b border-gray-100 mb-1">
-                      <p className="text-sm font-bold text-gray-900">{user.firstname} {user.lastname}</p>
-                      <p className="text-xs text-gray-500 truncate">{user.email || user.phone}</p>
+                <div className="absolute right-0 top-full mt-4 w-60 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-300 origin-top-right">
+                    <div className="px-5 py-3.5 border-b border-gray-50 mb-2">
+                      <p className="text-sm font-black text-gray-900 leading-tight">{user.firstname} {user.lastname}</p>
+                      <p className="text-[11px] text-gray-400 font-bold truncate mt-0.5">{user.email || user.phone}</p>
                     </div>
                     
-                    <Link 
-                      to="/profile" 
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <User size={16} />
-                      <span>Thông tin cá nhân</span>
+                    <Link to="/profile" className="flex items-center gap-3 px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setIsProfileOpen(false)}>
+                      <User size={18} /> {t('actions.profile')}
                     </Link>
 
                     {user.role === 'admin' && (
-                      <Link 
-                        to="/admin" 
-                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setIsProfileOpen(false)}
-                      >
-                        <LayoutDashboard size={16} />
-                        <span>Quản trị viên</span>
+                      <Link to="/admin" className="flex items-center gap-3 px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setIsProfileOpen(false)}>
+                        <LayoutDashboard size={18} /> {t('actions.admin')}
                       </Link>
                     )}
 
-                    <div className="border-t border-gray-100 mt-1 pt-1">
-                      <button 
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
-                      >
-                        <LogOut size={16} />
-                        <span>Đăng xuất</span>
+                    <div className="border-t border-gray-50 mt-2 pt-2">
+                      <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 transition-colors text-left">
+                        <LogOut size={18} /> {t('actions.logout')}
                       </button>
                     </div>
                   </div>
-                </>
               )}
             </div>
           ) : (
-            <Link to="/login" className="flex flex-col items-center gap-1 text-gray-700 hover:text-primary transition-colors">
-              <div className="bg-gray-100 p-2 rounded-full cursor-pointer">
-                <User size={20} strokeWidth={2}/>
+            <Link to="/login" className="flex items-center gap-2.5 text-gray-500 hover:text-primary transition-colors">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                <User size={22} strokeWidth={2} />
               </div>
-              <span className="text-xs font-semibold hidden lg:block">
-                Đăng nhập
-              </span>
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.login')}</span>
+                <span className="text-sm font-black text-gray-900 leading-none">{t('navbar.account')}</span>
+              </div>
             </Link>
           )}
           
-          <Link to="/cart" className="flex flex-col items-center gap-1 text-gray-700 hover:text-primary transition-colors relative">
-            <div className="relative bg-gray-100 p-2 rounded-full cursor-pointer">
-              <ShoppingCart size={20} strokeWidth={2}/>
-              <span className="absolute -top-1 -right-1 bg-destructive text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                0
+          <Link to="/cart" className="flex items-center gap-4 group">
+            <div className="relative">
+              <div className="text-primary bg-[#0da487]/10 p-3 rounded-xl group-hover:bg-[#0da487] group-hover:text-white transition-all duration-300">
+                <ShoppingCart size={24} strokeWidth={2.5}/>
+              </div>
+              <span className="absolute -top-2 -right-2 bg-[#ffa53b] text-white text-[11px] min-w-[20px] h-[20px] px-1.5 rounded-full flex items-center justify-center font-black shadow-[0_3px_10px_rgba(255,165,59,0.3)] border-2 border-white">
+                {totalItems}
               </span>
             </div>
-            <span className="text-xs font-semibold hidden lg:block">Giỏ hàng</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Bottom Navigation */}
-      <div className="bg-primary text-primary-foreground hidden md:block">
-        <div className="container mx-auto px-4 max-w-7xl flex items-center">
-          {/* Categories Megamenu Trigger */}
-          <div 
-            className="flex items-center gap-2 bg-black/10 hover:bg-black/20 cursor-pointer py-3 px-6 transition-colors relative group"
-            onMouseEnter={() => setCategoryMenuOpen(true)}
-            onMouseLeave={() => setCategoryMenuOpen(false)}
-          >
-            <Menu size={20}/>
-            <span className="font-bold tracking-wide text-sm uppercase">Danh Mục Sản Phẩm</span>
-            
-            {/* The actual Mega Menu */}
-            <div className="absolute top-full left-0 w-full lg:w-[800px] z-50">
-              <MegaMenu isOpen={isCategoryMenuOpen} onClose={() => setCategoryMenuOpen(false)} />
+            <div className="hidden sm:flex flex-col text-left">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.cart')}</span>
+              <span className="text-[15px] font-black text-gray-900 leading-none group-hover:text-primary transition-colors">{formatMoney(totalPrice)}</span>
             </div>
-          </div>
+          </Link>
 
-          {/* Quick Links */}
-          <div className="flex items-center gap-8 ml-8 text-sm font-bold uppercase tracking-wide">
-            <Link to="/sale" className="hover:text-yellow-300 transition-colors">⚡ Khuyến Mãi</Link>
-            <Link to="/brand/3m" className="hover:text-white/80 transition-colors">Thương Hiệu 3M</Link>
-            <Link to="/video" className="hover:text-white/80 transition-colors">Video Review</Link>
-            <Link to="/blog" className="hover:text-white/80 transition-colors">Tin Tức Kỹ Thuật</Link>
+        </div>
+      </div>
+
+
+      {/* Bottom Navigation (FastKart style) */}
+      <div className="bg-white border-b border-gray-100 hidden md:block">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="flex items-center">
+            {/* Categories Megamenu Trigger */}
+            <div 
+              className="relative w-fit flex-shrink-0"
+              onMouseLeave={handleCategoryMenuClose}
+            >
+              <button 
+                onMouseEnter={handleCategoryMenuOpen}
+                onClick={() => setCategoryMenuOpen(!isCategoryMenuOpen)}
+                className="flex items-center gap-3 bg-primary text-white cursor-pointer py-3.5 px-6 rounded-tr-3xl relative z-[60] transition-all hover:bg-primary/95 w-[280px] active:scale-95 flex-shrink-0"
+              >
+                <Menu size={20} strokeWidth={3} />
+                <span className="font-black tracking-tight text-sm uppercase">{t('navbar.allCategories')}</span>
+              </button>
+              
+              {/* The Mega Menu */}
+              <AnimatePresence>
+                {isCategoryMenuOpen && (
+                  <div className="absolute top-full left-0 z-50 pt-2 w-[950px]">
+                    <MegaMenu isOpen={isCategoryMenuOpen} onClose={() => setCategoryMenuOpen(false)} />
+                  </div>
+                )}
+              </AnimatePresence>
+            </div>
+
+
+            {/* Quick Links */}
+            <nav className="flex items-center gap-8 ml-10">
+              {[
+                { to: '/', label: t('navbar.navHome'), end: true },
+                { to: '/categories', label: t('navbar.navCategories'), end: false },
+                { to: '/brand', label: t('navbar.navBrands'), end: false },
+                { to: '/dealer', label: t('navbar.navDealer'), end: false },
+                { to: '/blog', label: t('navbar.navBlog'), end: false },
+                { to: '/contact', label: t('navbar.navContact'), end: false },
+              ].map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.end}
+                  className={({ isActive }) =>
+                    `text-[14px] font-bold transition-colors py-4 relative group whitespace-nowrap ${
+                      isActive ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {link.label}
+                      <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${
+                        isActive ? 'w-full' : 'w-0 group-hover:w-full'
+                      }`} />
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
           </div>
         </div>
       </div>
+
+
     </header>
   );
 };

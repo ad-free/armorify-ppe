@@ -1,23 +1,34 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { GenericManager } from '../../components/dynamic/GenericManager';
+import { ProductManager } from '../../components/admin/ProductManager';
 
 export const ResourceManagerPage: React.FC = () => {
+  const { t } = useTranslation();
   const { entityId } = useParams<{ entityId: string }>();
   const activeEntity = entityId || 'product';
 
+  const entityHelpText = activeEntity === 'variant'
+    ? t('admin.resourceManager.helpVariant')
+    : activeEntity === 'product'
+      ? t('admin.resourceManager.helpProduct')
+      : t('admin.resourceManager.helpDefault', { entity: activeEntity.replace(/_/g, ' ') });
+
+  const activeEntityLabel = t(`admin.menu.${activeEntity}`, { defaultValue: activeEntity.replace(/_/g, ' ').replace(/\b([a-z])/g, (match) => match.toUpperCase()) });
+
   return (
-    <AdminLayout>
-      <div className="flex items-center gap-2 text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest">
-        <span>Admin</span>
-        <span>/</span>
-        <span className="text-primary">{activeEntity}</span>
-      </div>
-      
-      <GenericManager entityName={activeEntity} />
+    <AdminLayout title={activeEntityLabel} subtitle={entityHelpText}>
+      {activeEntity === 'product' ? (
+        <ProductManager />
+      ) : (
+        <GenericManager entityName={activeEntity} />
+      )}
     </AdminLayout>
   );
 };
+
+
 
 export default ResourceManagerPage;

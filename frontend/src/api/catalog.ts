@@ -1,23 +1,36 @@
 // src/api/catalog.ts
 import { GET, POST } from '@/lib/api';
-import type { 
-  BrandRead, 
-  ProductImageRead, 
-  ProductRead, 
-  ReviewRead, 
-  ReviewCreate, 
+import type {
+  BrandRead,
+  CategoryRead,
   PaginatedResponse,
-  CategoryRead
+  ProductImageRead,
+  ProductRead,
+  ProductVariantRead,
+  ReviewCreate,
+  ReviewRead,
+  FlashSalePublicRead,
 } from '@/types/api';
 
-export const getBrands = () =>
-  GET<PaginatedResponse<BrandRead>>('/api/v1/catalog/brands'); // Usually paginated check
+export const getBrands = async (): Promise<PaginatedResponse<BrandRead>> => {
+  const res = await GET<PaginatedResponse<BrandRead> | BrandRead[]>('/api/v1/catalog/brands');
+  if (Array.isArray(res)) {
+    return { items: res, total: res.length, skip: 0, limit: res.length };
+  }
+  return res;
+};
 
 export const getCategories = () =>
-  GET<PaginatedResponse<CategoryRead>>('/api/v1/catalog/categories');
+  GET<CategoryRead[]>('/api/v1/catalog/categories');
 
 export const getBrand = (id: string) =>
   GET<BrandRead>(`/api/v1/catalog/brands/${id}`);
+
+export const getProductBySlug = (slug: string) =>
+  GET<ProductRead>(`/api/v1/catalog/products/slug/${encodeURIComponent(slug)}`);
+
+export const listProductVariants = (productId: string) =>
+  GET<ProductVariantRead[]>(`/api/v1/catalog/products/${productId}/variants`);
 
 export const getProductImages = (productId: string) =>
   GET<ProductImageRead[]>(`/api/v1/catalog/products/${productId}/images`);
@@ -42,10 +55,15 @@ export const listProducts = (params: {
   brand_id?: string;
   is_featured?: boolean;
   is_new?: boolean;
+  is_flash_deal?: boolean;
   price_min?: number;
   price_max?: number;
   sort_by?: 'newest' | 'price_asc' | 'price_desc' | 'featured';
   skip?: number;
   limit?: number;
   q?: string;
+  rating_min?: number;
 }) => GET<PaginatedResponse<ProductRead>>('/api/v1/catalog/products', { params });
+
+export const getActiveFlashSale = () =>
+  GET<FlashSalePublicRead>('/api/v1/catalog/flash-sale');

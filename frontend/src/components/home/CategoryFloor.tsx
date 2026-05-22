@@ -16,7 +16,7 @@ interface CategoryFloorProps {
 
 export const CategoryFloor: React.FC<CategoryFloorProps> = ({ 
   title, 
-  subtitle, 
+  subtitle: _subtitle, 
   bannerImage, 
   categorySlug, 
   products, 
@@ -26,53 +26,54 @@ export const CategoryFloor: React.FC<CategoryFloorProps> = ({
   const displayProducts = useMemo(() => products.slice(0, 8), [products]);
 
   return (
-    <section className="py-8">
-      <div className="container mx-auto px-4 max-w-7xl">
+    <section className="py-2">
+      <div className="container mx-auto">
         {/* Floor Header */}
-        <div className="flex justify-between items-end mb-4 md:mb-6 border-b-2 border-primary pb-2 gap-4">
+        <div className="flex justify-between items-end mb-8 gap-4">
           <div className="flex-1">
-            <h2 className="text-2xl md:text-3xl font-black text-gray-900 uppercase line-clamp-2 leading-tight">
+            <h2 className="text-2xl md:text-[28px] font-black text-gray-900 tracking-tight leading-tight uppercase">
               {title}
             </h2>
-            <p className="text-sm md:text-base text-gray-500 mt-1 font-medium line-clamp-2">{subtitle}</p>
+            <div className="h-1 w-20 bg-primary rounded-full mt-3" />
           </div>
           <Link 
             to={`/categories/${categorySlug}`}
-            className="hidden sm:flex flex-shrink-0 items-center gap-1 text-primary hover:underline font-semibold"
+            className="group flex flex-shrink-0 items-center gap-2 text-gray-400 hover:text-primary transition-colors font-black text-xs tracking-widest"
           >
-            Xem tất cả <ArrowRight size={18} />
+            XEM TẤT CẢ <ArrowRight size={18} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
 
-        {/* Floor Body - "Garan" style sidebar banner + grid */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        {/* Floor Body - "FastKart" style sidebar banner + grid */}
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Categorical Sidebar Banner */}
-          <div className="hidden lg:block w-56 xl:w-64 flex-shrink-0 relative rounded-xl overflow-hidden group">
-            <img 
+          <div className="hidden lg:block w-72 flex-shrink-0 relative rounded-[2rem] overflow-hidden group min-h-[500px]">
+             <img 
               src={bannerImage} 
               alt={title}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent" />
-            <div className="absolute bottom-5 left-4 right-4 xl:bottom-6 xl:left-6 xl:right-6">
-              <h3 className="text-white font-bold text-base xl:text-lg mb-2 leading-snug drop-shadow-md line-clamp-2">{title}</h3>
-              <ul className="text-gray-200 space-y-1 text-[11px] xl:text-xs font-medium">
-                <li className="hover:text-primary transition-colors cursor-pointer">• Hàng mới về</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">• Thương hiệu nổi bật</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">• Khuyến mãi</li>
-              </ul>
-              <Link to={`/categories/${categorySlug}`} className="mt-4 xl:mt-5 inline-block bg-primary text-white text-[11px] xl:text-xs font-bold px-3 py-2 rounded-lg w-full text-center hover:bg-primary/90 transition-colors shadow-sm">
-                MUA NGAY
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent opacity-80" />
+            <div className="absolute bottom-8 left-8 right-8">
+              <span className="text-primary font-black text-[10px] tracking-[0.2em] uppercase mb-2 block">Premium Collection</span>
+              <h3 className="text-white font-black text-2xl mb-6 leading-tight drop-shadow-lg">{title}</h3>
+              
+              <Link 
+                to={`/categories/${categorySlug}`} 
+                className="inline-flex items-center gap-3 bg-white text-gray-900 text-xs font-black px-8 py-3.5 rounded-xl hover:bg-primary hover:text-white transition-all shadow-xl active:scale-95"
+              >
+                MUA NGAY <ArrowRight size={14} strokeWidth={3} />
               </Link>
             </div>
           </div>
 
           {/* Grid Area */}
-          <div className="flex-1">
+          <div className="flex-1 bg-white rounded-[2rem] p-4 lg:p-8 border border-gray-100/50 shadow-sm">
             <ProductGrid products={displayProducts} loading={loading} />
           </div>
         </div>
       </div>
     </section>
+
   );
 };

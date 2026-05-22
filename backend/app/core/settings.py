@@ -1,8 +1,10 @@
 # app/core/settings.py
+import json
 import os
 from enum import Enum
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_ENV_FILE = ".env"
@@ -68,14 +70,64 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
-    admin_username: str = "admin"
-    admin_phone: str = "0909090909"
+    admin_username: str = "0971409192"
+    admin_phone: str = "0971409192"
     admin_password: str = "admin!!!!"
+    allowed_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+    @staticmethod
+    def _normalize_database_url_value(url: str | None) -> str | None:
+        if not url:
+            return url
+        normalized = url.strip()
+        if normalized.startswith("postgres://"):
+            return "postgresql+asyncpg://" + normalized[len("postgres://") :]
+        if normalized.startswith("postgresql://") and "+" not in normalized.split("://", 1)[1]:
+            return "postgresql+asyncpg://" + normalized[len("postgresql://") :]
+        return normalized
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, v):
+        if isinstance(v, str):
+            return cls._normalize_database_url_value(v)
+        return v
+
+    @field_validator("environment", mode="before")
+    @classmethod
+    def _normalize_environment(cls, v):
+        # Accept None or empty strings and normalize to defaults.
+        if v is None:
+            return Environment.DEVELOPMENT
+        if isinstance(v, str):
+            return Environment.from_str(v)
+        return v
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def _parse_allowed_origins(cls, v):
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            # Try parsing as JSON array
+
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+        # Return default if parsing fails
+        return ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     def model_post_init(self, __context: object) -> None:
-        missing = [f for f in ("database_url", "secret_key", "jwt_secret_key") if not getattr(self, f)]
-        if missing:
-            raise ValueError(f"Missing required environment variables: {', '.join(missing).upper()}")
+        # Only enforce presence of critical secrets in production. During
+        # development we allow loading from .dev.env or using defaults.
+        required = ("database_url", "secret_key", "jwt_secret_key")
+        if self.environment == Environment.PRODUCTION:
+            missing = [f for f in required if not getattr(self, f)]
+            if missing:
+                raise ValueError(f"Missing required environment variables for production: {', '.join(missing).upper()}")
 
 
 def get_settings() -> Settings:

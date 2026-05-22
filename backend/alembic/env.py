@@ -13,7 +13,19 @@ from sqlalchemy.ext.asyncio import AsyncConnection, async_engine_from_config
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.settings import settings
-from app.models import blog, brand, cart, cms, order, product, product_image, quote, review, user  # noqa: F401
+from app.models import (
+    blog,
+    brand,
+    cart,
+    cms,
+    flash_sale,
+    order,
+    product,
+    product_image,
+    quote,
+    review,
+    user,
+)  # noqa: F401
 from app.models.base import Base
 
 config = context.config
@@ -42,8 +54,19 @@ _CONFIGURE_KWARGS: dict = {
 }
 
 
+def _normalize_database_url_for_alembic(url: str | None) -> str | None:
+    if not url:
+        return url
+    normalized = url.strip()
+    if normalized.startswith("postgres://"):
+        return "postgresql+asyncpg://" + normalized[len("postgres://"):]
+    if normalized.startswith("postgresql://") and "+" not in normalized.split("://", 1)[1]:
+        return "postgresql+asyncpg://" + normalized[len("postgresql://"):]
+    return normalized
+
+
 def run_migrations_offline() -> None:
-    url = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+    url = _normalize_database_url_for_alembic(os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url"))
     context.configure(
         url=url,
         literal_binds=True,
@@ -74,12 +97,17 @@ async def _ensure_schema(connection: AsyncConnection) -> None:
 
 def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = os.getenv("DATABASE_URL") or settings.database_url
+    configuration["sqlalchemy.url"] = _normalize_database_url_for_alembic(os.getenv("DATABASE_URL") or settings.database_url)
 
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args={
+            "server_settings": {"search_path": f"{DEFAULT_SCHEMA},public"},
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0,
+        },
     )
 
     async def _run_async_migrations() -> None:

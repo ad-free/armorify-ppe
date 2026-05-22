@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.core.database import DbSession
 from app.core.deps import CurrentUser
@@ -20,7 +21,12 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 
 @router.get("/", response_model=list[OrderRead])
 async def list_my_orders(current_user: CurrentUser, db: DbSession) -> list[Order]:
-    result = await db.execute(select(Order).where(Order.user_id == current_user.id, Order.is_active.is_(True)))
+    result = await db.execute(
+        select(Order)
+        .where(Order.user_id == current_user.id, Order.is_active.is_(True))
+        .options(selectinload(Order.items).selectinload(OrderItem.product))
+        .order_by(Order.created_at.desc())
+    )
     return list(result.scalars().all())
 
 

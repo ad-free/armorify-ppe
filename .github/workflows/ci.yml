@@ -1,4 +1,4 @@
-name: CI
+name: CI & Deploy
 
 on:
   push:
@@ -6,9 +6,36 @@ on:
   pull_request:
     branches-ignore: [release/*]
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
-  lint:
-    name: Backend Lint (Python)
+  filter:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
+  backend-lint:
+    name: Backend Lint
+    needs: filter
+    if: needs.filter.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -17,7 +44,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12" # Downgraded to a widely available version in runners
+          python-version: '3.12'
 
       - name: Cache pip dependencies
         uses: actions/cache@v3
@@ -37,7 +64,9 @@ jobs:
         run: pre-commit run --all-files --show-diff-on-failure
 
   frontend-lint:
-    name: Frontend Lint (React/TS)
+    name: Frontend Lint
+    needs: filter
+    if: needs.filter.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -49,7 +78,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '25'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -58,3 +87,67 @@ jobs:
 
       - name: Run linting
         run: npm run lint
+
+  release-note:
+    name: Create Release Note
+    needs:
+      - filter
+    if: always() && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0                # ← REQUIRED: fetch full git history
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          # Get the previous tag (if none, use first commit)
+          PREV_TAG=$(git tag --sort=-creatordate | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+
+          # Collect commits since last release
+          COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+
+          # Categorize by conventional commit prefix
+          FEATURES=$(echo "$COMMITS"     | grep -E "^\- feat"     || echo "")
+          FIXES=$(echo "$COMMITS"        | grep -E "^\- fix"      || echo "")
+          CHORES=$(echo "$COMMITS"       | grep -E "^\- chore"    || echo "")
+          OTHERS=$(echo "$COMMITS"       | grep -vE "^\- (feat|fix|chore)" || echo "")
+
+          # Build the body
+          BODY=""
+
+          if [ -n "$FEATURES" ]; then
+            BODY="${BODY}### ✨ New Features\n${FEATURES}\n\n"
+          fi
+          if [ -n "$FIXES" ]; then
+            BODY="${BODY}### 🐛 Bug Fixes\n${FIXES}\n\n"
+          fi
+          if [ -n "$CHORES" ]; then
+            BODY="${BODY}### 🔧 Chores\n${CHORES}\n\n"
+          fi
+          if [ -n "$OTHERS" ]; then
+            BODY="${BODY}### 📦 Other Changes\n${OTHERS}\n\n"
+          fi
+
+          # Release summary
+          BODY="${BODY}---\n### 🚀 Release Info\n"
+          BODY="${BODY}\n**Commit:** ${{ github.sha }}\n"
+          BODY="${BODY}**Triggered by:** ${{ github.actor }}\n"
+
+          # Save to file to avoid quoting issues
+          printf "$BODY" > release_notes.md
+          cat release_notes.md
+
+      - name: Create release note
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: release-${{ github.run_number }}
+          name: Release ${{ github.run_number }} — ${{ github.ref_name }}
+          body_path: release_notes.md        # ← use file instead of inline body
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

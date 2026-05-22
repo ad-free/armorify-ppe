@@ -1,7 +1,10 @@
 # app/models/product.py
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID as _UUID
+
+if TYPE_CHECKING:
+    from app.models.brand import Brand
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import (
@@ -68,11 +71,13 @@ class Product(BaseMixin, Base):
     compare_at_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     is_new: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     video_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cover_image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     seo_title: Mapped[str | None] = mapped_column(String(160), nullable=True)
     seo_description: Mapped[str | None] = mapped_column(String(320), nullable=True)
     rating_avg: Mapped[Decimal | None] = mapped_column(Numeric(3, 2), nullable=True)
     rating_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     category: Mapped[Category] = relationship(back_populates="products")
+    brand: Mapped["Brand | None"] = relationship("Brand", foreign_keys=[brand_id], lazy="joined")
     variants: Mapped[list["ProductVariant"]] = relationship(back_populates="product")
 
     __table_args__ = (
@@ -111,10 +116,20 @@ class ProductVariant(BaseMixin, Base):
     color: Mapped[str | None] = mapped_column(String(64), nullable=True)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     price_override: Mapped[Numeric | None] = mapped_column(Numeric(12, 2), nullable=True)
+    attributes: Mapped[Any | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        server_default=text("'{}'::jsonb"),
+    )
     product: Mapped[Product] = relationship(back_populates="variants")
 
     __table_args__ = (
         Index("ix_variants_product_id", "product_id"),
-        Index("ix_variants_sku", "sku", unique=True),
+        Index(
+            "ix_variants_sku",
+            "sku",
+            unique=True,
+            postgresql_where=text("is_active = true"),
+        ),
         CheckConstraint("stock >= 0", name="ck_variants_stock_nonneg"),
     )

@@ -42,8 +42,11 @@ export interface ProductImageCreate {
 export interface ReviewRead {
   id: string;
   product_id: string;
+  product_name?: string;
+  product_image?: string;
   user_id: string | null;
   author_name: string;
+  author_avatar?: string;
   rating: number;
   body: string | null;
   is_approved: boolean;
@@ -53,10 +56,26 @@ export interface ReviewRead {
 }
 
 export interface ReviewCreate {
-  author_name: string;
+  author_name?: string;
   rating: number;
   body?: string | null;
 }
+
+export interface ProductCreate {
+  name: string;
+  slug: string;
+  description?: string | null;
+  price: number;
+  dealer_price?: number | null;
+  stock?: number;
+  is_featured?: boolean;
+  category_id: string;
+  brand_id?: string | null;
+  specifications?: unknown;
+  cover_image_url?: string | null;
+}
+
+export type ProductUpdate = Partial<ProductCreate>;
 
 export interface BlogPostRead {
   id: string;
@@ -66,6 +85,7 @@ export interface BlogPostRead {
   body: string;
   cover_image_url: string | null;
   author_id: string | null;
+  author_name?: string | null;
   published_at: string | null;
   seo_title: string | null;
   seo_description: string | null;
@@ -85,6 +105,15 @@ export interface BlogPostCreate {
   seo_description?: string | null;
 }
 
+export interface FlashSalePublicRead {
+  id: string;
+  name: string;
+  start_at: string;
+  end_at: string;
+  is_active: boolean;
+  products: ProductRead[];
+}
+
 export type BlogPostUpdate = Partial<BlogPostCreate>;
 
 export interface PaginatedResponse<T> {
@@ -92,22 +121,59 @@ export interface PaginatedResponse<T> {
   total: number;
   skip: number;
   limit: number;
+  extra?: Record<string, unknown>;
+}
+
+export interface ProductBrandRead {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  country_of_origin: string | null;
 }
 
 export interface ProductRead {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
   price: number;
+  dealer_price: number | null;
+  stock: number;
+  is_featured: boolean;
   category_id: string;
+  specifications: Record<string, unknown> | unknown[] | null;
+  cover_image_url: string | null;
   brand_id: string | null;
+  brand: ProductBrandRead | null;
   compare_at_price: string | null;
   is_new: boolean;
+  is_flash_deal: boolean;
+  flash_deal_end: string | null;
   video_url: string | null;
   seo_title: string | null;
   seo_description: string | null;
   rating_avg: string | null;
   rating_count: number;
+  flash_sale_price?: string | null;
+  flash_sale_discount?: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductVariantRead {
+  id: string;
+  product_id: string;
+  sku: string;
+  size: string | null;
+  color: string | null;
+  stock: number;
+  price_override: string | null;
+  attributes: Record<string, unknown> | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CategoryRead {
@@ -121,6 +187,19 @@ export interface CategoryRead {
 export interface LoginRequest {
   phone: string;
   password: string;
+}
+
+export interface MeUpdate {
+  firstname?: string;
+  lastname?: string;
+  email?: string | null;
+  address?: string | null;
+  birthday?: string | null;
+}
+
+export interface PasswordChangeRequest {
+  current_password: string;
+  new_password: string;
 }
 
 export interface RegisterRequest {
@@ -145,6 +224,8 @@ export interface UserRead {
   role: string;
   status: string;
   is_active: boolean;
+  created_at?: string;
+  address?: string | null;
 }
 
 export interface GuestOrderItemCreate {
@@ -156,7 +237,18 @@ export interface GuestOrderItemCreate {
 
 export interface GuestOrderCreate {
   contact_phone: string;
+  customer_name?: string | null;
   items: GuestOrderItemCreate[];
+}
+
+export interface OrderItemRead {
+  id: string;
+  order_id: string;
+  product_id: string;
+  variant_id: string | null;
+  quantity: number;
+  unit_price: number;
+  product?: ProductRead;
 }
 
 export interface OrderRead {
@@ -164,9 +256,32 @@ export interface OrderRead {
   user_id: string | null;
   order_code: string;
   contact_phone: string;
+  customer_name: string | null;
   total_amount: number;
   status: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  items?: OrderItemRead[];
+}
+
+export interface DashboardStats {
+  total_revenue: number;
+  total_orders: number;
+  total_users: number;
+  low_stock_count: number;
+  revenue_growth: number;
+  order_growth: number;
+}
+
+export interface RevenueChartPoint {
+  date: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface DashboardData {
+  stats: DashboardStats;
+  revenue_chart: RevenueChartPoint[];
+  recent_orders: OrderRead[];
 }

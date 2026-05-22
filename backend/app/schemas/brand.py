@@ -2,7 +2,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class BrandBase(BaseModel):
@@ -10,7 +10,7 @@ class BrandBase(BaseModel):
     slug: str
     logo_url: str | None = None
     country_of_origin: str | None = None
-    description: str | None = None
+    description: str | None = Field(default=None, json_schema_extra={"x-ui-widget": "rich-text"})
 
 
 class BrandCreate(BrandBase):
@@ -22,7 +22,7 @@ class BrandUpdate(BaseModel):
     slug: str | None = None
     logo_url: str | None = None
     country_of_origin: str | None = None
-    description: str | None = None
+    description: str | None = Field(default=None, json_schema_extra={"x-ui-widget": "rich-text"})
 
 
 class BrandRead(BrandBase):

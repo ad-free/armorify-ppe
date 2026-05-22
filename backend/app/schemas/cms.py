@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class BannerBase(BaseModel):
@@ -40,7 +40,7 @@ class BannerRead(BannerBase):
 class PageContentBase(BaseModel):
     slug: str
     title: str
-    body: str
+    body: str = Field(..., json_schema_extra={"x-ui-widget": "rich-text"})
 
 
 class PageContentCreate(PageContentBase):
@@ -50,7 +50,7 @@ class PageContentCreate(PageContentBase):
 class PageContentUpdate(BaseModel):
     slug: str | None = None
     title: str | None = None
-    body: str | None = None
+    body: str | None = Field(default=None, json_schema_extra={"x-ui-widget": "rich-text"})
 
 
 class PageContentRead(PageContentBase):

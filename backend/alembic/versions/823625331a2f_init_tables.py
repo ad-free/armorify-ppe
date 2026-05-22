@@ -116,6 +116,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.UUID(), nullable=True),
         sa.Column("order_code", sa.String(64), nullable=False),
         sa.Column("contact_phone", sa.String(32), nullable=False),
+        sa.Column("customer_name", sa.String(128), nullable=True),
         sa.Column("total_amount", sa.Numeric(12, 2), nullable=False),
         sa.Column("status", sa.Enum("pending", "confirmed", "shipped", "delivered", "cancelled", name="order_status"), server_default=sa.text("'pending'"), nullable=False),
         sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
@@ -162,10 +163,13 @@ def upgrade() -> None:
         sa.Column("compare_at_price", sa.Numeric(12, 2), nullable=True),
         sa.Column("is_new", sa.Boolean(), server_default=sa.text("false"), nullable=False),
         sa.Column("video_url", sa.Text(), nullable=True),
+        sa.Column("cover_image_url", sa.String(512), nullable=True),
         sa.Column("seo_title", sa.String(160), nullable=True),
         sa.Column("seo_description", sa.String(320), nullable=True),
         sa.Column("rating_avg", sa.Numeric(3, 2), nullable=True),
         sa.Column("rating_count", sa.Integer(), server_default=sa.text("0"), nullable=False),
+        sa.Column("is_flash_deal", sa.Boolean(), server_default=sa.text("false"), nullable=False),
+        sa.Column("flash_deal_end", sa.DateTime(timezone=True), nullable=True),
         sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
@@ -207,6 +211,7 @@ def upgrade() -> None:
         sa.Column("color", sa.String(64), nullable=True),
         sa.Column("stock", sa.Integer(), server_default=sa.text("0"), nullable=False),
         sa.Column("price_override", sa.Numeric(12, 2), nullable=True),
+        sa.Column("attributes", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=True),
         sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
@@ -324,8 +329,37 @@ def upgrade() -> None:
     op.create_index("ix_order_items_order_id", "order_items", ["order_id"], unique=False)
     op.create_index("ix_order_items_product_id", "order_items", ["product_id"], unique=False)
 
+    op.create_table(
+        "flash_sales",
+        sa.Column("name", sa.String(255), nullable=False),
+        sa.Column("start_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("end_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+
+    op.create_table(
+        "flash_sale_items",
+        sa.Column("flash_sale_id", sa.UUID(), nullable=False),
+        sa.Column("product_id", sa.UUID(), nullable=False),
+        sa.Column("discount_percent", sa.Float(), server_default=sa.text("0.0"), nullable=False),
+        sa.Column("sale_price", sa.Numeric(12, 2), nullable=True),
+        sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
+        sa.ForeignKeyConstraint(["flash_sale_id"], ["flash_sales.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["product_id"], ["products.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+
 
 def downgrade() -> None:
+    op.drop_table("flash_sale_items")
+    op.drop_table("flash_sales")
     op.drop_index("ix_order_items_product_id", table_name="order_items")
     op.drop_index("ix_order_items_order_id", table_name="order_items")
     op.drop_table("order_items")

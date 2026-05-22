@@ -4,17 +4,19 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.order import OrderStatus
+from app.schemas.product import ProductRead
 
 
 class OrderBase(BaseModel):
-    user_id: UUID | None = None
-    order_code: str
-    contact_phone: str
-    total_amount: Decimal
-    status: Optional[OrderStatus] = OrderStatus.PENDING
+    user_id: UUID | None = Field(None, json_schema_extra={"x-ui-hidden": True})
+    order_code: str = Field(..., json_schema_extra={"x-ui-priority": True, "x-ui-order": 1})
+    customer_name: str | None = Field(None, json_schema_extra={"x-ui-priority": True, "x-ui-order": 2})
+    contact_phone: str = Field(..., json_schema_extra={"x-ui-order": 3})
+    total_amount: Decimal = Field(..., json_schema_extra={"x-ui-order": 4})
+    status: Optional[OrderStatus] = Field(OrderStatus.PENDING, json_schema_extra={"x-ui-order": 5})
 
 
 class OrderCreate(OrderBase):
@@ -31,6 +33,7 @@ class OrderRead(OrderBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    items: list["OrderItemRead"] = []
 
     model_config = {"from_attributes": True}
 
@@ -59,6 +62,7 @@ class OrderItemRead(OrderItemBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    product: Optional[ProductRead] = None
 
     model_config = {"from_attributes": True}
 
@@ -72,4 +76,5 @@ class GuestOrderItemCreate(BaseModel):
 
 class GuestOrderCreate(BaseModel):
     contact_phone: str
+    customer_name: str | None = None
     items: list[GuestOrderItemCreate]

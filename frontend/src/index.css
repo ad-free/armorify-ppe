@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,27 +7,78 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 220 20% 18%; /* Softer dark charcoal instead of pure black */
     
-    /* Emerald Green - The new Primary */
-    --primary: 160 84% 39%;
+    /* FastKart Green Primary - Slightly deeper for better readability */
+    --primary: 168 85% 32%; /* #0a8971 */
     --primary-foreground: 210 40% 98%;
     
-    /* Ruby Red - Action / Sale */
-    --destructive: 348 83% 47%;
+    /* FastKart Orange - Secondary / Highlights */
+    --secondary: 35 100% 60%; /* #ffa53b */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    /* FastKart Rose - Sale / Flash */
+    --destructive: 354 80% 55%; /* #f0444e */
     --destructive-foreground: 210 40% 98%;
 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215 15% 35%; /* Softer, more readable gray */
     
-    --border: 214.3 31.8% 91.4%;
+    --border: 210 20% 93%; /* Softer borders */
+    --radius: 0.75rem;
   }
 }
 
 body {
-  @apply bg-gray-50 text-foreground antialiased;
+  @apply bg-[#f4f7f7] text-foreground antialiased;
+  font-family: 'Public Sans', sans-serif;
+  color: #2d2d2d; /* Fixed softened black for whole site */
 }
 
+.container {
+  @apply max-w-[1440px] px-4 md:px-6;
+}
+
+/* Glassmorphism utility for floating headers */
+.glass {
+  @apply bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm transition-all;
+}
+
+/* Custom shadow for cards */
+.card-shadow {
+  box-shadow: 0 10px 20px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.card-shadow:hover {
+  box-shadow: 0 15px 35px rgba(0,0,0,0.05), 0 5px 15px rgba(0,0,0,0.04);
+}
+
+/* Responsive Video Embeds */
+.prose iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border-radius: 1rem;
+  margin: 2rem 0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+/* Custom Scrollbar for filter panels */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Hide scrollbar utility */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -34,7 +87,27 @@ body {
   scrollbar-width: none;
 }
 
-/* Glassmorphism utility for floating headers */
-.glass {
-  @apply bg-white/90 backdrop-blur-md border-b border-white/20 shadow-sm transition-all;
+/* Shimmer animation for skeletons */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
+
+/* Infinite Horizontal Marquee */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.hover-pause:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
