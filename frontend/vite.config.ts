@@ -1,13 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'               // ← add this
+import path from 'path'
 
 export default defineConfig(() => ({
   plugins: [react()],
-  base: '/armorify-ppe/',
+  // base: '/armorify-ppe/',   ← remove this entirely, defaults to '/'
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),   // ← add this
+      '@': path.resolve(__dirname, './src'),
     },
   },
   build: {

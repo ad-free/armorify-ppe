@@ -63,23 +63,6 @@ jobs:
       - name: Run pre-commit
         run: pre-commit run --all-files --show-diff-on-failure
 
-  backend-deploy:
-    name: Deploy Backend to Render
-    needs: backend-lint
-    if: needs.filter.outputs.backend == 'true' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy backend to Render
-        env:
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-        run: |
-          curl -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
-            -H "Accept: application/json" \
-            -H "Authorization: Bearer ${RENDER_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{}'
-
   frontend-lint:
     name: Frontend Lint
     needs: filter
@@ -105,48 +88,11 @@ jobs:
       - name: Run linting
         run: npm run lint
 
-  frontend-deploy:
-    name: Deploy Frontend to GitHub Pages
-    needs: [filter, frontend-lint]          # ← fix: add filter
-    if: needs.filter.outputs.frontend == 'true' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '25'
-          cache: 'npm'                       # ← add caching
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: frontend          # ← cleaner than cd
-
-      - name: Build frontend
-        env:
-          VITE_API_BASE_URL: https://armorify-ppe.onrender.com
-          VITE_BASE_PATH: /armorify-ppe/     # ← set base path for GitHub Pages
-        run: |
-          npm run build
-          cp dist/index.html dist/404.html       # ← SPA fallback
-        working-directory: frontend
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: frontend/dist
-          publish_branch: gh-pages
-          force_orphan: true
-          commit_message: 'Deploy frontend to GitHub Pages'
-
   release-note:
     name: Create Release Note
     needs:
-      - backend-deploy
-      - frontend-deploy
-    if: github.event_name == 'push' && (needs.backend-deploy.result == 'success' || needs.frontend-deploy.result == 'success')
+      - filter
+    if: always() && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -188,10 +134,8 @@ jobs:
             BODY="${BODY}### 📦 Other Changes\n${OTHERS}\n\n"
           fi
 
-          # Deployment summary
-          BODY="${BODY}---\n### 🚀 Deployment Status\n"
-          BODY="${BODY}- Backend: ${{ needs.backend-deploy.result }}\n"
-          BODY="${BODY}- Frontend: ${{ needs.frontend-deploy.result }}\n"
+          # Release summary
+          BODY="${BODY}---\n### 🚀 Release Info\n"
           BODY="${BODY}\n**Commit:** ${{ github.sha }}\n"
           BODY="${BODY}**Triggered by:** ${{ github.actor }}\n"
 
