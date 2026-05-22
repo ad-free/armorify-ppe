@@ -9,7 +9,6 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.core.database import DbSession
-
 from app.core.deps import get_current_user, require_admin, require_staff
 from app.core.middleware import SecurityMiddleware
 from app.core.settings import settings
