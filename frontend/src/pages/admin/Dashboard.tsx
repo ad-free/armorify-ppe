@@ -273,7 +273,7 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 ml-4">
-                    <p className="text-[14px] font-black text-gray-900">{order.total_amount.toLocaleString()}đ</p>
+                    <p className="text-[14px] font-black text-gray-900">{Number(order.total_amount).toLocaleString('vi-VN')}đ</p>
                     <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg mt-1 inline-block ${order.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
                       order.status === 'cancelled' ? 'bg-rose-50 text-rose-600' :
                         'bg-amber-50 text-amber-500'

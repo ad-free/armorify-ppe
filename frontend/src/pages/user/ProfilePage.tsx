@@ -34,13 +34,13 @@ import { authToast } from '@/lib/toast';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
 import { getMediaUrl } from '@/lib/api';
+import { normalizeSpecs } from '@/components/catalog/productFacts';
 
 const ORDER_STATUS_CONFIG = {
   pending: { label: 'Chờ xử lý', color: 'bg-amber-500', icon: Clock, bg: 'bg-amber-50', text: 'text-amber-600', desc: 'Đơn hàng của bạn đang được hệ thống tiếp nhận.' },
   confirmed: { label: 'Đã xác nhận', color: 'bg-blue-500', icon: CheckCircle, bg: 'bg-blue-50', text: 'text-blue-600', desc: 'Đơn hàng đã được xác nhận và đang chuẩn bị hàng.' },
-  shipping: { label: 'Đang giao', color: 'bg-indigo-500', icon: Truck, bg: 'bg-indigo-50', text: 'text-indigo-600', desc: 'Sản phẩm đang trên đường đến với bạn.' },
+  shipped: { label: 'Đang giao', color: 'bg-indigo-500', icon: Truck, bg: 'bg-indigo-50', text: 'text-indigo-600', desc: 'Sản phẩm đang trên đường đến với bạn.' },
   delivered: { label: 'Đã giao', color: 'bg-emerald-500', icon: Package, bg: 'bg-emerald-50', text: 'text-emerald-600', desc: 'Đơn hàng đã được giao thành công.' },
-  completed: { label: 'Hoàn thành', color: 'bg-emerald-500', icon: CheckCircle, bg: 'bg-emerald-50', text: 'text-emerald-600', desc: 'Cảm ơn bạn đã tin tưởng Armorify!' },
   cancelled: { label: 'Đã hủy', color: 'bg-rose-500', icon: XCircle, bg: 'bg-rose-50', text: 'text-rose-600', desc: 'Đơn hàng đã bị hủy bỏ.' },
 } as const;
 
@@ -53,8 +53,6 @@ const DEFAULT_STATUS_CONFIG = {
   desc: '',
 };
 
-const getStatusConfig = (status: string) =>
-  ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS_CONFIG] ?? DEFAULT_STATUS_CONFIG;
 
 const STATIC_MENU_ITEMS = [
   { id: 'dashboard', labelKey: null, staticLabel: 'Tổng Quan', icon: ShoppingBag },
@@ -317,8 +315,7 @@ const ProfilePage: React.FC = () => {
                     ) : (
                       <div className="p-6 space-y-8">
                         {orders.map((order) => {
-                          // ✅ Fix 1: Dùng helper getStatusConfig thay vì tạo object trong map
-                          const statusConfig = getStatusConfig(order.status);
+                          const statusConfig = order.status === null ? DEFAULT_STATUS_CONFIG : ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG] ?? DEFAULT_STATUS_CONFIG;
                           const StatusIcon = statusConfig.icon;
 
                           return (
@@ -352,19 +349,12 @@ const ProfilePage: React.FC = () => {
                                     key={item.id}
                                     className="flex flex-col sm:flex-row items-center gap-6 pb-5 border-b border-gray-100 last:border-0 last:pb-0"
                                   >
-                                    <div className="w-24 h-24 bg-white rounded-2xl p-3 border border-gray-100 shrink-0 flex items-center justify-center shadow-sm">
-                                      <img
-                                        src={getMediaUrl(item.product?.cover_image_url) || '/placeholder.png'}
-                                        alt={item.product?.name}
-                                        className="max-w-full max-h-full object-contain"
-                                      />
-                                    </div>
                                     <div className="flex-1 text-center sm:text-left">
                                       <h5 className="text-base font-black text-gray-900 mb-1 leading-tight line-clamp-2">
-                                        {item.product?.name || 'Sản phẩm không còn tồn tại'}
+                                        {item.product_name ?? 'Tên sản phẩm chưa được lưu'}
                                       </h5>
                                       <p className="text-xs text-gray-500 font-medium mb-3 line-clamp-1 italic">
-                                        {item.product?.description?.replace(/<[^>]*>?/gm, '').slice(0, 80)}...
+                                        SKU: {item.sku ?? 'Không có'}
                                       </p>
                                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-1">
                                         <div>
@@ -375,17 +365,9 @@ const ProfilePage: React.FC = () => {
                                           <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Số lượng</p>
                                           <p className="text-sm font-bold text-gray-900">{item.quantity} x sản phẩm</p>
                                         </div>
-                                        <div className="hidden sm:block">
-                                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Thương hiệu</p>
-                                          <p className="text-sm font-bold text-primary">{item.product?.brand?.name || 'Armorify'}</p>
-                                        </div>
-                                        <div className="hidden sm:block">
-                                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Đánh giá</p>
-                                          <div className="flex items-center gap-0.5 text-amber-400">
-                                            {[...Array(5)].map((_, i) => (
-                                              <Star key={i} size={12} fill={i < 4 ? 'currentColor' : 'none'} />
-                                            ))}
-                                          </div>
+                                        <div className="col-span-2">
+                                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Phiên bản đã đặt</p>
+                                          <p className="text-sm font-bold">{normalizeSpecs(item.attributes).map((row) => `${row.label}: ${row.value}`).join(' · ') || 'Không có thông tin thuộc tính'}</p>
                                         </div>
                                       </div>
                                     </div>
@@ -395,18 +377,6 @@ const ProfilePage: React.FC = () => {
                                 {/* Order Footer */}
                                 <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-100 mt-2">
                                   <div className="flex items-center gap-3">
-                                    <div className="flex -space-x-2">
-                                      {order.items?.slice(0, 3).map((item, idx) => (
-                                        <div key={idx} className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm">
-                                          <img src={getMediaUrl(item.product?.cover_image_url) || '/placeholder.png'} className="w-full h-full object-cover" />
-                                        </div>
-                                      ))}
-                                      {(order.items?.length || 0) > 3 && (
-                                        <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-900 text-[10px] font-bold text-white flex items-center justify-center">
-                                          +{(order.items?.length || 0) - 3}
-                                        </div>
-                                      )}
-                                    </div>
                                     <p className="text-[11px] font-bold text-gray-400">
                                       Đã đặt ngày {new Date(order.created_at).toLocaleDateString('vi-VN')}
                                     </p>

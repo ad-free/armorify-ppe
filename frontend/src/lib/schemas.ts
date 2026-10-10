@@ -36,10 +36,13 @@ export const trackOrderSchema = z.object({
   contact_phone: z.string().min(6, 'Số điện thoại không hợp lệ')
 });
 
-export const guestOrderSchema = z.object({
-  fullname: z.string().min(2, 'Vui lòng nhập họ tên'),
-  contact_phone: z.string().min(10, 'Số điện thoại không hợp lệ').max(11),
-  address: z.string().min(10, 'Vui lòng nhập địa chỉ giao hàng chi tiết'),
-  note: z.string().optional(),
-  payment_method: z.enum(['cod', 'transfer']).default('cod'),
+export const checkoutSchema = z.object({
+  customer_name: z.string().trim().min(1, 'Vui lòng nhập họ tên').max(128, 'Tối đa 128 ký tự'),
+  contact_phone: z.string().trim().min(6, 'Số điện thoại không hợp lệ').max(32, 'Số điện thoại tối đa 32 ký tự').regex(/^\+?[0-9][0-9 .()-]*$/, 'Số điện thoại không hợp lệ'),
+  email: z.string().trim().max(254, 'Email tối đa 254 ký tự').refine((value) => value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), 'Email không hợp lệ'),
+  province: z.string().trim().min(1, 'Vui lòng nhập tỉnh / thành phố').max(128, 'Tối đa 128 ký tự'),
+  district: z.string().trim().min(1, 'Vui lòng nhập quận / huyện').max(128, 'Tối đa 128 ký tự'),
+  ward: z.string().trim().min(1, 'Vui lòng nhập phường / xã').max(128, 'Tối đa 128 ký tự'),
+  address: z.string().trim().min(1, 'Vui lòng nhập số nhà và tên đường').max(512, 'Địa chỉ tối đa 512 ký tự'),
+  delivery_note: z.string().trim().max(1000, 'Ghi chú tối đa 1000 ký tự'),
 });

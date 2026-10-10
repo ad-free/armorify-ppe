@@ -228,17 +228,54 @@ export interface UserRead {
   address?: string | null;
 }
 
-export interface GuestOrderItemCreate {
+export type Money = number | string;
+
+export interface CheckoutItem {
   product_id: string;
-  variant_id?: string | null;
+  variant_id: string | null;
   quantity: number;
-  unit_price: number;
 }
 
-export interface GuestOrderCreate {
+export interface CheckoutCreate {
+  customer_name: string;
   contact_phone: string;
-  customer_name?: string | null;
-  items: GuestOrderItemCreate[];
+  email: string | null;
+  province: string;
+  district: string;
+  ward: string;
+  address: string;
+  delivery_note: string | null;
+  shipping_method: 'standard';
+  payment_method: 'cod';
+  items: CheckoutItem[];
+  idempotency_key: string;
+  pricing_token: string;
+}
+
+export interface QuoteItem extends CheckoutItem {
+  product_name: string | null;
+  slug: string | null;
+  image_url: string | null;
+  sku: string | null;
+  attributes: Record<string, unknown>;
+  stock: number;
+  base_price: Money | null;
+  unit_price: Money | null;
+  line_total: Money | null;
+  issue: string | null;
+}
+
+export interface CartQuote {
+  items: QuoteItem[];
+  subtotal: Money;
+  discount: Money;
+  shipping: Money | null;
+  total: Money | null;
+  pricing_token: string | null;
+  can_checkout: boolean;
+  shipping_method: 'standard';
+  payment_methods: ['cod'];
+  shipping_message: string | null;
 }
 
 export interface OrderItemRead {
@@ -246,9 +283,11 @@ export interface OrderItemRead {
   order_id: string;
   product_id: string;
   variant_id: string | null;
+  product_name: string | null;
+  sku: string | null;
+  attributes: Record<string, unknown> | null;
   quantity: number;
-  unit_price: number;
-  product?: ProductRead;
+  unit_price: Money;
 }
 
 export interface OrderRead {
@@ -257,12 +296,25 @@ export interface OrderRead {
   order_code: string;
   contact_phone: string;
   customer_name: string | null;
-  total_amount: number;
-  status: string;
+  email: string | null;
+  province: string | null;
+  district: string | null;
+  ward: string | null;
+  address: string | null;
+  delivery_note: string | null;
+  shipping_method: string | null;
+  payment_method: string | null;
+  subtotal: Money | null;
+  discount: Money | null;
+  shipping: Money | null;
+  total_amount: Money;
+  payment_status: string | null;
+  fulfillment_status: string | null;
+  status: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  items?: OrderItemRead[];
+  items: OrderItemRead[];
 }
 
 export interface DashboardStats {

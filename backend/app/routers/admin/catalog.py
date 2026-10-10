@@ -78,7 +78,7 @@ async def upload_product_image(file: UploadFile = File(...)) -> dict[str, str]:
     static_root = Path(__file__).resolve().parents[3] / "static" / "uploads"
     static_root.mkdir(parents=True, exist_ok=True)
 
-    file_extension = Path(file.filename).suffix
+    file_extension = Path(file.filename or "").suffix
     safe_filename = f"{uuid4().hex}{file_extension}"
     destination = static_root / safe_filename
 

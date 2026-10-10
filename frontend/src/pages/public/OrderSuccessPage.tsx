@@ -1,181 +1,71 @@
-// src/pages/public/OrderSuccessPage.tsx
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { CheckCircle, Package, ArrowRight, Home, Phone, Download } from 'lucide-react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { CheckCircle } from 'lucide-react';
+import { SeoHead } from '@/components/common/SeoHead';
+import { FeedbackState } from '@/components/ui/Primitives';
+import { MoneyValue, QuoteTotals } from '@/components/order/QuoteReview';
+import { TrackOrderForm } from '@/components/order/TrackOrderForm';
+import { readConfirmedOrder } from '@/components/order/checkoutRecovery';
+import { normalizeSpecs } from '@/components/catalog/productFacts';
+import { orderStatusLabel } from '@/lib/orderStatus';
+import { useCartStore } from '@/store/cartStore';
 
-const OrderSuccessPage: React.FC = () => {
-  const location = useLocation();
-  const orderId = (location.state as any)?.orderId || `ORD-${Math.floor(Math.random() * 90000) + 10000}`;
-
-  const steps = [
-    { label: 'Đặt Hàng', icon: '📝', done: true },
-    { label: 'Xác Nhận', icon: '✅', done: true },
-    { label: 'Đóng Gói', icon: '📦', done: false },
-    { label: 'Vận Chuyển', icon: '🚚', done: false },
-    { label: 'Giao Hàng', icon: '🏠', done: false },
-  ];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-primary/5 py-16 px-4 font-sans">
-      <div className="max-w-2xl mx-auto">
-
-        {/* Success Icon */}
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', bounce: 0.4, duration: 0.8 }}
-          className="flex flex-col items-center mb-8 text-center"
-        >
-          <div className="relative mb-6">
-            <div className="w-28 h-28 bg-emerald-500 rounded-full flex items-center justify-center shadow-2xl shadow-emerald-500/30">
-              <CheckCircle size={56} className="text-white" strokeWidth={2.5} />
-            </div>
-            <motion.div
-              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="absolute inset-0 rounded-full bg-emerald-500 -z-10"
-            />
-          </div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-3xl font-black text-gray-900 mb-2"
-          >
-            Đặt Hàng Thành Công! 🎉
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="text-gray-500 max-w-sm"
-          >
-            Cảm ơn bạn đã tin tưởng chọn Armorify. Đơn hàng của bạn đang được xử lý.
-          </motion.p>
-        </motion.div>
-
-        {/* Order Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6"
-        >
-          {/* Header */}
-          <div className="bg-gradient-to-r from-primary to-emerald-500 px-6 py-5 text-white">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-1">Mã Đơn Hàng</p>
-                <p className="text-xl font-black">#{orderId}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-1">Trạng thái</p>
-                <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">Đang xử lý</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Order Progress */}
-          <div className="px-6 py-6 border-b border-gray-50">
-            <p className="text-xs font-extrabold text-gray-400 uppercase tracking-wider mb-5">Tiến Trình Đơn Hàng</p>
-            <div className="relative">
-              {/* Track line */}
-              <div className="absolute top-5 left-5 right-5 h-0.5 bg-gray-100">
-                <div className="h-full bg-emerald-500 w-[25%] transition-all" />
-              </div>
-
-              <div className="relative flex justify-between">
-                {steps.map((step, i) => (
-                  <div key={i} className="flex flex-col items-center gap-2 z-10">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold transition-all ${
-                      step.done ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-gray-100'
-                    }`}>
-                      <span>{step.icon}</span>
-                    </div>
-                    <p className={`text-[11px] font-semibold text-center leading-tight ${step.done ? 'text-emerald-600' : 'text-gray-400'}`}>
-                      {step.label}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Info Grid */}
-          <div className="grid grid-cols-2 divide-x divide-y divide-gray-50">
-            {[
-              { label: 'Phương thức thanh toán', value: 'COD – Thanh toán khi nhận' },
-              { label: 'Thời gian giao hàng', value: '3 – 5 ngày làm việc' },
-              { label: 'Địa chỉ nhận hàng', value: 'TP. Hồ Chí Minh' },
-              { label: 'Email xác nhận', value: 'Đã gửi vào hòm thư' },
-            ].map((item, i) => (
-              <div key={i} className="px-5 py-4">
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">{item.label}</p>
-                <p className="text-sm font-semibold text-gray-800">{item.value}</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Action Buttons */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className="grid grid-cols-2 gap-4 mb-6"
-        >
-          <Link
-            to="/"
-            className="flex items-center justify-center gap-2 py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/20"
-          >
-            <Home size={18} />
-            Trang Chủ
-          </Link>
-          <Link
-            to="/profile?tab=orders"
-            className="flex items-center justify-center gap-2 py-3.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all"
-          >
-            <Package size={18} />
-            Xem Đơn Hàng
-          </Link>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="grid grid-cols-2 gap-4"
-        >
-          <button className="flex items-center justify-center gap-2 py-3 text-sm text-gray-600 border border-dashed border-gray-200 rounded-xl hover:border-primary hover:text-primary transition-colors font-semibold">
-            <Download size={16} /> Tải Hóa Đơn PDF
-          </button>
-          <a
-            href="tel:0372371668"
-            className="flex items-center justify-center gap-2 py-3 text-sm text-gray-600 border border-dashed border-gray-200 rounded-xl hover:border-primary hover:text-primary transition-colors font-semibold"
-          >
-            <Phone size={16} /> Hotline Hỗ Trợ
-          </a>
-        </motion.div>
-
-        {/* Upsell */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-          className="mt-8 text-center"
-        >
-          <Link
-            to="/categories"
-            className="inline-flex items-center gap-2 text-primary font-bold text-sm hover:underline"
-          >
-            Tiếp tục mua sắm <ArrowRight size={16} />
-          </Link>
-        </motion.div>
-      </div>
+export default function OrderSuccessPage() {
+  const [order] = useState(() => {
+    try { return readConfirmedOrder(window.sessionStorage); }
+    catch { return null; }
+  });
+  const retainedCart = useCartStore((state) => state.items.length > 0);
+  if (!order) return <main className="container py-8"><SeoHead title="Thông tin đơn hàng | Armorify" /><h1 className="page-heading mb-6">Thông tin đơn hàng</h1><FeedbackState title="Chưa có đơn hàng được xác nhận" description="Trang này chỉ hiển thị đơn đã được máy chủ ghi nhận trong phiên trình duyệt. Không có đơn mới nào được tạo khi bạn mở trang."><Link to="/cart" className="btn btn-primary">Về giỏ hàng</Link><Link to="/contact" className="btn btn-secondary">Liên hệ hỗ trợ</Link></FeedbackState></main>;
+  return <main className="container max-w-4xl py-6 md:py-8">
+    <SeoHead title="Đã ghi nhận đơn hàng | Armorify" />
+    <header className="mb-6 space-y-3">
+      <p className="font-bold text-primary">Armorify · Thông tin đơn hàng</p>
+      <CheckCircle className="text-success" size={40} aria-hidden="true" />
+      <h1 className="page-heading">Đơn hàng đã được ghi nhận</h1>
+      <p className="text-body">Máy chủ đã tiếp nhận đơn hàng. Tình trạng bên dưới là thông tin đã lưu; tra cứu để kiểm tra cập nhật mới nhất.</p>
+      <p className="break-all font-semibold">Mã đơn hàng: {order.order_code}</p>
+      <p className="text-caption">Ngày đặt: {new Date(order.created_at).toLocaleString('vi-VN')}</p>
+    </header>
+    {retainedCart && <div role="status" className="card mb-6 space-y-3 border-warning p-4">
+      <p>Giỏ hàng có những thay đổi được giữ lại. Kiểm tra các sản phẩm đã đặt trước khi đặt tiếp để tránh đặt lặp.</p>
+      <Link to="/cart" reloadDocument className="btn btn-secondary">Kiểm tra giỏ hàng</Link>
+    </div>}
+    <div className="grid gap-6 md:grid-cols-2">
+      <section className="card space-y-3 p-4 sm:p-6" aria-labelledby="success-contact">
+        <h2 id="success-contact" className="section-heading">Thông tin giao hàng</h2>
+        <dl className="space-y-2 break-words text-sm">
+          <div><dt className="text-muted-foreground">Người nhận</dt><dd className="font-semibold">{order.customer_name}</dd></div>
+          <div><dt className="text-muted-foreground">Điện thoại</dt><dd>{order.contact_phone}</dd></div>
+          {order.email && <div><dt className="text-muted-foreground">Email</dt><dd>{order.email}</dd></div>}
+          <div><dt className="text-muted-foreground">Địa chỉ</dt><dd>{[order.address, order.ward, order.district, order.province].filter(Boolean).join(', ')}</dd></div>
+          {order.delivery_note && <div><dt className="text-muted-foreground">Ghi chú</dt><dd className="whitespace-pre-wrap">{order.delivery_note}</dd></div>}
+          <div><dt className="text-muted-foreground">Giao hàng</dt><dd>{order.shipping_method === 'standard' ? 'Tiêu chuẩn' : order.shipping_method ?? 'Chưa có thông tin'}</dd></div>
+          <div><dt className="text-muted-foreground">Thanh toán</dt><dd>{order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : order.payment_method ?? 'Chưa có thông tin'} · {orderStatusLabel(order.payment_status)}</dd></div>
+          <div><dt className="text-muted-foreground">Xử lý đơn</dt><dd>{orderStatusLabel(order.status)}</dd></div>
+          <div><dt className="text-muted-foreground">Hoàn tất giao hàng</dt><dd>{orderStatusLabel(order.fulfillment_status)}</dd></div>
+        </dl>
+      </section>
+      <section className="card space-y-4 p-4 sm:p-6" aria-labelledby="success-total">
+        <h2 id="success-total" className="section-heading">Tổng tiền đã xác nhận</h2>
+        <QuoteTotals quote={{ subtotal: order.subtotal, discount: order.discount, shipping: order.shipping, total: order.total_amount }} />
+        {order.payment_method === 'cod' && order.payment_status === 'unpaid' && <p className="text-caption">Thanh toán tổng tiền này khi nhận hàng theo phương thức COD đã chọn.</p>}
+      </section>
+      <section className="card space-y-4 p-4 md:col-span-2 sm:p-6" aria-labelledby="success-items">
+        <h2 id="success-items" className="section-heading">Sản phẩm đã đặt</h2>
+        <ul className="divide-y divide-border">{order.items.map((item) => <li key={item.id} className="space-y-1 py-4 first:pt-0 last:pb-0">
+          <h3 className="break-words font-semibold">{item.product_name ?? 'Tên sản phẩm chưa được lưu'}</h3>
+          <p className="text-caption">SKU: {item.sku ?? 'Không có'}</p>
+          {normalizeSpecs(item.attributes).map((row) => <p key={row.label} className="text-caption break-words">{row.label}: {row.value}</p>)}
+          <div className="flex flex-wrap justify-between gap-2 text-sm"><span>{item.quantity} × <MoneyValue value={item.unit_price} /></span><strong><MoneyValue value={Number(item.unit_price) * item.quantity} /></strong></div>
+        </li>)}</ul>
+      </section>
+      <section className="card space-y-4 p-4 md:col-span-2 sm:p-6" aria-labelledby="success-next">
+        <h2 id="success-next" className="section-heading">Theo dõi đơn hàng</h2>
+        <p className="text-body">Giữ mã đơn <strong className="break-all text-foreground">{order.order_code}</strong> và số điện thoại đặt hàng. Bạn có thể tra cứu bên dưới hoặc cung cấp hai thông tin này khi liên hệ hỗ trợ. Thông tin xác nhận được lưu trong phiên trình duyệt để xem lại khi tải lại trang.</p>
+        <details className="rounded-md border border-border p-4"><summary className="min-h-11 cursor-pointer font-semibold">Tra cứu tình trạng hiện tại</summary><div className="mt-4"><TrackOrderForm initialValues={{ order_code: order.order_code, contact_phone: order.contact_phone }} /></div></details>
+        <div className="flex flex-wrap gap-3"><Link to="/categories" className="btn btn-primary">Tiếp tục mua sắm</Link><Link to="/contact" className="btn btn-secondary">Liên hệ hỗ trợ</Link></div>
+      </section>
     </div>
-  );
-};
-
-export default OrderSuccessPage;
+  </main>;
+}

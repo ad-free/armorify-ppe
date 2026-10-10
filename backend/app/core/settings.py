@@ -1,6 +1,7 @@
 # app/core/settings.py
 import json
 import os
+from decimal import Decimal
 from enum import Enum
 from pathlib import Path
 
@@ -74,6 +75,21 @@ class Settings(BaseSettings):
     admin_phone: str = "0971409192"
     admin_password: str = "admin!!!!"
     allowed_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # Published standard shipping policy: 30,000 VND; free from 500,000 VND.
+    checkout_shipping_fee: Decimal | None = Decimal("30000")
+    checkout_free_shipping_threshold: Decimal | None = Decimal("500000")
+
+    @field_validator("checkout_shipping_fee", "checkout_free_shipping_threshold", mode="before")
+    @classmethod
+    def validate_checkout_shipping_fee(cls, value):
+        if value is None or value == "":
+            return None
+        fee = Decimal(str(value))
+        if not fee.is_finite() or fee < 0 or fee > Decimal("9999999999.99") or fee != fee.quantize(Decimal("0.01")):
+            raise ValueError(
+                "Checkout shipping settings must be finite nonnegative amounts with at most two decimal places"
+            )
+        return fee
 
     @staticmethod
     def _normalize_database_url_value(url: str | None) -> str | None:

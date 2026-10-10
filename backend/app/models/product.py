@@ -106,7 +106,7 @@ class Product(BaseMixin, Base):
 class ProductVariant(BaseMixin, Base):
     __tablename__ = "product_variants"
 
-    product_id: Mapped[UUID] = mapped_column(
+    product_id: Mapped[_UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("products.id", ondelete="CASCADE"),
         nullable=False,
