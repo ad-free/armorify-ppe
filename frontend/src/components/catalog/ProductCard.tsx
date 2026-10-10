@@ -2,12 +2,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Primitives';
 import { useTranslation } from 'react-i18next';
-import { ShoppingCart, Heart, Eye } from 'lucide-react';
+import { Heart, Eye } from 'lucide-react';
 import { ProductRead } from '@/types/api';
 import { StarRating } from './StarRating';
 import { authToast } from '@/lib/toast';
-import { useCartStore } from '@/store/cartStore';
-
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useAuthStore } from '@/store/authStore';
 import { formatCurrency } from '@/lib/currency';
@@ -41,7 +39,6 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { i18n } = useTranslation();
-  const addItem = useCartStore((s) => s.addItem);
   const { user } = useAuthStore();
   const { toggleItem, isInWishlist } = useWishlistStore();
   const isFavorite = isInWishlist(product.id);
@@ -181,24 +178,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Action Button */}
         <div className="mt-4 pt-3 border-t border-border">
-          <Button
-            disabled={!inStock}
-            aria-label={`${inStock ? 'Thêm vào giỏ' : 'Hết hàng'}: ${product.name}`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (!inStock) return;
-              addItem(product, 1);
-              authToast.success(
-                'Thêm thành công',
-                `Đã thêm ${product.name} vào giỏ hàng.`
-              );
-            }}
-            className="w-full whitespace-normal px-2 text-xs sm:text-sm"
-          >
-            <ShoppingCart size={16} aria-hidden="true" />
-            {inStock ? 'Thêm vào giỏ' : 'Hết hàng'}
-          </Button>
+          {inStock ? (
+            <Link
+              to={`/products/${encodeURIComponent(product.slug)}`}
+              aria-label={`Xem lựa chọn: ${product.name}`}
+              className="btn btn-primary w-full whitespace-normal px-2 text-xs sm:text-sm"
+            >
+              Xem lựa chọn
+            </Link>
+          ) : (
+            <Button disabled aria-label={`Hết hàng: ${product.name}`} className="w-full whitespace-normal px-2 text-xs sm:text-sm">
+              Hết hàng
+            </Button>
+          )}
         </div>
       </div>
 

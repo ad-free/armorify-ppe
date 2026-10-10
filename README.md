@@ -144,8 +144,12 @@ inside their own region on narrow screens. Red is reserved for errors, destructi
 and genuine discounts; inactive/cancelled/refunded statuses are neutral.
 
 Verify from `frontend/` with `npm run build && npm run lint`.
-The Node TypeScript config emits declarations only, so builds do not leave a redundant
-`vite.config.js` beside the source configuration or introduce generated-file lint errors.
+`tsc -b` writes incremental build metadata, including for the no-emit app project.
+Both TypeScript projects now place that metadata under
+`frontend/node_modules/.cache/armorify-build/`; the Node project emits declarations
+into its `vite-types/` subdirectory instead of beside `vite.config.ts`.
+Routine builds therefore leave no new TypeScript artifacts in the frontend root.
+Pre-existing root build metadata and declarations are left untouched.
 
 ### Phase 2 product discovery
 
@@ -159,9 +163,12 @@ an invalid request. Out-of-range pages return to the last available page.
 Discovery surfaces distinguish loading, request errors with retry, empty catalogs, missing
 categories/brands, and searches without results. Product cards show supplied scalar PPE
 specifications, standards and price units when present, explicit unknowns when absent,
-stock-backed availability, and review summaries only when reviews exist. Out-of-stock
-cards cannot add items to the cart. Featured products are labeled as curated—not as
-best sellers, because no sales/popularity data is exposed.
+stock-backed availability, and review summaries only when reviews exist. The listing
+response has no reliable variant-required indicator, so in-stock cards link to the
+product page with “Xem lựa chọn” (View options) rather than adding an unspecified item.
+Out-of-stock card actions remain disabled. Direct quick-add can return only when the
+API reliably verifies that no required variants exist. Featured products are labeled
+as curated—not as best sellers, because no sales/popularity data is exposed.
 
 The footer groups products, policies, contact, and business purchasing. Quote actions open
 an email to the existing contact address; they do not submit through the unconnected
