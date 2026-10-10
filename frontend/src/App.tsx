@@ -9,6 +9,7 @@ import { Footer } from './components/layout/Footer';
 import { useAuthStore } from './store/authStore';
 import { GET } from './lib/api';
 import type { UserRead } from './types/api';
+import { Button, FeedbackState, Skeleton } from './components/ui/Primitives';
 
 // Lazy load the pages we built
 const HomePage = React.lazy(() => import('./pages/public/HomePage'));
@@ -55,20 +56,10 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-xl max-w-2xl w-full">
-            <h2 className="text-2xl font-black text-rose-500 mb-4 uppercase tracking-tight">Hệ thống gặp lỗi hiển thị</h2>
-            <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 mb-6 overflow-auto max-h-[300px]">
-              <p className="text-rose-700 font-mono text-sm whitespace-pre-wrap">{this.state.error?.toString()}</p>
-              <p className="text-rose-500 text-xs mt-2 font-mono">{this.state.error?.stack}</p>
-            </div>
-            <button 
-              onClick={() => window.location.reload()}
-              className="w-full py-4 bg-primary text-white font-black rounded-xl uppercase tracking-widest hover:bg-primary/90 transition-all"
-            >
-              Tải lại trang
-            </button>
-          </div>
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <FeedbackState variant="error" title="Hệ thống gặp lỗi hiển thị" description="Vui lòng tải lại trang để thử lại." className="max-w-lg w-full">
+            <Button onClick={() => window.location.reload()}>Tải lại trang</Button>
+          </FeedbackState>
         </div>
       );
     }
@@ -82,19 +73,19 @@ const AppLayout = ({ children, t }: { children: React.ReactNode; t: (key: string
 
   if (isAdmin) {
     return (
-      <main className="min-h-screen bg-[#f4f7f6]">
-        <Suspense fallback={<div className="flex h-screen items-center justify-center bg-[#f4f7f6] uppercase font-black text-xs tracking-widest text-gray-400">{t('status.loading')}...</div>}>
+      <div className="min-h-screen bg-background">
+        <Suspense fallback={<div role="status" className="container py-12"><p className="text-body mb-4">{t('status.loading')}</p><Skeleton className="h-64" /></div>}>
           {children}
         </Suspense>
-      </main>
+      </div>
     );
   }
 
   return (
     <>
       <Navbar />
-      <main className="min-h-[80vh] bg-gray-50">
-        <Suspense fallback={<div className="flex p-20 justify-center">{t('status.loading')}</div>}>
+      <main className="min-h-[80vh] bg-background">
+        <Suspense fallback={<div role="status" className="container py-12"><p className="text-body mb-4">{t('status.loading')}</p><Skeleton className="h-64" /></div>}>
           {children}
         </Suspense>
       </main>
@@ -110,30 +101,30 @@ const GlobalToaster = () => {
     <Toaster
       position="top-right"
       gutter={12}
-      containerStyle={{ top: 40, right: 40 }}
+      containerStyle={{ top: 16, right: 16, left: 16 }}
       toastOptions={{
         duration: 4000,
         className: 'premium-toast',
         style: {
-          background: '#ffffff',
-          color: '#1a202c',
-          padding: '16px 24px',
-          borderRadius: '16px',
+          background: 'hsl(var(--surface))',
+          color: 'hsl(var(--foreground))',
+          padding: '16px',
+          borderRadius: 'var(--radius-md)',
           fontSize: '14px',
           fontWeight: '600',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
-          border: '1px solid #f3f4f6',
+          boxShadow: 'var(--shadow-md)',
+          border: '1px solid hsl(var(--border))',
         },
         success: {
           iconTheme: {
-            primary: '#0da487',
-            secondary: '#fff',
+            primary: 'hsl(var(--success))',
+            secondary: 'hsl(var(--surface))',
           },
         },
         error: {
           iconTheme: {
-            primary: '#ef4444',
-            secondary: '#fff',
+            primary: 'hsl(var(--destructive))',
+            secondary: 'hsl(var(--surface))',
           },
         },
       }}
@@ -172,10 +163,10 @@ function App() {
 
   if (!hasHydrated || isAuthChecking) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
+      <div role="status" className="flex min-h-screen items-center justify-center bg-background p-4">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-          <p className="text-gray-500 font-medium animate-pulse">{t('status.initializing')}</p>
+          <Skeleton className="h-12 w-12" />
+          <p className="text-body">{t('status.initializing')}</p>
         </div>
       </div>
     );

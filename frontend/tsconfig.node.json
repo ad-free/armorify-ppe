@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
     "composite": true,
+    "emitDeclarationOnly": true,
+    "tsBuildInfoFile": "./node_modules/.cache/armorify-build/node.tsbuildinfo",
+    "outDir": "./node_modules/.cache/armorify-build/vite-types",
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "bundler",

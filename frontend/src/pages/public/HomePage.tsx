@@ -1,161 +1,165 @@
-// src/pages/public/HomePage.tsx — Optimized Premium Layout
-import React from 'react';
-import { SeoHead } from '@/components/common/SeoHead';
-import { HeroSlider } from '@/components/home/HeroSlider';
-import { TrustBar } from '@/components/home/TrustBar';
-import { FlashSaleRow } from '@/components/home/FlashSaleRow';
-import { CategoryFloor } from '@/components/home/CategoryFloor';
-import { TabbedCategorySection } from '@/components/home/TabbedCategorySection';
-import { LatestBlogSection } from '@/components/home/LatestBlogSection';
-import { BrandSection } from '@/components/home/BrandSection';
-import { useProducts, useActiveFlashSale, useCategories } from '@/hooks/useCatalog';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
-
-const MidBanner: React.FC<{
-  bg: string; image: string; title: string; sub: string; to: string; btnColor: string; eyebrow?: string;
-}> = ({ bg, image, title, sub, to, btnColor, eyebrow = 'Bộ Sưu Tập' }) => (
-  <Link
-    to={to}
-    className="relative rounded-[2.5rem] overflow-hidden group flex items-center px-8 md:px-12 py-12 min-h-[280px] transition-all duration-700 hover:-translate-y-2 hover:shadow-2xl active:scale-[0.98]"
-    style={{ background: bg }}
-  >
-    <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-700" />
-    <div className="flex-1 z-10 relative">
-      <p className="text-white/90 text-[11px] font-black uppercase tracking-[0.3em] mb-4 drop-shadow-md">{eyebrow}</p>
-      <h3 className="text-white font-black text-3xl md:text-4xl leading-[1.2] mb-4 whitespace-pre-line tracking-tight drop-shadow-md">{title}</h3>
-      <p className="text-white/90 text-sm mb-8 font-medium max-w-[260px] leading-relaxed drop-shadow-sm">{sub}</p>
-      <span className={`inline-flex items-center gap-2 text-white font-black text-xs px-8 py-3.5 rounded-xl transition-all shadow-lg ${btnColor}`}>
-        XEM NGAY <ChevronRight size={16} strokeWidth={3} />
-      </span>
-    </div>
-    <div className="absolute right-[-5%] bottom-[-10%] w-[55%] h-[120%] flex items-center justify-center select-none pointer-events-none group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-700">
-      {image.startsWith('http') || image.startsWith('/') ? (
-        <img src={image} alt="Banner" className="w-full h-full object-contain drop-shadow-2xl filter contrast-125" />
-      ) : (
-        <div className="text-[160px] opacity-20 filter blur-[2px]">{image}</div>
-      )}
-    </div>
-  </Link>
-);
+import { SeoHead } from '@/components/common/SeoHead';
+import { ProductGrid } from '@/components/catalog/ProductGrid';
+import { Button, FeedbackState, Skeleton } from '@/components/ui/Primitives';
+import { useActiveFlashSale, useBrands, useCategories, useProducts } from '@/hooks/useCatalog';
 
 const HomePage: React.FC = () => {
-  const queryClient = useQueryClient();
-  const { data: categories } = useCategories();
-  
-  const shoesCategoryId = categories?.find(c => c.slug === 'giay-bao-ho')?.id;
-  const helmetCategoryId = categories?.find(c => c.slug === 'mu-bao-ho')?.id;
+  const categories = useCategories();
+  const featured = useProducts({ is_featured: true, limit: 8 });
+  const brands = useBrands();
+  const flash = useActiveFlashSale();
+  const [now, setNow] = useState(Date.now);
+  const flashEnd = flash.data ? new Date(flash.data.end_at).getTime() : 0;
+  const flashStart = flash.data ? new Date(flash.data.start_at).getTime() : 0;
+  const activeFlash = flash.data?.is_active && flashStart <= now && flashEnd > now ? flash.data : null;
+  // The catalog API uses this 404 detail for an empty campaign slot.
+  const noActiveFlash = flash.error instanceof Error && flash.error.message === 'No active flash sale found';
 
-  const { data: shoesData, isLoading: shoesLoading } = useProducts(
-    { category_id: shoesCategoryId, limit: 8 },
-    { enabled: !!shoesCategoryId }
-  );
-  
-  const { data: helmetData, isLoading: helmetLoading } = useProducts(
-    { category_id: helmetCategoryId, limit: 8 },
-    { enabled: !!helmetCategoryId }
-  );
-  
-  const { data: activeFlash, isLoading: flashLoading } = useActiveFlashSale();
-
-  const handleFlashEnd = () => {
-    queryClient.invalidateQueries({ queryKey: ['active-flash-sale'] });
-  };
+  useEffect(() => {
+    setNow(Date.now());
+    if (!flashEnd || flashEnd <= Date.now()) return;
+    const timer = window.setTimeout(() => {
+      setNow(Date.now());
+      void flash.refetch();
+    }, Math.min(flashEnd - Date.now(), 2_147_483_647));
+    return () => window.clearTimeout(timer);
+  }, [flashEnd, flash.refetch]);
 
   return (
-    <div className="bg-[#f4f7f7]">
+    <div className="min-w-0 break-words bg-background text-foreground">
       <SeoHead
-        title="NBE Hoang Duy | Bảo Hộ Lao Động Cao Cấp & Chính Hãng"
-        description="Đại lý phân phối thiết bị bảo hộ lao động hàng đầu Việt Nam. Giày bảo hộ, mũ bảo hiểm, quần áo chống hóa chất chuẩn quốc tế."
+        title="NBE Hoang Duy | Thiết bị bảo hộ lao động"
+        description="Khám phá thiết bị bảo hộ lao động theo danh mục và thương hiệu. Liên hệ NBE Hoang Duy để yêu cầu báo giá cho doanh nghiệp."
       />
 
-      {/* ① Hero Slider (Full Impact) */}
-      <div className="bg-white">
-        <HeroSlider />
-      </div>
-
-      {/* ② Trust Bar (Assurance) */}
-      <TrustBar />
-
-      {/* ③ Flash Sale Section (Urgency) */}
-      {activeFlash && (
-        <div className="bg-white py-12 border-y border-gray-100 animate-in fade-in duration-700">
-          <div className="container mx-auto">
-            <FlashSaleRow
-              products={activeFlash.products || []}
-              loading={flashLoading}
-              targetDate={activeFlash.end_at}
-              title={activeFlash.name}
-              onEnd={handleFlashEnd}
-            />
+      <section className="border-b border-border bg-surface" aria-labelledby="home-heading">
+        <div className="container py-12 md:py-16">
+          <p className="mb-3 text-sm font-semibold text-primary">NBE Hoang Duy</p>
+          <h1 id="home-heading" className="page-heading max-w-3xl">Tìm thiết bị bảo hộ phù hợp với công việc của bạn</h1>
+          <p className="text-body mt-4 max-w-2xl">Khám phá sản phẩm theo danh mục, thương hiệu hoặc gửi yêu cầu báo giá cho nhu cầu mua sắm của doanh nghiệp.</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link to="/categories" className="btn btn-primary">Xem sản phẩm</Link>
+            <a href={`mailto:info@nbehoangduy.vn?subject=${encodeURIComponent('Yêu cầu báo giá thiết bị bảo hộ')}`} className="btn btn-secondary">Yêu cầu báo giá</a>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* ⑤ Mid Promo Banners — 2 column (Curated Content) */}
-      <div className="container mx-auto py-20 px-4 md:px-0">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <MidBanner
-            bg="linear-gradient(135deg, #059669 0%, #064e3b 100%)"
-            image="https://res.cloudinary.com/dpvjfqm1u/image/upload/v1738734612/3m-respirator_yxg00w.png"
-            eyebrow="Phân Phối Chính Hãng"
-            title={`Giải Pháp An Toàn\nTừ Hãng 3M`}
-            sub="Trang bị mặt nạ phòng độc và thiết bị bảo hộ tiên tiến nhất hiện nay."
-            to="/categories"
-            btnColor="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20"
-          />
-          <MidBanner
-            bg="linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)"
-            image="https://res.cloudinary.com/dpvjfqm1u/image/upload/v1738734612/safety-helmet_j55w0j.png"
-            eyebrow="Tiêu Chuẩn Châu Âu"
-            title={`Mũ Bảo Hộ\nChống Va Đập`}
-            sub="Vỏ nhựa ABS chịu lực cao, thiết kế tối ưu cho mọi công trình và điều kiện khắc nghiệt."
-            to="/categories/mu-bao-ho"
-            btnColor="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/30"
-          />
-        </div>
+      <div className="container space-y-12 py-10 md:space-y-16 md:py-12">
+        <section aria-labelledby="home-categories">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h2 id="home-categories" className="section-heading">Mua sắm theo danh mục</h2>
+            <Link to="/categories" className="btn btn-ghost">Tất cả sản phẩm</Link>
+          </div>
+          {categories.isLoading ? (
+            <div role="status" aria-label="Đang tải danh mục" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-20" />)}
+            </div>
+          ) : categories.isError ? (
+            <FeedbackState variant="error" title="Không thể tải danh mục" description="Vui lòng thử tải lại danh mục.">
+              <Button variant="secondary" loading={categories.isFetching} onClick={() => void categories.refetch()}>Thử lại</Button>
+            </FeedbackState>
+          ) : !categories.data?.length ? (
+            <FeedbackState title="Chưa có danh mục" description="Bạn có thể xem toàn bộ sản phẩm hoặc tải lại danh mục.">
+              <div className="flex flex-wrap justify-center gap-3">
+                <Link to="/categories" className="btn btn-primary">Xem sản phẩm</Link>
+                <Button variant="secondary" loading={categories.isFetching} onClick={() => void categories.refetch()}>Tải lại</Button>
+              </div>
+            </FeedbackState>
+          ) : (
+            <nav aria-label="Danh mục sản phẩm">
+              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {categories.data.map(category => (
+                  <li key={category.id} className="min-w-0">
+                    <Link to={`/categories/${encodeURIComponent(category.slug)}`} className="card flex min-h-11 h-full items-center p-5 font-semibold hover:border-primary hover:text-primary">{category.name}</Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+        </section>
+
+        <section aria-labelledby="home-featured">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 id="home-featured" className="section-heading">Sản phẩm nổi bật</h2>
+              <p className="text-body mt-2">Các sản phẩm được chọn giới thiệu trong danh mục.</p>
+            </div>
+            <Link to="/categories?is_featured=true" className="btn btn-ghost">Xem tất cả sản phẩm nổi bật</Link>
+          </div>
+          {featured.isError ? (
+            <FeedbackState variant="error" title="Không thể tải sản phẩm nổi bật" description="Vui lòng thử tải lại sản phẩm.">
+              <Button variant="secondary" loading={featured.isFetching} onClick={() => void featured.refetch()}>Thử lại</Button>
+            </FeedbackState>
+          ) : !featured.isLoading && !featured.data?.items.length ? (
+            <FeedbackState title="Chưa có sản phẩm nổi bật" description="Khám phá toàn bộ danh mục để tìm sản phẩm phù hợp.">
+              <div className="flex flex-wrap justify-center gap-3">
+                <Link to="/categories" className="btn btn-primary">Xem sản phẩm</Link>
+                <Button variant="secondary" loading={featured.isFetching} onClick={() => void featured.refetch()}>Tải lại</Button>
+              </div>
+            </FeedbackState>
+          ) : <ProductGrid products={featured.data?.items ?? []} loading={featured.isLoading} />}
+        </section>
+
+        <section aria-labelledby="home-brands">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h2 id="home-brands" className="section-heading">Khám phá thương hiệu</h2>
+            <Link to="/brand" className="btn btn-ghost">Tất cả thương hiệu</Link>
+          </div>
+          {brands.isLoading ? (
+            <div role="status" aria-label="Đang tải thương hiệu" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-16" />)}
+            </div>
+          ) : brands.isError ? (
+            <FeedbackState variant="error" title="Không thể tải thương hiệu" description="Vui lòng thử tải lại thương hiệu.">
+              <Button variant="secondary" loading={brands.isFetching} onClick={() => void brands.refetch()}>Thử lại</Button>
+            </FeedbackState>
+          ) : !brands.data?.items.length ? (
+            <FeedbackState title="Chưa có thương hiệu" description="Thông tin thương hiệu sẽ hiển thị khi có dữ liệu.">
+              <Button variant="secondary" loading={brands.isFetching} onClick={() => void brands.refetch()}>Tải lại</Button>
+            </FeedbackState>
+          ) : (
+            <nav aria-label="Thương hiệu sản phẩm">
+              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {brands.data.items.map(brand => (
+                  <li key={brand.id} className="min-w-0">
+                    <Link to={`/brand/${encodeURIComponent(brand.slug)}`} className="card flex min-h-11 h-full items-center p-5 font-semibold hover:border-primary hover:text-primary">{brand.name}</Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+        </section>
+
+        {(flash.isLoading || (flash.isError && !noActiveFlash) || activeFlash) && (
+          <section aria-labelledby="home-promotions">
+            <h2 id="home-promotions" className="section-heading mb-6">Chương trình đang diễn ra</h2>
+            {flash.isLoading ? (
+              <div role="status" aria-label="Đang kiểm tra chương trình" className="space-y-4">
+                <Skeleton className="h-6 w-2/3" />
+                <Skeleton className="h-32" />
+              </div>
+            ) : flash.isError ? (
+              <FeedbackState variant="error" title="Không thể tải chương trình" description="Vui lòng thử lại để kiểm tra chương trình đang diễn ra.">
+                <Button variant="secondary" loading={flash.isFetching} onClick={() => void flash.refetch()}>Thử lại</Button>
+              </FeedbackState>
+            ) : activeFlash && (
+              <>
+                <h3 className="mb-2 text-lg font-semibold">{activeFlash.name}</h3>
+                <p className="text-body mb-6">Kết thúc: {new Date(activeFlash.end_at).toLocaleString('vi-VN')}</p>
+                {activeFlash.products?.length ? <ProductGrid products={activeFlash.products} /> : (
+                  <FeedbackState title="Chưa có sản phẩm trong chương trình" description="Vui lòng tải lại để cập nhật sản phẩm.">
+                    <Button variant="secondary" loading={flash.isFetching} onClick={() => void flash.refetch()}>Tải lại</Button>
+                  </FeedbackState>
+                )}
+              </>
+            )}
+          </section>
+        )}
       </div>
-
-      {/* ⑥ Category Floor 1 (Featured Category) */}
-      <div className="bg-white py-20">
-        <div className="container mx-auto">
-          <CategoryFloor
-            title="Giày & Ủng Bảo Hộ"
-            subtitle="An toàn trên từng bước chân với công nghệ đế Kevlar chống đinh tuyệt đối"
-            bannerImage="/shoes_banner.png"
-            categorySlug="giay-bao-ho"
-            products={shoesData?.items || []}
-            loading={shoesLoading}
-          />
-        </div>
-      </div>
-
-      {/* ⑦ Category Floor 2 (Secondary Category) */}
-      <div className="bg-[#f4f7f7] py-20">
-        <div className="container mx-auto">
-          <CategoryFloor
-            title="Mũ Bảo Hộ Chuyên Dụng"
-            subtitle="Kết hợp kính che mặt và tai chống ồn - giải pháp bảo vệ toàn diện"
-            bannerImage="/helmet_banner.png"
-            categorySlug="mu-bao-ho"
-            products={helmetData?.items || []}
-            loading={helmetLoading}
-          />
-        </div>
-      </div>
-
-      {/* ⑧ Tabbed Category Floor (All Other Categories) */}
-      <TabbedCategorySection excludeSlugs={['giay-bao-ho', 'mu-bao-ho']} />
-
-      {/* ⑨ Knowledge Section (Value Content) */}
-      <LatestBlogSection />
-
-      {/* ⑩ Partnership Section (Authority) */}
-      <BrandSection />
     </div>
   );
 };
 
 export default HomePage;
-

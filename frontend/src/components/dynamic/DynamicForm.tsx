@@ -8,6 +8,7 @@ import { RichTextEditor } from '../ui/RichTextEditor';
 
 import { authToast } from '../../lib/toast';
 import { getMediaUrl } from '../../lib/api';
+import { Button } from '@/components/ui/Primitives';
 
 interface DynamicFormProps {
   entityName: string;
@@ -89,7 +90,7 @@ const PRICE_FIELDS = new Set(['price', 'dealer_price', 'compare_at_price', 'unit
 
 const SLUG_SOURCE_CANDIDATES = ['name', 'title', 'label'] as const;
 
-const CurrencyInput: React.FC<{ field: ControllerRenderProps<FieldValues, string>; commonClasses: string }> = ({ field, commonClasses }) => {
+const CurrencyInput: React.FC<{ field: ControllerRenderProps<FieldValues, string>; commonClasses: string; inputProps: React.InputHTMLAttributes<HTMLInputElement> }> = ({ field, commonClasses, inputProps }) => {
   const formatValue = (val: string | number | null | undefined) => {
     if (val === undefined || val === null || val === '') return '';
     const num = parseFloat(val.toString().replace(/[^0-9.]/g, ''));
@@ -109,13 +110,16 @@ const CurrencyInput: React.FC<{ field: ControllerRenderProps<FieldValues, string
   return (
     <div className="relative group">
       <input
+        {...inputProps}
+        ref={field.ref}
+        onBlur={field.onBlur}
         type="text"
         value={displayValue}
         onChange={handleChange}
-        className={`${commonClasses} pr-16 font-black text-gray-900 tracking-wider text-base`}
+        className={`${commonClasses} pr-16`}
         placeholder="0"
       />
-      <div className="absolute right-5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-gray-100 rounded-lg text-[10px] font-black text-gray-400 uppercase tracking-widest group-focus-within:bg-primary/10 group-focus-within:text-primary transition-colors">
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-caption">
         VND
       </div>
     </div>
@@ -128,7 +132,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   initialData,
   onSubmit,
   onCancel,
-  isLoading,
+  isLoading: externalLoading,
 }) => {
   const { t } = useTranslation();
   const isSlugManuallyEdited = useRef(false);
@@ -141,10 +145,11 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
     watch,
     setValue,
     getValues,
-    formState: { errors }
+    formState: { errors, isSubmitting }
   } = useForm({
     defaultValues: initialData || {},
   });
+  const isLoading = externalLoading || isSubmitting;
 
   const humanizeField = (key: string) => {
     return key
@@ -312,10 +317,10 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   const renderField = (key: string, prop: PropertySchema) => {
     const fieldLabel = getFieldLabel(key, prop);
     return (
-      <div key={key} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] mb-2.5">
+      <div key={key}>
+        <label htmlFor={`field-${entityName}-${key}`} className="field-label">
           {fieldLabel}{PRICE_FIELDS.has(key) ? ` (${t('generic.currency', 'VND')})` : ''}
-          {schema.required?.includes(key) && <span className="text-rose-500 ml-1.5">*</span>}
+          {schema.required?.includes(key) && <span className="text-destructive ml-1">*</span>}
         </label>
 
         <Controller
@@ -335,64 +340,64 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
                   isSlugManuallyEdited.current = true;
                 }
               }}
-              error={errors[key]?.message as string}
+              error={errors[key] ? t('generic.fieldRequired') : undefined}
             />
           )}
         />
 
         {(prop.description || PRICE_FIELDS.has(key) || key === 'color' || RELATION_FIELDS[key]) && (
-          <p className="mt-2 text-[10px] text-gray-400 font-bold italic opacity-70 leading-relaxed">
+          <p className="mt-2 text-caption">
             {prop.description}
           </p>
         )}
 
         {errors[key] && (
-          <p className="mt-2 text-[10px] text-rose-500 font-black uppercase tracking-tighter">{t('generic.fieldRequired')}</p>
+          <p id={`field-${entityName}-${key}-error`} role="alert" className="field-error">{t('generic.fieldRequired')}</p>
         )}
       </div>
     );
   };
 
   return (
-    <form onSubmit={handleFormSubmit} className="space-y-10">
-      <div className="flex flex-col lg:flex-row gap-10">
+    <form onSubmit={handleFormSubmit} className="space-y-6" aria-busy={isLoading || undefined}>
+      <div className="flex flex-col xl:flex-row gap-6">
         {/* Main Content Column */}
-        <div className="flex-1 space-y-8 min-w-0">
-          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-8">
-            <div className="border-b border-gray-50 pb-4 mb-2">
-              <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest">Thông tin chính</h4>
+        <div className="flex-1 space-y-6 min-w-0">
+          <div className="card p-4 sm:p-6 space-y-6">
+            <div className="border-b border-border pb-4">
+              <h2 className="section-heading">Thông tin chính</h2>
             </div>
             {mainFields.map(([key, prop]) => renderField(key, prop))}
           </div>
         </div>
 
         {/* Sidebar Column */}
-        <div className="w-full lg:w-[380px] space-y-8 shrink-0">
-          <div className="bg-gray-50/50 p-8 rounded-[2.5rem] border border-gray-100 space-y-8">
-            <div className="border-b border-gray-200/50 pb-4 mb-2">
-              <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest">Thiết lập & Phân loại</h4>
+        <div className="w-full xl:w-80 space-y-6 shrink-0">
+          <div className="card p-4 sm:p-6 space-y-6">
+            <div className="border-b border-border pb-4">
+              <h2 className="section-heading">Thiết lập & Phân loại</h2>
             </div>
             {sideFields.map(([key, prop]) => renderField(key, prop))}
           </div>
         </div>
       </div>
 
-      {/* Clean Floating Sticky Footer Actions */}
-      <div className="sticky bottom-6 z-30 mt-16 px-4 md:px-0">
-        <div className="max-w-5xl mx-auto bg-white/80 backdrop-blur-2xl py-3 px-6 md:px-8 rounded-[2rem] shadow-[0_15px_50px_rgba(0,0,0,0.12)] border border-white flex items-center justify-between gap-4 animate-in slide-in-from-bottom-4 duration-500">
+      {/* Form actions */}
+      <div className="pt-2">
+        <div className="card p-4 flex flex-wrap items-center justify-between gap-4 shadow-md">
           <div className="flex items-center gap-5">
-            <div className={`relative flex items-center justify-center ${isLoading ? 'animate-pulse' : ''}`}>
+            <div className="relative flex items-center justify-center">
               {isLoading ? (
                 <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <div className="w-11 h-11 rounded-md bg-primary-soft flex items-center justify-center text-primary">
                   <div className="w-2.5 h-2.5 bg-primary rounded-full" />
                 </div>
               )}
             </div>
             <div className="hidden sm:block">
-              <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-0.5">Hệ thống sẵn sàng</h5>
-              <p className="text-[12px] font-bold text-gray-900">
+              <h3 className="text-caption mb-0.5">Hệ thống sẵn sàng</h3>
+              <p className="text-sm font-semibold text-foreground">
                 {isLoading ? 'Đang thực thi lệnh lưu...' : initialData ? 'Cập nhật thay đổi ngay' : 'Tạo mới bản ghi này'}
               </p>
             </div>
@@ -400,21 +405,20 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
           <div className="flex items-center gap-2">
             {onCancel && (
-              <button
+              <Button variant="secondary"
                 type="button"
                 onClick={onCancel}
-                className="px-6 py-3.5 text-[11px] font-black text-gray-400 uppercase tracking-widest hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                disabled={isLoading}
               >
                 {t('generic.cancel')}
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               type="submit"
-              disabled={isLoading}
-              className="px-10 py-3.5 bg-primary text-white text-[11px] font-black rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-50 disabled:translate-y-0 uppercase tracking-widest"
+              loading={isLoading}
             >
               {isLoading ? t('generic.saving') : initialData ? t('generic.updateRecord') : t('generic.createRecord')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -527,45 +531,45 @@ const AttributesField = ({
   return (
     <div className="space-y-3">
       {entries.map((entry, index) => (
-        <div key={entry.id} className="grid grid-cols-12 gap-2 items-end">
-          <div className="col-span-5">
-            <label className="block text-xs text-slate-500 mb-1">{labelName}</label>
+        <div key={entry.id} className="flex flex-wrap items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <label htmlFor={`${entry.id}-key`} className="field-label">{labelName}</label>
             <input
               type="text"
+              id={`${entry.id}-key`}
               value={entry.key}
               onChange={(e) => handleKeyChange(index, e.target.value)}
               placeholder={placeholderKey}
               className={commonClasses}
             />
           </div>
-          <div className="col-span-5">
-            <label className="block text-xs text-slate-500 mb-1">{labelValue}</label>
+          <div className="min-w-0 flex-1">
+            <label htmlFor={`${entry.id}-value`} className="field-label">{labelValue}</label>
             <input
               type="text"
+              id={`${entry.id}-value`}
               value={entry.value}
               onChange={(e) => handleValueChange(index, e.target.value)}
               placeholder={placeholderValue}
               className={commonClasses}
             />
           </div>
-          <div className="col-span-2 flex items-center gap-2">
-            <button
+          <div className="w-full sm:w-auto">
+            <Button variant="danger"
               type="button"
               onClick={() => handleRemoveEntry(index)}
-              className="px-3 py-2 text-sm text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50 transition"
             >
               {t('generic.remove')}
-            </button>
+            </Button>
           </div>
         </div>
       ))}
-      <button
+      <Button variant="secondary"
         type="button"
         onClick={handleAddEntry}
-        className="inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition"
       >
         {labelAdd}
-      </button>
+      </Button>
     </div>
   );
 };
@@ -603,25 +607,27 @@ const FlashSaleItemsField = ({
           const productId = item.product_id;
           const product = relationOptions.find(o => o.value === productId);
           return (
-            <div key={item.product_id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm animate-in slide-in-from-left-2">
+            <div key={item.product_id} className="card flex flex-wrap items-center gap-3 p-4">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-gray-900 truncate">{product?.label || item.product_id}</p>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Sản phẩm tham gia deal</p>
+                <p className="text-sm font-semibold text-foreground truncate">{product?.label || item.product_id}</p>
+                <p className="text-caption mt-1">Sản phẩm tham gia deal</p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <div className="relative">
                   <input
                     type="number"
+                    aria-label={`Giảm giá: ${product?.label || item.product_id}`}
                     value={item.discount_percent}
                     onChange={(e) => handleUpdateDiscount(item.product_id, Number(e.target.value))}
-                    className="w-24 px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm font-black text-primary outline-none focus:border-primary transition-all pr-8"
+                    className="field w-24 pr-8"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-caption">%</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleRemoveItem(item.product_id)}
-                  className="p-2 text-gray-300 hover:text-rose-500 transition-colors"
+                  aria-label={`Xóa sản phẩm: ${product?.label || item.product_id}`}
+                  className="btn btn-ghost btn-icon text-destructive"
                 >
                   <X size={18} />
                 </button>
@@ -632,6 +638,7 @@ const FlashSaleItemsField = ({
       </div>
 
       <select
+        aria-label="Thêm sản phẩm vào chiến dịch"
         className={commonClasses}
         onChange={(e) => {
           if (e.target.value) {
@@ -671,10 +678,13 @@ const FormFieldAdapter = ({
   error?: string;
 }) => {
   const { t } = useTranslation();
-  const commonClasses = `w-full px-6 py-4 rounded-2xl border font-bold text-sm transition-all outline-none ${error
-    ? 'border-rose-200 focus:ring-4 focus:ring-rose-50/50 bg-rose-50/30'
-    : 'border-gray-100 bg-gray-50/30 focus:border-primary focus:ring-4 focus:ring-primary/5 focus:bg-white'
-    }`;
+  const commonClasses = 'field';
+  const accessibilityProps = {
+    id: `field-${entityName}-${fieldKey}`,
+    'aria-label': fieldLabel,
+    'aria-invalid': Boolean(error),
+    'aria-describedby': error ? `field-${entityName}-${fieldKey}-error` : undefined,
+  };
 
   const [isUploading, setIsUploading] = useState(false);
 
@@ -700,40 +710,38 @@ const FormFieldAdapter = ({
 
     return (
       <div className="space-y-4">
-        <label className={`flex items-center justify-center w-full px-6 py-10 border-2 border-dashed rounded-3xl transition-all cursor-pointer group ${isUploading ? 'bg-gray-50 border-primary/30 cursor-not-allowed' : 'border-gray-200 hover:border-primary hover:bg-primary/5'
-          }`}>
+        <label className={`card relative flex items-center justify-center w-full px-4 py-6 border-dashed cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-primary ${isUploading ? 'bg-muted' : 'hover:border-primary'}`}>
           <div className="flex flex-col items-center">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-3 transition-colors ${isUploading ? 'bg-primary/20 text-primary' : 'bg-gray-50 text-gray-400 group-hover:bg-white group-hover:text-primary'
-              }`}>
+            <div className="w-11 h-11 rounded-md flex items-center justify-center mb-3 bg-muted text-muted-foreground">
               {isUploading ? (
                 <div className="w-6 h-6 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
               ) : (
                 <Columns size={24} />
               )}
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] transition-colors group-hover:text-primary">
+            <p className="text-sm font-semibold">
               {isUploading ? 'Đang xử lý dữ liệu...' : 'Nhấn để tải hình ảnh lên'}
             </p>
-            <p className="text-[9px] font-bold text-gray-400 mt-2">Định dạng JPG, PNG, WEBP (Tối đa 5MB)</p>
+            <p className="text-caption mt-2">Định dạng JPG, PNG, WEBP (Tối đa 5MB)</p>
           </div>
           <input
             type="file"
+            {...accessibilityProps}
             accept="image/*"
-            className="hidden"
+            className="sr-only"
             onChange={handleFileChange}
             disabled={isUploading}
           />
         </label>
 
         {typeof field.value === 'string' && field.value ? (
-          <div className="flex items-center gap-5 p-4 bg-white rounded-3xl border border-gray-100 shadow-sm animate-in fade-in slide-in-from-top-4">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shrink-0 p-1">
-              <img src={getMediaUrl(field.value)} alt="Preview" className="w-full h-full object-contain rounded-xl" />
+          <div className="card flex items-center gap-3 p-4">
+            <div className="w-16 h-16 rounded-md overflow-hidden bg-muted shrink-0 p-1">
+              <img src={getMediaUrl(field.value)} alt="Preview" className="w-full h-full object-contain" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Đã tải lên thành công</p>
+                <p className="text-caption">Đã tải lên thành công</p>
               </div>
               <a
                 href={field.value}
@@ -747,7 +755,8 @@ const FormFieldAdapter = ({
             <button
               type="button"
               onClick={() => field.onChange(null)}
-              className="p-2 text-gray-300 hover:text-rose-500 transition-colors"
+              aria-label={`Xóa ảnh: ${fieldLabel}`}
+              className="btn btn-ghost btn-icon text-destructive"
             >
               <X size={18} />
             </button>
@@ -764,10 +773,11 @@ const FormFieldAdapter = ({
     const colorValue = normalizedColor || '#0da487';
 
     return (
-      <div className="flex items-center gap-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
-        <div className="relative w-12 h-12 rounded-xl overflow-hidden shadow-soft shrink-0 border-2 border-white">
+      <div className="card flex items-center gap-3 p-4">
+        <div className="relative w-11 h-11 rounded-md overflow-hidden shrink-0 border border-border">
           <input
             type="color"
+            aria-label={`${fieldLabel}: chọn màu`}
             value={colorValue}
             onChange={(e) => field.onChange(e.target.value)}
             className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer"
@@ -775,10 +785,11 @@ const FormFieldAdapter = ({
         </div>
         <input
           type="text"
+          {...accessibilityProps}
           value={field.value || ''}
           onChange={(e) => field.onChange(e.target.value)}
           placeholder="#000000"
-          className="bg-transparent border-none focus:ring-0 font-black text-gray-900 uppercase tracking-widest w-full"
+          className="field"
         />
       </div>
     );
@@ -818,6 +829,7 @@ const FormFieldAdapter = ({
       <div className="relative">
         <select
           {...field}
+          {...accessibilityProps}
           value={field.value ?? ''}
           onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
           className={commonClasses}
@@ -842,19 +854,20 @@ const FormFieldAdapter = ({
       const selectedIds = Array.isArray(field.value) ? field.value : [];
       return (
         <div className="space-y-3">
-          <div className="flex flex-wrap gap-2 p-4 bg-gray-50/50 rounded-2xl border border-gray-100 min-h-[100px]">
+          <div className="flex flex-wrap gap-2 p-4 bg-muted rounded-md border border-border min-h-[100px]">
             {selectedIds.length === 0 && (
-              <span className="text-gray-300 text-xs font-bold italic">Chưa chọn sản phẩm nào...</span>
+              <span className="text-caption">Chưa chọn sản phẩm nào...</span>
             )}
             {selectedIds.map((id: string) => {
               const opt = (relationOptions || []).find(o => o.value === id);
               return (
-                <div key={id} className="bg-white px-3 py-1.5 rounded-xl border border-primary/20 flex items-center gap-2 shadow-sm animate-in zoom-in-95">
-                  <span className="text-xs font-black text-gray-900">{opt?.label || id}</span>
+                <div key={id} className="bg-surface pl-3 rounded-md border border-border flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">{opt?.label || id}</span>
                   <button
                     type="button"
                     onClick={() => field.onChange(selectedIds.filter((i: string) => i !== id))}
-                    className="text-gray-400 hover:text-rose-500 transition-colors"
+                    aria-label={`Bỏ chọn: ${opt?.label || id}`}
+                    className="btn btn-ghost btn-icon text-destructive"
                   >
                     <X size={14} />
                   </button>
@@ -863,6 +876,7 @@ const FormFieldAdapter = ({
             })}
           </div>
           <select
+            {...accessibilityProps}
             className={commonClasses}
             onChange={(e) => {
               const val = e.target.value;
@@ -886,6 +900,7 @@ const FormFieldAdapter = ({
     return (
       <select
         {...field}
+        {...accessibilityProps}
         value={field.value ?? ''}
         onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
         className={commonClasses}
@@ -903,7 +918,7 @@ const FormFieldAdapter = ({
   // Enum -> Select
   if (schema.enum) {
     return (
-      <select {...field} className={commonClasses}>
+      <select {...field} {...accessibilityProps} value={field.value ?? ''} className={commonClasses}>
         <option value="">{t('generic.selectOption', { field: fieldLabel })}</option>
         {schema.enum.map((opt) => (
           <option key={String(opt)} value={String(opt)}>{String(opt)}</option>
@@ -918,22 +933,25 @@ const FormFieldAdapter = ({
       <div className="flex items-center gap-4 p-2">
         <button
           type="button"
+          {...accessibilityProps}
+          role="switch"
+          aria-checked={Boolean(field.value)}
           onClick={() => {
             onManualEdit?.();
             field.onChange(!field.value);
           }}
-          className={`w-14 h-8 rounded-full transition-all relative ${field.value ? 'bg-primary' : 'bg-gray-200'}`}
+          className={`w-14 h-11 rounded-md transition-colors relative ${field.value ? 'bg-primary' : 'bg-muted border border-input'}`}
         >
-          <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all ${field.value ? 'right-1' : 'left-1'}`} />
+          <span aria-hidden="true" className={`absolute top-2 w-6 h-6 rounded-sm bg-surface transition-all ${field.value ? 'right-1' : 'left-1'}`} />
         </button>
-        <span className="text-xs font-black text-gray-500 uppercase tracking-widest">{field.value ? t('generic.enabled') : t('generic.disabled')}</span>
+        <span className="text-caption">{field.value ? t('generic.enabled') : t('generic.disabled')}</span>
       </div>
     );
   }
 
   // Price
   if (PRICE_FIELDS.has(fieldKey)) {
-    return <CurrencyInput field={field} commonClasses={commonClasses} />;
+    return <CurrencyInput field={field} commonClasses={commonClasses} inputProps={accessibilityProps} />;
   }
 
   // Number
@@ -942,6 +960,8 @@ const FormFieldAdapter = ({
       <input
         type="number"
         {...field}
+        {...accessibilityProps}
+        value={field.value ?? ''}
         onChange={(e) => {
           onManualEdit?.();
           field.onChange(e.target.valueAsNumber);
@@ -957,6 +977,8 @@ const FormFieldAdapter = ({
       <input
         type={schema.format === 'date' ? 'date' : 'datetime-local'}
         {...field}
+        {...accessibilityProps}
+        value={field.value ?? ''}
         onChange={(e) => {
           onManualEdit?.();
           field.onChange(e.target.value);
@@ -992,6 +1014,8 @@ const FormFieldAdapter = ({
     <input
       type={type}
       {...field}
+      {...accessibilityProps}
+      value={field.value ?? ''}
       onChange={(e) => {
         onManualEdit?.();
         field.onChange(e.target.value);

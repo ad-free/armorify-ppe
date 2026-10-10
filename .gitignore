@@ -217,3 +217,7 @@ backend/dist/
 node_modules/
 dist/
 .vite/
+*.tsbuildinfo
+
+# Local code index
+/.codegraph/

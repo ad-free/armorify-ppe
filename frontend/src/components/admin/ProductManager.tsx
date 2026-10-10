@@ -7,6 +7,7 @@ import { useEntitySchema } from '../../hooks/useSchema';
 import { DynamicTable } from '../dynamic/DynamicTable';
 import { DynamicForm } from '../dynamic/DynamicForm';
 import { authToast } from '@/lib/toast';
+import { Button, Skeleton } from '@/components/ui/Primitives';
 
 // --- Sub-managers for Images and Variants ---
 
@@ -327,63 +328,61 @@ export const ProductManager: React.FC = () => {
     : (createSchema || updateSchema || readSchema);
 
   if (isSchemaLoading || !schema || !formSchema) {
-    return <div className="p-8 text-center">Loading product environment...</div>;
+    return <div role="status" className="card p-6 space-y-4"><p className="text-body">Loading product environment...</p><Skeleton className="h-48" /></div>;
   }
 
   const tabClass = (tab: string) =>
-    `px-6 py-4 font-black text-xs uppercase tracking-widest transition-all border-b-4 ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-600'}`;
+    `btn btn-ghost rounded-none whitespace-nowrap border-b-2 ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent'}`;
 
   return (
     <div className="space-y-8 min-w-0">
       {stockFilter === 'low' && !isFormOpen && (
-        <div className="flex items-center justify-between bg-amber-50 border border-amber-100 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-warning-soft border border-warning/20 p-4 rounded-lg">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center shadow-md">
-              <Package size={20} />
+            <div className="w-11 h-11 text-warning flex items-center justify-center">
+              <Package size={20} aria-hidden="true" />
             </div>
             <div>
-              <p className="text-[13px] font-black text-gray-900">Danh sách sản phẩm sắp hết hàng</p>
-              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">Đang hiển thị các sản phẩm có tồn kho dưới 10</p>
+              <p className="text-sm font-semibold text-foreground">Danh sách sản phẩm sắp hết hàng</p>
+              <p className="text-caption text-warning">Đang hiển thị các sản phẩm có tồn kho dưới 10</p>
             </div>
           </div>
-          <button
+          <Button variant="secondary"
             onClick={() => navigate('/admin/manage/product')}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-400 hover:text-rose-500 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm transition-all"
           >
             <X size={14} />
             Xóa bộ lọc
-          </button>
+          </Button>
         </div>
       )}
 
       {isFormOpen ? (
-        <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_60px_rgba(0,0,0,0.03)] animate-in fade-in slide-in-from-bottom-6 duration-500 overflow-hidden">
+        <div className="space-y-6 min-w-0">
 
-          <div className="flex items-center justify-between px-10 py-6 bg-gray-50/50 border-b border-gray-50">
-            <h3 className="text-xl font-black text-gray-900">
+          <div className="card flex flex-wrap items-center justify-between gap-4 p-4 sm:p-6">
+            <h2 className="section-heading">
               {editingItem ? `Chỉnh sửa: ${editingItem.name || 'Sản phẩm'}` : 'Tạo sản phẩm mới'}
-            </h3>
-            <button
+            </h2>
+            <Button variant="secondary"
               type="button"
               onClick={() => setIsFormOpen(false)}
-              className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] bg-white border border-gray-100 px-5 py-2.5 rounded-xl hover:text-primary hover:border-primary transition-all"
             >
               Quay lại danh sách
-            </button>
+            </Button>
           </div>
 
-          <div className="flex overflow-x-auto border-b border-gray-50 px-10 bg-white sticky top-0 z-20">
-            <button className={tabClass('info')} onClick={() => setActiveTab('info')}>Thông tin chung</button>
-            <button className={tabClass('images')} onClick={() => setActiveTab('images')} disabled={!editingItem}>Thư viện ảnh</button>
-            <button className={tabClass('variants')} onClick={() => setActiveTab('variants')} disabled={!editingItem}>Biến thể & Kho</button>
+          <div className="card flex flex-wrap items-center gap-2 p-3">
+            <button aria-pressed={activeTab === 'info'} className={tabClass('info')} onClick={() => setActiveTab('info')}>Thông tin chung</button>
+            <button aria-pressed={activeTab === 'images'} className={tabClass('images')} onClick={() => setActiveTab('images')} disabled={!editingItem}>Thư viện ảnh</button>
+            <button aria-pressed={activeTab === 'variants'} className={tabClass('variants')} onClick={() => setActiveTab('variants')} disabled={!editingItem}>Biến thể & Kho</button>
             {!editingItem && (
-              <span className="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest ml-auto self-center">
+              <span className="text-caption text-warning p-2">
                 Vui lòng lưu sản phẩm để mở khóa Ảnh và Biến thể.
               </span>
             )}
           </div>
 
-          <div className="p-10">
+          <div className="min-w-0">
             {activeTab === 'info' && (
               <DynamicForm
                 entityName={entityName}

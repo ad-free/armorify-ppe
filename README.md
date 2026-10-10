@@ -15,8 +15,8 @@ NBE Hoang Duy is a specialized e-commerce platform for Personal Protective Equip
 ## 🚀 Key Features
 
 ### 🎨 Frontend & User Experience
-- **Content-rich storefront**: Homepage includes dynamic hero banners, trust highlights, and floor-based category showcases.
-- **Product discovery flow**: Public catalog supports category browsing, search, filtering, sorting, and pagination.
+- **Discovery-first storefront**: One value proposition with product and email-quote actions, followed by categories, featured products, brands, and API-backed active campaigns.
+- **Product discovery flow**: Category, brand, and search results share URL-backed filters, sorting, result counts, removable filter chips, and pagination.
 - **Detailed product pages**: Product detail experience includes image galleries, variants, related products, and review sections.
 - **Commerce-ready checkout**: Cart state is persisted with Zustand and users can complete guest checkout.
 - **Order self-service**: Built-in order tracking form lets customers check order status by code and phone number.
@@ -37,7 +37,7 @@ NBE Hoang Duy is a specialized e-commerce platform for Personal Protective Equip
 ### Frontend
 - **Framework**: React 18, Vite 5.x
 - **Language**: TypeScript 5.9.3
-- **Styling**: Tailwind CSS + Shadcn/UI
+- **Styling**: Tailwind CSS 3 + shared CSS tokens and React UI primitives
 - **State management**: Zustand
 - **Data fetching**: TanStack Query (React Query) v5
 - **Animations**: Framer Motion
@@ -112,6 +112,83 @@ The project maintains strict code quality standards through automated tools:
 ### Backend
 - **Ruff**: Ultra-fast Python Linter and Formatter.
 - **mypy**: Static type checking for robust data integrity.
+
+### Phase 1 UI foundation
+
+Storefront and admin share tokens in `frontend/src/index.css`, exposed through
+`frontend/tailwind.config.js`. Use semantic colors instead of page-specific hex values.
+
+| Role | Tokens / convention |
+|---|---|
+| Primary actions | `primary`, `primary-hover`, `primary-soft`; emerald |
+| Neutral surfaces and content | `surface`, `background`, `muted`, `foreground`, `muted-foreground`; white/slate |
+| Feedback | `success`, `warning`, `destructive` and their `*-soft` surfaces |
+| Borders | `border` for surfaces, `input` for interactive field boundaries |
+| Typography | Manrope 400–800; 12/14/16/18/20/24/30px, responsive page headings |
+| Spacing | Tailwind's 4px-based scale; `xs/sm/md/lg/xl` = 4/8/16/24/32px |
+| Shape | `rounded-sm/md/lg` = 4/8/12px; `shadow-sm/md` only for restrained elevation |
+| Containers | 1280px maximum; 16/24/32px gutters on mobile/tablet/desktop |
+
+Reuse `Button`, `FeedbackState`, and `Skeleton` from
+`frontend/src/components/ui/Primitives.tsx`. `Button` supports `primary`, `secondary`,
+`ghost`, and `danger`, forwards its ref/native props, and disables itself while `loading`.
+For links use `btn` plus a variant; for native inputs/selects/textareas use `field`,
+`field-label`, and `field-error`. Associate errors using `aria-invalid` and
+`aria-describedby`. Other shared styles: `card`, `badge` + `badge-neutral/success/warning/error`,
+`page-heading`, `section-heading`, `table-shell`, and `dialog-panel`.
+
+Shared controls have 44px targets and visible keyboard focus. CSS and Framer Motion
+respect reduced-motion preferences. Admin mobile navigation uses a native modal dialog
+with Tab containment, Escape dismissal, and trigger focus restoration. Tables scroll
+inside their own region on narrow screens. Red is reserved for errors, destructive actions,
+and genuine discounts; inactive/cancelled/refunded statuses are neutral.
+
+Verify from `frontend/` with `npm run build && npm run lint`.
+`tsc -b` writes incremental build metadata, including for the no-emit app project.
+Both TypeScript projects now place that metadata under
+`frontend/node_modules/.cache/armorify-build/`; the Node project emits declarations
+into its `vite-types/` subdirectory instead of beside `vite.config.ts`.
+Routine builds therefore leave no new TypeScript artifacts in the frontend root.
+Pre-existing root build metadata and declarations are left untouched.
+
+### Phase 2 product discovery
+
+`CatalogDiscovery.tsx` is shared by category, brand, and search routes. Desktop filters
+use labeled native fields; mobile filters use a native modal dialog with focus containment,
+Escape dismissal, scroll locking, and trigger focus restoration. Search terms, filter values,
+sort, page size, and page remain in the URL. Changing filters resets the page; clearing filters
+preserves search and sort. Invalid price ranges show an actionable error instead of sending
+an invalid request. Out-of-range pages return to the last available page.
+
+Discovery surfaces distinguish loading, request errors with retry, empty catalogs, missing
+categories/brands, and searches without results. Product cards show supplied scalar PPE
+specifications, standards and price units when present, explicit unknowns when absent,
+stock-backed availability, and review summaries only when reviews exist. The listing
+response has no reliable variant-required indicator, so in-stock cards link to the
+product page with “Xem lựa chọn” (View options) rather than adding an unspecified item.
+Out-of-stock card actions remain disabled. Direct quick-add can return only when the
+API reliably verifies that no required variants exist. Featured products are labeled
+as curated—not as best sellers, because no sales/popularity data is exposed.
+
+The footer groups products, policies, contact, and business purchasing. Quote actions open
+an email to the existing contact address; they do not submit through the unconnected
+contact-page form. The catalog API's documented “No active flash sale found” response
+means no campaign is displayed; other campaign failures remain visible with retry.
+
+Focused regression checks, from `frontend/`:
+```bash
+node src/components/catalog/catalogState.check.mjs
+node src/components/catalog/ProductCard.facts.check.mjs
+npm run build && npm run lint
+```
+
+Product-detail phase remains: migrate the gallery/specification/variant/review presentation
+to shared tokens; clarify variant-specific availability, price units, standards and quote
+entry points using actual product data. Product-detail, checkout and admin business logic
+are unchanged by Phase 2. Authentication, checkout, dashboard cards/charts, and specialized
+product image/variant editors still retain legacy styling outside this discovery scope.
+The removed admin search/sample-notification controls need real integrations before returning.
+
 
 ---
 
