@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import DbSession
 from app.models.order import Order, OrderItem, OrderStatus
-from app.schemas.order import OrderRead, OrderUpdate
+from app.schemas.order import AdminOrderRead, OrderUpdate
 
 router = APIRouter(prefix="/admin/orders", tags=["admin-orders"])
 
@@ -17,7 +17,7 @@ class OrderStatusUpdate(BaseModel):
     status: OrderStatus
 
 
-@router.get("", response_model=list[OrderRead])
+@router.get("", response_model=list[AdminOrderRead])
 async def list_orders(
     db: DbSession,
     status_filter: OrderStatus | None = None,
@@ -42,7 +42,7 @@ async def list_orders(
     return list(result.scalars().all())
 
 
-@router.get("/{order_id}", response_model=OrderRead)
+@router.get("/{order_id}", response_model=AdminOrderRead)
 async def get_order(order_id: UUID, db: DbSession) -> Order:
     stmt = select(Order).where(Order.id == order_id).options(selectinload(Order.items).selectinload(OrderItem.product))
     result = await db.execute(stmt)
@@ -52,7 +52,7 @@ async def get_order(order_id: UUID, db: DbSession) -> Order:
     return order
 
 
-@router.put("/{order_id}", response_model=OrderRead)
+@router.put("/{order_id}", response_model=AdminOrderRead)
 async def update_order(order_id: UUID, payload: OrderUpdate, db: DbSession) -> Order:
     stmt = select(Order).where(Order.id == order_id).options(selectinload(Order.items).selectinload(OrderItem.product))
     result = await db.execute(stmt)
@@ -73,7 +73,7 @@ async def update_order(order_id: UUID, payload: OrderUpdate, db: DbSession) -> O
     return result.scalar_one()
 
 
-@router.patch("/{order_id}/status", response_model=OrderRead)
+@router.patch("/{order_id}/status", response_model=AdminOrderRead)
 async def update_order_status(order_id: UUID, payload: OrderStatusUpdate, db: DbSession) -> Order:
     stmt = select(Order).where(Order.id == order_id).options(selectinload(Order.items).selectinload(OrderItem.product))
     result = await db.execute(stmt)

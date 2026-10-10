@@ -71,7 +71,7 @@ const AppLayout = ({ children, t }: { children: React.ReactNode; t: (key: string
   const { pathname } = useLocation();
   const isAdmin = pathname.startsWith('/admin');
 
-  if (isAdmin) {
+  if (isAdmin || pathname === '/checkout' || pathname === '/order-success') {
     return (
       <div className="min-h-screen bg-background">
         <Suspense fallback={<div role="status" className="container py-12"><p className="text-body mb-4">{t('status.loading')}</p><Skeleton className="h-64" /></div>}>
@@ -90,7 +90,7 @@ const AppLayout = ({ children, t }: { children: React.ReactNode; t: (key: string
         </Suspense>
       </main>
       <Footer />
-      <FloatingContact />
+      {pathname !== '/cart' && <FloatingContact />}
     </>
   );
 };

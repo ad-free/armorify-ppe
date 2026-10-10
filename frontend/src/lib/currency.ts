@@ -31,7 +31,7 @@ export const formatCurrency = (
     const formatter = new Intl.NumberFormat(locale, {
       style: showSymbol ? 'currency' : 'decimal',
       currency: currency,
-      maximumFractionDigits: currency === 'VND' ? 0 : 2,
+      maximumFractionDigits: 2,
     });
 
     return formatter.format(numericAmount);

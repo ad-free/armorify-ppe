@@ -1,7 +1,7 @@
 // src/lib/api.ts
 import { useAuthStore } from '@/store/authStore';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
 
 /**
  * The HTTP origin (scheme + host + port) of the backend server, derived from
@@ -38,6 +38,28 @@ export const getMediaUrl = (url: string | null | undefined): string => {
     // Relative path — just prepend the origin.
     return `${SERVER_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
   }
+};
+
+/** Preserve structured validation details without rendering arbitrary server data. */
+export class ApiError extends Error {
+  constructor(public status: number, public details: unknown, fallback = 'Không thể hoàn tất yêu cầu.') {
+    super(typeof details === 'string' ? details : fallback);
+    this.name = 'ApiError';
+  }
+}
+
+const responseError = async (response: Response): Promise<ApiError> => {
+  let details: unknown = null;
+  try {
+    const data: unknown = await response.json();
+    if (data && typeof data === 'object') {
+      const body = data as Record<string, unknown>;
+      details = body.detail ?? body.message ?? null;
+    }
+  } catch {
+    // Non-JSON HTTP responses still carry their status.
+  }
+  return new ApiError(response.status, details);
 };
 
 interface FetchOptions extends RequestInit {
@@ -123,13 +145,7 @@ export const apiFetch = async <T>(endpoint: string, options: FetchOptions = {}):
   });
 
   if (!response.ok) {
-    let errorMessage = response.statusText;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.detail || errorData.message || errorMessage;
-    } catch {
-      // Cannot parse JSON
-    }
+    const error = await responseError(response);
 
     if (response.status === 401 && !_retry) {
       const newAccessToken = await refreshAuthToken();
@@ -147,27 +163,21 @@ export const apiFetch = async <T>(endpoint: string, options: FetchOptions = {}):
           return retryResponse.json();
         }
 
-        let retryMessage = retryResponse.statusText;
-        try {
-          const retryData = await retryResponse.json();
-          retryMessage = retryData.detail || retryData.message || retryMessage;
-        } catch {
-          // Ignore parse failure
-        }
+        const retryError = await responseError(retryResponse);
 
         if (retryResponse.status === 401) {
           useAuthStore.getState().logout();
         }
 
-        throw new Error(retryMessage);
+        throw retryError;
       }
     }
 
-    if (response.status === 401) {
+    if (response.status === 401 && useAuthStore.getState().accessToken === token) {
       useAuthStore.getState().logout();
     }
 
-    throw new Error(errorMessage);
+    throw error;
   }
 
   // Support 204 No Content

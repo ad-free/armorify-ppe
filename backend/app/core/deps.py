@@ -1,5 +1,6 @@
 # app/core/deps.py
 from typing import Annotated
+from uuid import UUID
 
 from app.core.database import DbSession
 from app.core.settings import settings
@@ -22,7 +23,8 @@ async def get_current_user(
         user_id: str | None = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    except JWTError:
+        user_id = UUID(user_id)
+    except (JWTError, ValueError, TypeError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     user = await db.get(User, user_id)

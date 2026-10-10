@@ -29,6 +29,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         path = request.url.path
+        public_order_route = (request.method, path) in {
+            ("POST", "/api/v1/orders/quote"),
+            ("POST", "/api/v1/orders/guest"),
+            ("GET", "/api/v1/orders/track"),
+        }
+        if public_order_route:
+            return await call_next(request)
 
         if path in _PUBLIC_PATHS or any(path.startswith(p) for p in _PUBLIC_PREFIXES):
             return await call_next(request)

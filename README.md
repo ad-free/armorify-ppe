@@ -224,12 +224,111 @@ variant-free purchase, stock/quantity boundaries, gallery keyboard/touch, review
 and pagination, lifecycle/empty states, and no horizontal overflow at 360/768/1024/1440px.
 This is not evidence of live database or order-creation correctness.
 
-**Cart and checkout phase remaining:** resolve and display each line's variant SKU and
-attributes; revalidate persisted cart quantities, availability and current prices;
-implement authoritative server-side product/variant ownership, active status, pricing
-and stock checks with atomic stock handling. The current guest order endpoint trusts
-client-supplied prices and quantities. Clarify fixed-versus-percentage campaign semantics,
-then align all commerce callers. Checkout policy claims and styling remain outside Phase 3.
+### Phase 4 cart and checkout
+
+`POST /api/v1/orders/quote` accepts `items` containing only `product_id`, optional
+`variant_id`, and strict positive integer `quantity` within PostgreSQL INTEGER capacity.
+Requests allow up to 100 lines; available stock, not an arbitrary sales quantity cap,
+limits each selection. The response contains current public line
+details, stock/issues, base subtotal, promotion discount, shipping, final total and
+`pricing_token`. Quote availability is not a reservation. Products with variants require
+an active owned variant; unavailable selections never expose hidden product details.
+Amounts must also fit the persisted `Numeric(12,2)` ceiling of 9,999,999,999.99 VND;
+a quantity within stock and INTEGER capacity can still exceed that monetary limit.
+
+`POST /api/v1/orders/guest` (optional authentication) and authenticated
+`POST /api/v1/orders/` share the same checkout service. Both require the quoted token,
+UUID `idempotency_key`, items, `customer_name`, `contact_phone`, `province`, `district`,
+`ward`, detailed `address`, `shipping_method: "standard"` and `payment_method: "cod"`.
+Optional fields are `email` and `delivery_note`. Client price/total fields are rejected.
+Validation errors use `detail` entries with field `loc`, safe `msg` and `type`.
+Requote/review on `409 stale_pricing`; reuse the exact submitted payload/key after
+network uncertainty. A key reused for another payload or customer returns `409`.
+
+Pricing uses the active product price or selected variant override, then the earliest
+expiring active campaign (percentage first; fixed prices cannot increase the base).
+Expired/inactive campaigns are ignored. Product, variant and campaign rows are locked
+in deterministic order; stock decrement and immutable order snapshots commit together.
+A transaction advisory lock and unique idempotency index prevent duplicate orders.
+Cancellation does **not** automatically replenish stock. Purchased item mutation
+routes have been removed.
+
+Standard retail shipping implements the published policy: **30,000 VND below
+500,000 VND; free at or above 500,000 VND**, based on merchandise after discounts.
+`CHECKOUT_SHIPPING_FEE` and `CHECKOUT_FREE_SHIPPING_THRESHOLD` configure those values;
+blank fee explicitly disables checkout, blank threshold disables free shipping.
+B2B contract exemptions are not inferred from user role: contract verification is
+not implemented. COD orders start `payment_status: "unpaid"` and
+`fulfillment_status: "unfulfilled"` independently of order `status`. Bank transfer
+and online gateways are not offered.
+
+The storefront still persists its cart locally in `armorify-cart-storage`; the separate
+authenticated database cart API is not its source of truth. Cart and checkout revalidate
+identifiers/quantities through the quote endpoint rather than trusting saved prices.
+Pending checkout submissions retain their original owner, payload/key, quote, and cart
+revision in session storage. Recover under the same account (or sign out for an original
+guest request); checkout never automatically refreshes/replays under another session.
+An unchanged cart clears only after a confirmed response. A changed cart is retained
+wholesale with a review warning rather than erasing later additions; the review link
+reloads current persisted cart data. Local cart persistence migrates to version 1.
+Success/tracking use saved delivery and item snapshots, not mutable catalog data.
+Checkout/success omit promotional navigation and floating contact controls.
+
+Migration `c4a91f027b63` follows `80686a8da3e7`. It adds nullable delivery/payment/status
+and subtotal/discount/shipping fields, an idempotency UUID/hash with a unique index, and
+order-item name/SKU/attribute snapshots. Historical rows are preserved with unknown
+fields left null; no invented historical payment or delivery evidence. Apply the
+migration before running the changed API. Upgrade acquires normal PostgreSQL DDL locks.
+Downgrade removes the new fields and therefore loses their data; use a backup and
+explicit approval for any non-test rollback. No production migration was performed.
+
+Focused checks:
+```bash
+.venv/bin/python -m pytest backend/tests -q
+.venv/bin/python -m ruff check backend
+cd frontend
+node src/components/order/checkoutRecovery.check.mjs
+node src/components/catalog/productPurchase.check.mjs
+node src/components/catalog/catalogState.check.mjs
+node src/components/catalog/ProductCard.facts.check.mjs
+npm run build && npm run lint
+```
+Checkout regression tests require local `armorify_dev` with existing `pgcrypto`; they
+migrate/seed/drop only generated `checkout_test_*` schemas and use real PostgreSQL
+transactions, including concurrent stock and duplicate submissions.
+
+The full PostgreSQL backend run passed 59 tests before the final quantity-ceiling
+correction. That correction removed an unverified 100,000-unit sales cap in favor of
+the actual PostgreSQL INTEGER capacity; a database-free schema smoke verified accepted
+large quantities and rejected invalid types, nonpositive values, and storage overflow.
+The full backend suite was not rerun after database writes were stopped. Fresh Ruff,
+four frontend focused checks, TypeScript/Vite build, ESLint, and `git diff --check`
+passed. Real FastAPI/PostgreSQL acceptance
+used seeded data in a generated local schema: guest/authenticated checkout, manipulated
+storage prices, stale pricing rejection, last-stock contention, full saved snapshots,
+and a deliberately lost response after commit followed by same-key recovery. Cart,
+checkout, and success had no horizontal overflow at 360/768/1024/1440px; keyboard
+validation, focus, loading, and tracking were exercised. Final owner-change and
+changed-cart recovery fixes additionally passed frontend-only intercepted browser
+fixtures and real transport/store-module checks; these are not live backend evidence.
+The shared currency formatter preserves the backend's two-decimal amounts instead of
+rounding VND prices to whole units. A fractional-price regression failed before the
+fix and passed after it; a frontend-only receipt fixture displayed a 0.25 VND unit
+price and 30,000.50 VND total without overflow at 360px or page errors.
+
+The task-created `phase4_live_*` fixture schema was removed after isolated migration
+downgrade/re-upgrade preservation checks. Local fixture data was not left intact.
+During resumed verification, the pre-existing `armorify_dev/armorify` schema reported revision
+`c4a91f027b63`, rather than the initially observed `80686a8da3e7`; approval for migrating
+that target was not recorded. Its new columns exist, and order/item/product counts
+were zero at inspection. No rollback or further database changes were attempted.
+Treat this schema revision change as an environmental risk, not proof that all local
+data was untouched. Downgrading an in-use schema would discard the new checkout data.
+
+**Admin order-management phase remaining:** payment verification and fulfillment
+transitions, shipment/tracking data, cancellation/restock/refund policy, verified B2B
+contracts, historical unknown-state presentation, and safe audited admin adjustments.
+
 Authentication, dashboard cards/charts, and specialized product editors still retain
 legacy styling. Removed admin search/sample-notification controls need real integrations.
 

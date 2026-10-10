@@ -1,13 +1,6 @@
 // src/hooks/useOrder.ts
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { createGuestOrder, trackOrder, getMyOrders } from '@/api/order';
-import type { GuestOrderCreate } from '@/types/api';
-
-export const useCreateGuestOrder = () => {
-  return useMutation({
-    mutationFn: (body: GuestOrderCreate) => createGuestOrder(body)
-  });
-};
+import { useQuery } from '@tanstack/react-query';
+import { trackOrder, getMyOrders } from '@/api/order';
 
 export const useTrackOrder = (order_code: string, contact_phone: string, enabled = false) => {
   return useQuery({
