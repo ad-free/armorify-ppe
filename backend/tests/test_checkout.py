@@ -1,9 +1,9 @@
 """Checkout regressions against migrated PostgreSQL, never the shared FakeSession.
 
-Run from the repository root:
-    .venv/bin/python -m pytest backend/tests/test_checkout.py -q
-Requires the configured local armorify_dev database and existing pgcrypto extension.
-Only a randomly generated checkout_test_* schema is created, seeded, and dropped.
+Run with DATABASE_URL pointing to a disposable local database named
+armorify_checkout_test_<32 lowercase hex characters>, with pgcrypto enabled.
+The original armorify_dev database is explicitly refused. Only generated
+checkout_test_* schemas in that disposable database are migrated, seeded, and dropped.
 """
 
 import asyncio
@@ -47,14 +47,15 @@ def checkout_schema():
     url = make_url(settings.database_url)
     if (
         url.host not in {"localhost", "127.0.0.1", "::1"}
-        or url.database != "armorify_dev"
+        or not re.fullmatch(r"armorify_checkout_test_[a-f0-9]{32}", url.database or "")
     ):
         pytest.fail(
-            "Checkout tests require local armorify_dev; refusing any other database"
+            "Checkout tests require a disposable local armorify_checkout_test_<32hex> database"
         )
     url = url.set(drivername="postgresql+asyncpg")
     schema = "checkout_test_" + uuid4().hex
     assert re.fullmatch(r"checkout_test_[a-f0-9]{32}", schema)
+    print(f"PostgreSQL test target: {url.database}/{schema}")
 
     async def administer(action):
         engine = create_async_engine(url, poolclass=NullPool)
@@ -375,7 +376,7 @@ async def test_line_price_injection_is_rejected(checkout_db):
     assert await db.order_count() == 0
 
 
-@pytest.mark.parametrize("quantity", [True, "2", 1.5, 0, -1])
+@pytest.mark.parametrize("quantity", [True, "2", 1.5, 0, -1, 2_147_483_648])
 async def test_quantities_are_strict_positive_integers(checkout_db, quantity):
     db = checkout_db
     payload = await db.payload()
@@ -760,7 +761,7 @@ async def test_authentication_and_immutable_item_routes(checkout_db):
         f"/api/v1/orders/{order['id']}/cancel", headers=db.auth()
     )
     assert cancelled.status_code == 200, cancelled.text
-    assert await db.stock() == 9  # No unapproved automatic replenishment.
+    assert await db.stock() == 10
 
 
 @pytest.mark.parametrize("change", ["price", "shipping", "quantity"])
@@ -949,3 +950,18 @@ async def test_promotion_net_price_controls_free_shipping_eligibility(
     assert response.status_code == 201, response.text
     assert money(response.json()["shipping"]) == Decimal("30000")
     assert money(response.json()["total_amount"]) == Decimal("480000")
+
+
+async def test_large_quantity_within_stock_and_money_capacity(checkout_db):
+    db = checkout_db
+    await db.change(Product, db.product_id, price=Decimal("1"), stock=100_001)
+    payload = await db.payload([db.line(100_001)])
+    created = await db.client.post("/api/v1/orders/", json=payload, headers=db.auth())
+    assert created.status_code == 201, created.text
+    order = created.json()
+    assert order["items"][0]["quantity"] == 100_001
+    assert money(order["total_amount"]) == Decimal("125001")
+    assert await db.stock() == 0
+    cancelled = await db.client.post(f"/api/v1/orders/{order['id']}/cancel", headers=db.auth())
+    assert cancelled.status_code == 200, cancelled.text
+    assert await db.stock() == 100_001

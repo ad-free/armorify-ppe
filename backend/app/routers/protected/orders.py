@@ -6,9 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.core.database import DbSession
-from app.core.checkout import create_checkout
+from app.core.checkout import cancel_checkout, create_checkout
 from app.core.deps import CurrentUser
-from app.models.order import Order, OrderStatus
+from app.models.order import Order
 from app.schemas.order import (
     CheckoutCreate,
     OrderRead,
@@ -43,13 +43,4 @@ async def get_order(order_id: UUID, current_user: CurrentUser, db: DbSession) ->
 
 @router.post("/{order_id}/cancel", response_model=OrderRead)
 async def cancel_order(order_id: UUID, current_user: CurrentUser, db: DbSession) -> Order:
-    order = (await db.execute(select(Order).where(Order.id == order_id).options(selectinload(Order.items)))).scalar_one_or_none()
-    if order is None or order.user_id != current_user.id or not order.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    if order.status not in (OrderStatus.PENDING, OrderStatus.CONFIRMED):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Order cannot be cancelled at this stage")
-    order.status = OrderStatus.CANCELLED
-    db.add(order)
-    await db.commit()
-    await db.refresh(order)
-    return order
+    return await cancel_checkout(db, order_id, current_user.id)

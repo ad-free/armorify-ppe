@@ -250,8 +250,14 @@ expiring active campaign (percentage first; fixed prices cannot increase the bas
 Expired/inactive campaigns are ignored. Product, variant and campaign rows are locked
 in deterministic order; stock decrement and immutable order snapshots commit together.
 A transaction advisory lock and unique idempotency index prevent duplicate orders.
-Cancellation does **not** automatically replenish stock. Purchased item mutation
-routes have been removed.
+Cancellation locks the owned order, then product and variant rows in checkout's lock
+order. Pending/confirmed, unpaid, unfulfilled COD orders with Phase 4 reservation
+metadata restore their saved quantities exactly once; order, payment and fulfillment
+states become `cancelled` in the same transaction. Repeated/concurrent cancellation
+returns the cancelled order without another stock increment. Unknown historical
+reservations, paid orders and progressed fulfillment require admin reconciliation.
+Admin cancellation uses the same path, and cancelled orders cannot be reopened.
+Purchased item mutation routes remain removed.
 
 Standard retail shipping implements the published policy: **30,000 VND below
 500,000 VND; free at or above 500,000 VND**, based on merchandise after discounts.
@@ -284,7 +290,7 @@ explicit approval for any non-test rollback. No production migration was perform
 
 Focused checks:
 ```bash
-.venv/bin/python -m pytest backend/tests -q
+DATABASE_URL="${CHECKOUT_TEST_DATABASE_URL:?Set a disposable PostgreSQL test URL}" .venv/bin/python -m pytest backend/tests -q
 .venv/bin/python -m ruff check backend
 cd frontend
 node src/components/order/checkoutRecovery.check.mjs
@@ -293,17 +299,30 @@ node src/components/catalog/catalogState.check.mjs
 node src/components/catalog/ProductCard.facts.check.mjs
 npm run build && npm run lint
 ```
-Checkout regression tests require local `armorify_dev` with existing `pgcrypto`; they
-migrate/seed/drop only generated `checkout_test_*` schemas and use real PostgreSQL
-transactions, including concurrent stock and duplicate submissions.
+Set `CHECKOUT_TEST_DATABASE_URL` to a separate local database named
+`armorify_checkout_test_<32 lowercase hex characters>`, with the already-installed
+`pgcrypto` extension enabled there. The test harness refuses `armorify_dev` and all
+other database names before migrating/seed/reset/drop operations. Generated
+`checkout_test_*` schemas are confined to the disposable target.
 
-The full PostgreSQL backend run passed 59 tests before the final quantity-ceiling
-correction. That correction removed an unverified 100,000-unit sales cap in favor of
-the actual PostgreSQL INTEGER capacity; a database-free schema smoke verified accepted
-large quantities and rejected invalid types, nonpositive values, and storage overflow.
-The full backend suite was not rerun after database writes were stopped. Fresh Ruff,
-four frontend focused checks, TypeScript/Vite build, ESLint, and `git diff --check`
-passed. Real FastAPI/PostgreSQL acceptance
+The cancellation audit ran the complete suite after the quantity-capacity correction
+and all final cancellation changes: **78 passed** against a separate PostgreSQL 18
+cluster at `127.0.0.1:45167`, database
+`armorify_checkout_test_ff7fa262ca9b451295f3c5bfbacc1ebe`. Coverage includes both stock
+types, concurrent/repeated cancellation, fulfillment/payment eligibility, real
+restock failure rollback, admin shipping contention, no double-restock, and a
+100,001-unit order within the persisted monetary limit. Fresh Ruff, all four frontend
+focused checks, TypeScript/Vite build, ESLint, and `git diff --check` passed.
+A real Uvicorn HTTP smoke in `checkout_audit_smoke` created a mixed product/variant
+order, cancelled it concurrently and repeatedly, then verified restored stock and
+all three saved cancelled states. This used seeded fixtures, not mocked responses.
+The isolated services were stopped; their data directory is retained at
+`/tmp/armorify-phase4-pg-h9tw6_gz`. During this audit the original
+`armorify_dev/armorify` was inspected only with read-only transactions; before/after
+revision and order/item/product/variant counts matched. No original migration,
+reset, drop or data mutation was performed.
+
+Earlier real FastAPI/PostgreSQL acceptance
 used seeded data in a generated local schema: guest/authenticated checkout, manipulated
 storage prices, stale pricing rejection, last-stock contention, full saved snapshots,
 and a deliberately lost response after commit followed by same-key recovery. Cart,
@@ -318,7 +337,7 @@ price and 30,000.50 VND total without overflow at 360px or page errors.
 
 The task-created `phase4_live_*` fixture schema was removed after isolated migration
 downgrade/re-upgrade preservation checks. Local fixture data was not left intact.
-During resumed verification, the pre-existing `armorify_dev/armorify` schema reported revision
+During the earlier implementation's resumed verification, `armorify_dev/armorify` reported revision
 `c4a91f027b63`, rather than the initially observed `80686a8da3e7`; approval for migrating
 that target was not recorded. Its new columns exist, and order/item/product counts
 were zero at inspection. No rollback or further database changes were attempted.
@@ -326,8 +345,8 @@ Treat this schema revision change as an environmental risk, not proof that all l
 data was untouched. Downgrading an in-use schema would discard the new checkout data.
 
 **Admin order-management phase remaining:** payment verification and fulfillment
-transitions, shipment/tracking data, cancellation/restock/refund policy, verified B2B
-contracts, historical unknown-state presentation, and safe audited admin adjustments.
+transitions, shipment/tracking data, paid-order refunds and historical reservation
+reconciliation, verified B2B contracts, unknown-state presentation, and safe audited adjustments.
 
 Authentication, dashboard cards/charts, and specialized product editors still retain
 legacy styling. Removed admin search/sample-notification controls need real integrations.

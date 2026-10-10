@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.core.checkout import cancel_checkout
 from app.core.database import DbSession
 from app.models.order import Order, OrderItem, OrderStatus
 from app.schemas.order import AdminOrderRead, OrderUpdate
@@ -54,33 +55,31 @@ async def get_order(order_id: UUID, db: DbSession) -> Order:
 
 @router.put("/{order_id}", response_model=AdminOrderRead)
 async def update_order(order_id: UUID, payload: OrderUpdate, db: DbSession) -> Order:
-    stmt = select(Order).where(Order.id == order_id).options(selectinload(Order.items).selectinload(OrderItem.product))
-    result = await db.execute(stmt)
-    order = result.scalar_one_or_none()
-
-    if order is None or not order.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-
-    data = payload.model_dump(exclude_unset=True)
-    for field, value in data.items():
-        setattr(order, field, value)
-
-    db.add(order)
-    await db.commit()
-
-    # Re-fetch for clean serialization
-    result = await db.execute(stmt)
-    return result.scalar_one()
+    if payload.status is None:
+        return await get_order(order_id, db)
+    return await update_order_status(order_id, OrderStatusUpdate(status=payload.status), db)
 
 
 @router.patch("/{order_id}/status", response_model=AdminOrderRead)
 async def update_order_status(order_id: UUID, payload: OrderStatusUpdate, db: DbSession) -> Order:
-    stmt = select(Order).where(Order.id == order_id).options(selectinload(Order.items).selectinload(OrderItem.product))
+    stmt = (
+        select(Order)
+        .where(Order.id == order_id)
+        .options(selectinload(Order.items).selectinload(OrderItem.product))
+        .with_for_update(of=Order)
+        .execution_options(populate_existing=True)
+    )
     result = await db.execute(stmt)
     order = result.scalar_one_or_none()
 
     if order is None or not order.is_active:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    if payload.status == OrderStatus.CANCELLED:
+        await cancel_checkout(db, order_id, order.user_id)
+        return await get_order(order_id, db)
+    if order.status == OrderStatus.CANCELLED:
+        raise HTTPException(status_code=409, detail="A cancelled order cannot be reopened")
 
     order.status = payload.status
     db.add(order)

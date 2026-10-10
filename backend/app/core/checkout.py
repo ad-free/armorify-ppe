@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.settings import settings
 from app.models.flash_sale import FlashSale, FlashSaleItem
-from app.models.order import Order, OrderItem
+from app.models.order import Order, OrderItem, OrderStatus
 from app.models.product import Product, ProductVariant
 from app.schemas.order import (
     CheckoutCreate,
@@ -359,6 +359,92 @@ async def create_checkout(
             )
         db.add(order)
         await db.flush()
+        await db.commit()
+        return order
+    except Exception:
+        await db.rollback()
+        raise
+
+
+async def cancel_checkout(db: AsyncSession, order_id: UUID, user_id: UUID | None) -> Order:
+    """Void an unfulfilled COD reservation once; unknown historical stock stays untouched."""
+    try:
+        order = (
+            await db.execute(
+                select(Order)
+                .where(Order.id == order_id, Order.user_id == user_id, Order.is_active.is_(True))
+                .options(selectinload(Order.items))
+                .with_for_update(of=Order)
+                .execution_options(populate_existing=True)
+            )
+        ).scalar_one_or_none()
+        if order is None:
+            raise HTTPException(status_code=404, detail="Order not found")
+        reserved = order.idempotency_key is not None and bool(order.checkout_payload_hash)
+        if (
+            reserved
+            and order.status == OrderStatus.CANCELLED
+            and order.payment_status == "cancelled"
+            and order.fulfillment_status == "cancelled"
+        ):
+            await db.commit()
+            return order
+        if (
+            not reserved
+            or not order.items
+            or order.status not in (OrderStatus.PENDING, OrderStatus.CONFIRMED)
+            or order.payment_method != "cod"
+            or order.payment_status != "unpaid"
+            or order.fulfillment_status != "unfulfilled"
+        ):
+            raise checkout_error(409, "status", "Đơn hàng không thể hủy ở trạng thái hiện tại.", "cancellation_ineligible")
+        products = {
+            product.id: product
+            for product in (
+                await db.execute(
+                    select(Product)
+                    .where(Product.id.in_({item.product_id for item in order.items}))
+                    .order_by(Product.id)
+                    .with_for_update(of=Product)
+                    .execution_options(populate_existing=True)
+                )
+            ).scalars()
+        }
+        variants = {
+            variant.id: variant
+            for variant in (
+                await db.execute(
+                    select(ProductVariant)
+                    .where(ProductVariant.id.in_({item.variant_id for item in order.items if item.variant_id}))
+                    .order_by(ProductVariant.id)
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+            ).scalars()
+        }
+        quantities = Counter()
+        inventory = {}
+        for item in order.items:
+            target = variants.get(item.variant_id) if item.variant_id else products.get(item.product_id)
+            if (
+                item.product_id not in products
+                or target is None
+                or item.quantity <= 0
+                or (item.variant_id and target.product_id != item.product_id)
+            ):
+                raise checkout_error(409, "status", "Không thể hoàn lại tồn kho an toàn. Vui lòng liên hệ hỗ trợ.", "restock_unavailable")
+            key = (item.product_id, item.variant_id)
+            quantities[key] += item.quantity
+            inventory[key] = target
+        for key, quantity in quantities.items():
+            target = inventory[key]
+            if target.stock < 0 or target.stock + quantity > 2_147_483_647:
+                raise checkout_error(409, "status", "Không thể hoàn lại tồn kho an toàn. Vui lòng liên hệ hỗ trợ.", "restock_unavailable")
+        for key, quantity in quantities.items():
+            inventory[key].stock += quantity
+        order.status = OrderStatus.CANCELLED
+        order.payment_status = "cancelled"
+        order.fulfillment_status = "cancelled"
         await db.commit()
         return order
     except Exception:
