@@ -1,10 +1,7 @@
-// src/components/layout/Navbar.tsx
-import React, { useState, useEffect } from 'react';
-import { Link, NavLink } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, Phone, Mail, LogOut, LayoutDashboard, MapPin, Zap, Heart } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Search, ShoppingCart, User, Menu, Phone, Mail, LogOut, LayoutDashboard, MapPin, Zap, Heart, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { AnimatePresence } from 'framer-motion';
 import { MegaMenu } from './MegaMenu';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
@@ -13,296 +10,173 @@ import { authToast } from '@/lib/toast';
 
 export const Navbar: React.FC = () => {
   const [isCategoryMenuOpen, setCategoryMenuOpen] = useState(false);
-  const categoryMenuTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const profileRef = React.useRef<HTMLDivElement>(null);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileNavOpen, setMobileNavOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  const handleCategoryMenuOpen = () => {
-    if (categoryMenuTimeoutRef.current) clearTimeout(categoryMenuTimeoutRef.current);
-    setCategoryMenuOpen(true);
-  };
-
-  const handleCategoryMenuClose = () => {
-    categoryMenuTimeoutRef.current = setTimeout(() => {
-      setCategoryMenuOpen(false);
-    }, 150);
-  };
+  const categoryRef = useRef<HTMLDivElement>(null);
+  const categoryTriggerRef = useRef<HTMLButtonElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const profileTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileNavRef = useRef<HTMLDivElement>(null);
+  const mobileNavTriggerRef = useRef<HTMLButtonElement>(null);
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const items = useCartStore((state) => state.items);
-  
+  const wishlistCount = useWishlistStore((state) => state.items.length);
+  const isVietnamese = i18n.language.startsWith('vi');
+  const label = (key: string) => {
+    const text = t(key);
+    return text.charAt(0).toLocaleUpperCase(i18n.language) + text.slice(1).toLocaleLowerCase(i18n.language);
+  };
   const totalItems = items.reduce((total, item) => total + item.quantity, 0);
   const totalPrice = items.reduce((total, item) => {
     const unit = item.unit_price ?? item.product.price;
     return total + unit * item.quantity;
   }, 0);
-
-  const wishlistCount = useWishlistStore((state) => state.items.length);
-
   const formatMoney = (value: number) =>
     new Intl.NumberFormat(i18n.language === 'vi' ? 'vi-VN' : 'en-US', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0,
+      style: 'currency', currency: 'VND', maximumFractionDigits: 0,
     }).format(value);
+  const closeCategories = () => {
+    setCategoryMenuOpen(false);
+    categoryTriggerRef.current?.focus();
+  };
+  const closeProfile = () => {
+    setIsProfileOpen(false);
+    profileTriggerRef.current?.focus();
+  };
+  const closeMobileNav = () => {
+    setMobileNavOpen(false);
+    mobileNavTriggerRef.current?.focus();
+  };
 
-  // Close profile dropdown when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
-        setIsProfileOpen(false);
-      }
-    };
-    if (isProfileOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isProfileOpen]);
-
-  // Sticky scroll detection
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    const dismissOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!categoryRef.current?.contains(target)) setCategoryMenuOpen(false);
+      if (!profileRef.current?.contains(target)) setIsProfileOpen(false);
+      if (!mobileNavRef.current?.contains(target)) setMobileNavOpen(false);
+    };
+    document.addEventListener('pointerdown', dismissOutside);
+    return () => document.removeEventListener('pointerdown', dismissOutside);
   }, []);
 
   const handleLanguageChange = (lang: 'vi' | 'en') => {
     localStorage.setItem('armorify-lang', lang);
     void i18n.changeLanguage(lang);
   };
-
   const handleLogout = () => {
+    closeProfile();
     logout();
     navigate('/');
     authToast.logoutSuccess();
     setIsProfileOpen(false);
   };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
+  const handleSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
   };
+  const links = [
+    { to: '/', label: label('navbar.navHome'), end: true },
+    { to: '/categories', label: label('navbar.navCategories'), end: false },
+    { to: '/brand', label: label('navbar.navBrands'), end: false },
+    { to: '/dealer', label: label('navbar.navDealer'), end: false },
+    { to: '/blog', label: label('navbar.navBlog'), end: false },
+    { to: '/contact', label: label('navbar.navContact'), end: false },
+  ];
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `inline-flex min-h-11 items-center rounded-md px-3 text-sm font-semibold ${isActive ? 'bg-primary-soft text-primary' : 'text-foreground hover:bg-background hover:text-primary'}`;
 
   return (
-    <header className={`w-full bg-white flex flex-col z-50 sticky top-0 font-sans transition-shadow duration-300 ${isScrolled ? 'shadow-[0_4px_24px_rgba(0,0,0,0.08)]' : ''}`}>
-      {/* Top Utility Bar (FastKart style: light grey, thin) */}
-      <div className="bg-[#f8f8f8] py-2 border-b border-gray-200 hidden md:block">
-        <div className="container mx-auto px-4 max-w-7xl flex flex-wrap justify-between items-center text-[13px] text-gray-500 font-medium">
-          <div className="flex gap-6">
-            <span className="flex items-center gap-1.5"><MapPin size={14} className="text-primary"/> {t('navbar.address')}</span>
-            <span className="flex items-center gap-1.5"><Mail size={14} className="text-primary"/> {t('navbar.email')}</span>
+    <header className="sticky top-0 z-50 border-b border-border bg-surface font-sans text-foreground">
+      <div className="hidden border-b border-border bg-background xl:block">
+        <div className="container flex min-h-11 flex-wrap items-center justify-between gap-x-6 text-caption text-muted-foreground">
+          <div className="flex flex-wrap gap-6">
+            <span className="flex items-center gap-2"><MapPin size={16} aria-hidden="true" />{t('navbar.address')}</span>
+            <span className="flex items-center gap-2"><Mail size={16} aria-hidden="true" />{t('navbar.email')}</span>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="flex gap-4 border-r border-gray-300 pr-6">
-              <Link to="/about" className="hover:text-primary transition-colors">{t('navbar.about')}</Link>
-              <Link to="/contact" className="hover:text-primary transition-colors">{t('navbar.contact')}</Link>
-              <span className="text-gray-300">|</span>
-              <button onClick={() => handleLanguageChange('vi')} className={`hover:text-primary transition-colors ${i18n.language === 'vi' ? 'text-primary font-bold' : ''}`}>VN</button>
-              <button onClick={() => handleLanguageChange('en')} className={`hover:text-primary transition-colors ${i18n.language === 'en' ? 'text-primary font-bold' : ''}`}>EN</button>
-            </div>
-            <span className="flex items-center gap-1.5 font-semibold text-gray-700">{t('navbar.freeShipping')}</span>
-          </div>
+          <span>{t('navbar.freeShipping')}</span>
         </div>
       </div>
 
-      {/* Main Bar (FastKart style: white bg, massive search bar) */}
-      <div className="container mx-auto flex items-center justify-between gap-8 py-5">
-        {/* Logo */}
-        <Link to="/" className="flex-shrink-0 flex items-center gap-2">
-          <div className="w-10 h-10 bg-primary text-white flex items-center justify-center rounded-xl font-black text-xl shadow-sm">
-            <Zap size={22} className="fill-white" />
-          </div>
-          <span className="text-2xl font-black text-gray-900 tracking-tighter hidden sm:block">
-            NBE Hoang Duy<span className="text-primary">.</span>
-          </span>
+      <div className="container grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 py-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-x-6 lg:py-4">
+        <Link to="/" aria-label="NBE Hoang Duy — Home" className="inline-flex min-h-11 min-w-11 items-center gap-2 justify-self-start rounded-md">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary text-white"><Zap size={24} aria-hidden="true" /></span>
+          <span className="hidden text-xl font-bold tracking-tight sm:block">NBE Hoang Duy<span className="text-primary">.</span></span>
+          <span className="text-lg font-bold sm:hidden">NBE</span>
         </Link>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden lg:flex items-center bg-[#f4f7f6] rounded-2xl p-1.5 focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10 transition-all border border-transparent focus-within:border-primary/20 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
-          <div className="pl-5 pr-2 text-gray-400">
-            <Search size={20} />
-          </div>
-          <input 
-            type="text" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('navbar.searchPlaceholder')}
-            className="flex-1 px-2 py-2.5 bg-transparent border-none outline-none text-[15px] text-gray-800 placeholder-gray-400 font-medium"
-          />
-          <button type="submit" className="px-6 h-11 bg-primary text-white rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-sm active:scale-95 font-bold text-[14px]">
-            {t('navbar.searchButton')}
+        <form onSubmit={handleSearch} role="search" className="col-span-2 row-start-2 flex min-w-0 items-center gap-2 lg:col-span-1 lg:col-start-2 lg:row-start-1">
+          <label htmlFor="header-product-search" className="sr-only">{t('navbar.searchPlaceholder')}</label>
+          <input id="header-product-search" type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t('navbar.searchPlaceholder')} className="field min-w-0 flex-1" />
+          <button type="submit" className="btn btn-primary shrink-0" aria-label={t('navbar.searchButton')}>
+            <Search size={20} aria-hidden="true" /><span className="hidden sm:inline">{label('navbar.searchButton')}</span>
           </button>
         </form>
 
-        {/* Actions - FastKart Style */}
-        <div className="flex items-center gap-4 sm:gap-7">
-          <div className="hidden xl:flex items-center gap-3 border-r border-gray-100 pr-7">
-            <div className="w-11 h-11 rounded-full bg-primary/5 flex items-center justify-center text-primary group cursor-pointer hover:bg-primary transition-colors">
-              <Phone size={20} className="group-hover:text-white" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.support')}</span>
-              <span className="text-[15px] font-bold text-slate-700 leading-none">1900 1234</span>
-            </div>
-          </div>
-
+        <div className="flex items-center justify-end gap-1 sm:gap-3 lg:col-start-3">
+          <a href="tel:19001234" className="hidden min-h-11 items-center gap-2 rounded-md text-primary xl:flex" aria-label={`${t('navbar.support')}: 1900 1234`}>
+            <Phone size={20} aria-hidden="true" /><span className="text-sm font-semibold">1900 1234</span>
+          </a>
           {user && (
-            <Link to="/wishlist" className="hidden sm:flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors relative">
-              <div className="relative">
-                <Heart size={26} strokeWidth={1.8} />
-                {wishlistCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white text-[10px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center font-bold shadow-sm border-2 border-white">
-                    {wishlistCount}
-                  </span>
-                )}
-              </div>
+            <Link to="/wishlist" className="btn btn-ghost btn-icon relative" aria-label={`${isVietnamese ? 'Yêu thích' : 'Wishlist'}: ${wishlistCount}`}>
+              <Heart size={22} aria-hidden="true" />
+              {wishlistCount > 0 && <span className="badge badge-neutral absolute -right-1 -top-1 px-1.5" aria-hidden="true">{wishlistCount}</span>}
             </Link>
           )}
-
           {user ? (
-            <div className="relative" ref={profileRef}>
-              <button 
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-2.5 text-gray-500 hover:text-primary transition-colors focus:outline-none"
-              >
-                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
-                  <User size={22} strokeWidth={2} />
-                </div>
-                <div className="hidden sm:flex flex-col text-left">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.account')}</span>
-                  <span className="text-sm font-bold text-slate-700 leading-none">{user.firstname}</span>
-                </div>
+            <div ref={profileRef} className="relative" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setIsProfileOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape' && isProfileOpen) { event.stopPropagation(); closeProfile(); } }}>
+              <button ref={profileTriggerRef} type="button" className="btn btn-ghost px-2" aria-label={`${label('navbar.account')}: ${user.firstname}`} aria-expanded={isProfileOpen} aria-controls="header-profile-panel" onClick={() => { setIsProfileOpen(!isProfileOpen); setCategoryMenuOpen(false); setMobileNavOpen(false); }}>
+                <User size={22} aria-hidden="true" /><span className="hidden text-sm sm:inline">{user.firstname}</span>
               </button>
-
-              {/* Profile Submenu */}
               {isProfileOpen && (
-                <div className="absolute right-0 top-full mt-4 w-60 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-300 origin-top-right">
-                    <div className="px-5 py-3.5 border-b border-gray-50 mb-2">
-                      <p className="text-sm font-black text-gray-900 leading-tight">{user.firstname} {user.lastname}</p>
-                      <p className="text-[11px] text-gray-400 font-bold truncate mt-0.5">{user.email || user.phone}</p>
-                    </div>
-                    
-                    <Link to="/profile" className="flex items-center gap-3 px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setIsProfileOpen(false)}>
-                      <User size={18} /> {t('actions.profile')}
-                    </Link>
-
-                    {user.role === 'admin' && (
-                      <Link to="/admin" className="flex items-center gap-3 px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setIsProfileOpen(false)}>
-                        <LayoutDashboard size={18} /> {t('actions.admin')}
-                      </Link>
-                    )}
-
-                    <div className="border-t border-gray-50 mt-2 pt-2">
-                      <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 transition-colors text-left">
-                        <LogOut size={18} /> {t('actions.logout')}
-                      </button>
-                    </div>
+                <div id="header-profile-panel" className="absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface p-2 shadow-md">
+                  <div className="mb-2 border-b border-border px-3 py-3">
+                    <p className="text-sm font-semibold">{user.firstname} {user.lastname}</p>
+                    <p className="text-caption break-words text-muted-foreground">{user.email || user.phone}</p>
                   </div>
+                  <Link to="/profile" className="btn btn-ghost w-full justify-start" onClick={closeProfile}><User size={18} aria-hidden="true" />{label('actions.profile')}</Link>
+                  {user.role === 'admin' && <Link to="/admin" className="btn btn-ghost w-full justify-start" onClick={closeProfile}><LayoutDashboard size={18} aria-hidden="true" />{label('actions.admin')}</Link>}
+                  <button type="button" onClick={handleLogout} className="btn btn-ghost w-full justify-start text-destructive hover:bg-destructive-soft"><LogOut size={18} aria-hidden="true" />{label('actions.logout')}</button>
+                </div>
               )}
             </div>
           ) : (
-            <Link to="/login" className="flex items-center gap-2.5 text-gray-500 hover:text-primary transition-colors">
-              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
-                <User size={22} strokeWidth={2} />
-              </div>
-              <div className="hidden sm:flex flex-col text-left">
-                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.login')}</span>
-                <span className="text-sm font-black text-gray-900 leading-none">{t('navbar.account')}</span>
-              </div>
-            </Link>
+            <Link to="/login" className="btn btn-ghost px-2" aria-label={t('navbar.login')}><User size={22} aria-hidden="true" /><span className="hidden text-sm sm:inline">{label('navbar.login')}</span></Link>
           )}
-          
-          <Link to="/cart" className="flex items-center gap-4 group">
-            <div className="relative">
-              <div className="text-primary bg-[#0da487]/10 p-3 rounded-xl group-hover:bg-[#0da487] group-hover:text-white transition-all duration-300">
-                <ShoppingCart size={24} strokeWidth={2.5}/>
-              </div>
-              <span className="absolute -top-2 -right-2 bg-[#ffa53b] text-white text-[11px] min-w-[20px] h-[20px] px-1.5 rounded-full flex items-center justify-center font-black shadow-[0_3px_10px_rgba(255,165,59,0.3)] border-2 border-white">
-                {totalItems}
-              </span>
-            </div>
-            <div className="hidden sm:flex flex-col text-left">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{t('navbar.cart')}</span>
-              <span className="text-[15px] font-black text-gray-900 leading-none group-hover:text-primary transition-colors">{formatMoney(totalPrice)}</span>
-            </div>
+          <Link to="/cart" className="btn btn-ghost gap-2 px-2" aria-label={`${t('navbar.cart')}: ${totalItems}, ${formatMoney(totalPrice)}`}>
+            <span className="relative"><ShoppingCart size={22} aria-hidden="true" /><span className="badge badge-neutral absolute -right-3 -top-3 px-1.5" aria-hidden="true">{totalItems}</span></span>
+            <span className="hidden text-sm lg:inline">{formatMoney(totalPrice)}</span>
           </Link>
-
         </div>
       </div>
 
-
-      {/* Bottom Navigation (FastKart style) */}
-      <div className="bg-white border-b border-gray-100 hidden md:block">
-        <div className="container mx-auto flex items-center justify-between">
-          <div className="flex items-center">
-            {/* Categories Megamenu Trigger */}
-            <div 
-              className="relative w-fit flex-shrink-0"
-              onMouseLeave={handleCategoryMenuClose}
-            >
-              <button 
-                onMouseEnter={handleCategoryMenuOpen}
-                onClick={() => setCategoryMenuOpen(!isCategoryMenuOpen)}
-                className="flex items-center gap-3 bg-primary text-white cursor-pointer py-3.5 px-6 rounded-tr-3xl relative z-[60] transition-all hover:bg-primary/95 w-[280px] active:scale-95 flex-shrink-0"
-              >
-                <Menu size={20} strokeWidth={3} />
-                <span className="font-black tracking-tight text-sm uppercase">{t('navbar.allCategories')}</span>
-              </button>
-              
-              {/* The Mega Menu */}
-              <AnimatePresence>
-                {isCategoryMenuOpen && (
-                  <div className="absolute top-full left-0 z-50 pt-2 w-[950px]">
-                    <MegaMenu isOpen={isCategoryMenuOpen} onClose={() => setCategoryMenuOpen(false)} />
-                  </div>
-                )}
-              </AnimatePresence>
-            </div>
-
-
-            {/* Quick Links */}
-            <nav className="flex items-center gap-8 ml-10">
-              {[
-                { to: '/', label: t('navbar.navHome'), end: true },
-                { to: '/categories', label: t('navbar.navCategories'), end: false },
-                { to: '/brand', label: t('navbar.navBrands'), end: false },
-                { to: '/dealer', label: t('navbar.navDealer'), end: false },
-                { to: '/blog', label: t('navbar.navBlog'), end: false },
-                { to: '/contact', label: t('navbar.navContact'), end: false },
-              ].map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  end={link.end}
-                  className={({ isActive }) =>
-                    `text-[14px] font-bold transition-colors py-4 relative group whitespace-nowrap ${
-                      isActive ? 'text-primary' : 'text-gray-700 hover:text-primary'
-                    }`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      {link.label}
-                      <span className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${
-                        isActive ? 'w-full' : 'w-0 group-hover:w-full'
-                      }`} />
-                    </>
-                  )}
-                </NavLink>
-              ))}
-            </nav>
+      <div className="border-t border-border">
+        <div className="container relative flex flex-wrap items-center gap-2 py-2">
+          <div ref={categoryRef} className="static shrink-0" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setCategoryMenuOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape' && isCategoryMenuOpen) { event.stopPropagation(); closeCategories(); } }}>
+            <button ref={categoryTriggerRef} type="button" className="btn btn-primary px-3" aria-expanded={isCategoryMenuOpen} aria-controls="header-category-panel" onClick={() => { setCategoryMenuOpen(!isCategoryMenuOpen); setIsProfileOpen(false); setMobileNavOpen(false); }}>
+              <Menu size={20} aria-hidden="true" /><span>{label('navbar.allCategories')}</span>
+            </button>
+            {isCategoryMenuOpen && <div id="header-category-panel" className="absolute inset-x-4 top-full z-50 pt-2 sm:inset-x-6 lg:inset-x-8"><MegaMenu isOpen={isCategoryMenuOpen} onClose={closeCategories} /></div>}
+          </div>
+          <nav aria-label={isVietnamese ? 'Điều hướng chính' : 'Main navigation'} className="hidden flex-wrap items-center lg:flex">
+            {links.map((link) => <NavLink key={link.to} to={link.to} end={link.end} className={navLinkClass}>{link.label}</NavLink>)}
+          </nav>
+          <div ref={mobileNavRef} className="lg:hidden" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setMobileNavOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape' && isMobileNavOpen) { event.stopPropagation(); closeMobileNav(); } }}>
+            <button ref={mobileNavTriggerRef} type="button" className="btn btn-ghost btn-icon" aria-label={isVietnamese ? 'Điều hướng chính' : 'Main navigation'} aria-expanded={isMobileNavOpen} aria-controls="header-mobile-navigation" onClick={() => { setMobileNavOpen(!isMobileNavOpen); setCategoryMenuOpen(false); setIsProfileOpen(false); }}>{isMobileNavOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}</button>
+            {isMobileNavOpen && <nav id="header-mobile-navigation" aria-label={isVietnamese ? 'Điều hướng chính' : 'Main navigation'} className="absolute inset-x-4 top-full z-50 grid max-h-[60vh] overflow-y-auto rounded-lg border border-border bg-surface p-2 shadow-md sm:inset-x-6">
+              {links.map((link) => <NavLink key={link.to} to={link.to} end={link.end} className={navLinkClass} onClick={closeMobileNav}>{link.label}</NavLink>)}
+              <Link to="/about" className="btn btn-ghost justify-start" onClick={closeMobileNav}>{label('navbar.about')}</Link>
+            </nav>}
+          </div>
+          <div className="ml-auto flex items-center">
+            <Link to="/about" className="btn btn-ghost hidden lg:inline-flex">{label('navbar.about')}</Link>
+            <button type="button" onClick={() => handleLanguageChange('vi')} className={`btn btn-ghost btn-icon ${isVietnamese ? 'bg-primary-soft text-primary' : ''}`} aria-label="Tiếng Việt" aria-pressed={isVietnamese}>VN</button>
+            <button type="button" onClick={() => handleLanguageChange('en')} className={`btn btn-ghost btn-icon ${!isVietnamese ? 'bg-primary-soft text-primary' : ''}`} aria-label="English" aria-pressed={!isVietnamese}>EN</button>
           </div>
         </div>
       </div>
-
-
     </header>
   );
 };

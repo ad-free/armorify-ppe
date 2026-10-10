@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { EntitySchema, PropertySchema } from '../../hooks/useSchema';
 import { Settings2, ChevronDown, Check, Columns, MoreVertical, Search } from 'lucide-react';
 import { getMediaUrl } from '../../lib/api';
+import { Button, FeedbackState, Skeleton } from '@/components/ui/Primitives';
 
 interface DynamicTableProps {
   entityName: string;
@@ -24,7 +25,7 @@ const renderCell = (
   entityName: string,
   row?: Record<string, unknown>
 ) => {
-  if (value === null || value === undefined || value === '') return <span className="text-slate-200 font-bold italic text-[11px]">N/A</span>;
+  if (value === null || value === undefined || value === '') return <span className="text-caption">—</span>;
 
   // Render Brand relation beautifully in tables if brand info is preloaded
   if ((key === 'brand_id' || key === 'branch_id') && row && typeof row.brand === 'object' && row.brand !== null) {
@@ -50,7 +51,7 @@ const renderCell = (
   if (typeof value === 'string' && (normalizedKey.includes('image') || normalizedKey.includes('logo') || normalizedKey.includes('avatar') || normalizedKey.includes('picture'))) {
     if (value.startsWith('http') || value.startsWith('/') || value.startsWith('data:image')) {
       return (
-        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 shrink-0 shadow-sm hover:scale-110 transition-transform">
+        <div className="w-12 h-12 rounded-md overflow-hidden bg-muted border border-border shrink-0">
           <img src={getMediaUrl(value)} alt="" className="w-full h-full object-cover" />
         </div>
       );
@@ -64,29 +65,24 @@ const renderCell = (
     const isActiveField = key === 'is_active';
 
     let label = boolValue ? t('generic.active') : t('generic.inactive');
-    let colorStyle = boolValue
-      ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-      : 'bg-rose-50 text-rose-500 border-rose-100';
+    let colorStyle = boolValue ? 'badge-success' : 'badge-neutral';
 
     // Special logic for Review statuses
     if (entityName === 'review') {
       if (isApprovedField) {
         label = boolValue ? "Đã duyệt" : "Đang chờ duyệt";
-        colorStyle = boolValue
-          ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-          : 'bg-amber-50 text-amber-600 border-amber-100';
+        colorStyle = boolValue ? 'badge-success' : 'badge-warning';
       }
       if (isActiveField && !boolValue) {
         label = "Từ chối";
-        colorStyle = 'bg-rose-50 text-rose-600 border-rose-100';
+        colorStyle = 'badge-neutral';
       }
     } else if (isApprovedField) {
       label = boolValue ? "Đã duyệt" : "Chờ duyệt";
     }
 
     return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${colorStyle}`}>
-        <span className={`w-1.5 h-1.5 rounded-full mr-2 ${boolValue ? 'bg-emerald-500 animate-pulse' : (isApprovedField ? 'bg-amber-500' : 'bg-rose-500')}`}></span>
+      <span className={`badge ${colorStyle}`}>
         {label}
       </span>
     );
@@ -96,8 +92,7 @@ const renderCell = (
   if (key === 'role' || key === 'user_role') {
     const isAdmin = stringValue.toLowerCase() === 'admin';
     return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-[0.1em] ${isAdmin ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-slate-50 text-slate-500 border border-slate-100'
-        }`}>
+      <span className={`badge ${isAdmin ? 'badge-success' : 'badge-neutral'}`}>
         {stringValue}
       </span>
     );
@@ -106,15 +101,14 @@ const renderCell = (
   // 3. Handle Statuses (Order, Payment, etc.)
   if (key.includes('status')) {
     const val = stringValue.toLowerCase();
-    let style = 'bg-slate-50 text-slate-500 border-slate-100';
+    let style = 'badge-neutral';
 
-    if (['completed', 'paid', 'success', 'delivered', 'active'].includes(val)) style = 'bg-emerald-50 text-emerald-600 border-emerald-100';
-    if (['pending', 'processing', 'waiting'].includes(val)) style = 'bg-amber-50 text-amber-600 border-amber-100';
-    if (['cancelled', 'failed', 'refunded', 'error', 'inactive'].includes(val)) style = 'bg-rose-50 text-rose-600 border-rose-100';
-    if (['shipping', 'shipped'].includes(val)) style = 'bg-blue-50 text-blue-600 border-blue-100';
+    if (['completed', 'paid', 'success', 'delivered', 'active'].includes(val)) style = 'badge-success';
+    if (['pending', 'processing', 'waiting'].includes(val)) style = 'badge-warning';
+    if (['failed', 'error'].includes(val)) style = 'badge-error';
 
     return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${style}`}>
+      <span className={`badge ${style}`}>
         {stringValue}
       </span>
     );
@@ -126,7 +120,7 @@ const renderCell = (
     return (
       <div className="flex flex-col">
         <span className="text-slate-700 font-bold text-[13px] tracking-tight">{date.toLocaleDateString('vi-VN')}</span>
-        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        <span className="text-caption mt-0.5">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
     );
   }
@@ -134,7 +128,7 @@ const renderCell = (
   // 5. Handle Enums
   if (schema.enum) {
     return (
-      <span className="inline-flex items-center px-3 py-1 bg-slate-50 text-slate-500 border border-slate-100 rounded-lg text-[10px] font-bold uppercase tracking-widest">
+      <span className="badge badge-neutral">
         {stringValue}
       </span>
     );
@@ -143,7 +137,7 @@ const renderCell = (
   // 6. Handle Objects/Arrays
   if (typeof value === 'object') {
     return (
-      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 w-fit uppercase tracking-tighter">
+      <div className="badge badge-neutral w-fit">
         <MoreVertical className="w-3 h-3" />
         {Array.isArray(value) ? t('generic.itemsCount', { count: value.length }) : t('generic.object')}
       </div>
@@ -153,7 +147,7 @@ const renderCell = (
   // 7. Handle UUIDs or Long IDs
   if (key === 'id' || key === 'uuid' || /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(stringValue)) {
     return (
-      <span className="font-mono text-[11px] font-bold text-slate-400 bg-slate-50/50 px-2 py-1 rounded-lg border border-slate-100" title={stringValue}>
+      <span className="font-mono text-xs text-muted-foreground bg-muted px-2 py-1 rounded-sm" title={stringValue}>
         {stringValue.substring(0, 8)}...
       </span>
     );
@@ -297,9 +291,11 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
 
   if (isLoading) {
     return (
-      <div className="p-24 flex flex-col items-center justify-center space-y-6 bg-white rounded-[2rem] border border-gray-100">
-        <div className="w-14 h-14 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
-        <p className="text-gray-400 font-black text-xs uppercase tracking-[0.2em]">{t('generic.tableFetching')}...</p>
+      <div role="status" className="card p-6 space-y-4">
+        <p className="text-body">{t('generic.tableFetching')}...</p>
+        <Skeleton className="h-11" />
+        <Skeleton className="h-11" />
+        <Skeleton className="h-11" />
       </div>
     );
   }
@@ -307,44 +303,44 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
   return (
     <div className="space-y-6 min-w-0">
       {/* Table Toolbar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-gray-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] relative z-20">
-        <div className="flex flex-1 items-center gap-6">
-          <div className="relative flex-1 max-w-md group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
+      <div className="card flex flex-col gap-4 p-4 sm:flex-row sm:flex-wrap sm:justify-between sm:items-center relative z-20">
+        <div className="flex flex-1 flex-wrap items-center gap-4 min-w-0">
+          <div className="relative flex-1 min-w-40 max-w-md">
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
+              aria-label={t('search.placeholder')}
               placeholder={`${t('search.placeholder')}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all placeholder:text-gray-300"
+              className="field pl-10"
             />
           </div>
-          <div className="text-[13px] font-bold text-gray-400 px-2 uppercase tracking-wide hidden md:block">
+          <div className="text-caption hidden md:block">
             {t('generic.tableSummary', { count: filteredData?.length || 0 })}
           </div>
           {onAdd && (
-            <button
-              onClick={onAdd}
-              className="inline-flex items-center px-4 py-2 bg-primary text-white font-bold rounded-xl shadow-md hover:bg-primary/90 transition-all text-[11px] uppercase tracking-widest active:scale-95 whitespace-nowrap"
-            >
+            <Button onClick={onAdd} className="whitespace-nowrap">
               + {t('generic.createNew')}
-            </button>
+            </Button>
           )}
         </div>
 
         <div className="relative" ref={columnSelectorRef}>
-          <button
+          <Button
+            variant="secondary"
             onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)}
-            className="inline-flex items-center gap-3 px-5 py-2.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-2xl hover:border-primary hover:text-primary transition-all shadow-sm uppercase tracking-widest"
+            aria-expanded={isColumnSelectorOpen}
+            aria-controls={`table-columns-${entityName}`}
           >
             <Columns className="w-4 h-4" />
             {t('generic.tableColumns')}
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isColumnSelectorOpen ? 'rotate-180' : ''}`} />
-          </button>
+          </Button>
 
           {isColumnSelectorOpen && (
-            <div className="absolute right-0 mt-3 w-64 bg-white border border-gray-100 rounded-3xl shadow-[0_20px_50px_rgba(13,164,135,0.2)] z-[100] max-h-[400px] overflow-y-auto p-3 animate-in fade-in zoom-in-95 duration-200">
-              <div className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 mb-2">
+            <div id={`table-columns-${entityName}`} onKeyDown={(event) => { if (event.key === 'Escape') { setIsColumnSelectorOpen(false); columnSelectorRef.current?.querySelector('button')?.focus(); } }} className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] card shadow-md z-[100] max-h-[400px] overflow-y-auto p-3">
+              <div className="px-3 py-3 text-caption border-b border-border mb-2">
                 {t('generic.visibleColumns')}
               </div>
               <div className="space-y-1">
@@ -352,12 +348,13 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
                   <button
                     key={col.key}
                     onClick={() => toggleColumn(col.key)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 rounded-2xl transition-all text-left group"
+                    aria-pressed={visibleKeys.includes(col.key)}
+                    className="btn btn-ghost w-full justify-start text-left px-3"
                   >
-                    <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${visibleKeys.includes(col.key) ? 'bg-primary border-primary' : 'bg-white border-gray-200 group-hover:border-primary'}`}>
+                    <div aria-hidden="true" className={`w-5 h-5 rounded-sm border flex items-center justify-center ${visibleKeys.includes(col.key) ? 'bg-primary border-primary' : 'bg-surface border-input'}`}>
                       {visibleKeys.includes(col.key) && <Check className="w-3.5 h-3.5 text-white" strokeWidth={4} />}
                     </div>
-                    <span className={`truncate font-bold ${visibleKeys.includes(col.key) ? 'text-gray-900' : 'text-gray-400'}`}>{col.title}</span>
+                    <span className="truncate">{col.title}</span>
                   </button>
                 ))}
               </div>
@@ -367,56 +364,55 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
       </div>
 
       {/* Table Container */}
-      <div className="relative max-w-full overflow-x-auto overflow-y-hidden rounded-[2.5rem] border border-gray-100 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.03)] selection:bg-primary/10">
+      <div className="table-shell" tabIndex={0} role="region" aria-label={t('generic.tableSummary', { count: filteredData.length })}>
         <table className="w-full min-w-max text-left text-sm border-collapse">
-          <thead className="bg-gray-50/50 border-b border-gray-100">
+          <thead className="bg-muted border-b border-border">
             <tr>
               {activeColumns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-8 py-6 cursor-pointer hover:bg-gray-100/50 transition-colors group whitespace-nowrap"
-                  onClick={() => onSort?.(col.key)}
+                  scope="col"
+                  className="px-4 py-2 whitespace-nowrap"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-gray-500 uppercase tracking-[0.1em] text-[11px]">{col.title}</span>
-                    <Settings2 className="w-3.5 h-3.5 text-gray-300 group-hover:text-primary transition-colors" />
-                  </div>
+                  <button type="button" disabled={!onSort} onClick={() => onSort?.(col.key)} className="btn btn-ghost justify-start px-0">
+                    <span>{col.title}</span>
+                    {onSort && <Settings2 aria-hidden="true" className="w-4 h-4" />}
+                  </button>
                 </th>
               ))}
-              <th className="px-8 py-6 text-right bg-gray-50/80 sticky right-0 z-10 border-l border-gray-100 font-bold text-gray-500 uppercase tracking-[0.1em] text-[11px] whitespace-nowrap">
+              <th scope="col" className="px-4 py-4 text-right bg-muted sticky right-0 z-10 border-l border-border font-semibold text-muted-foreground whitespace-nowrap">
                 {t('generic.tableActions')}
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-border">
             {filteredData?.length > 0 ? (
               filteredData.map((row, index) => {
                 const item = row as Record<string, unknown> & { id?: string | number; is_active?: boolean };
                 return (
-                  <tr key={item.id || index} className="group hover:bg-slate-50/50 transition-all border-b border-slate-50 last:border-none">
+                  <tr key={item.id || index} className="group hover:bg-muted transition-colors">
                     {activeColumns.map((col) => (
-                      <td key={col.key} className="px-8 py-5 text-slate-600 align-middle">
+                      <td key={col.key} className="px-4 py-3 text-muted-foreground align-middle">
                         {renderCell(item[col.key], schema.properties[col.key], t, col.key, entityName, item)}
                       </td>
                     ))}
-                    <td className="px-8 py-5 text-right bg-white/95 group-hover:bg-slate-50/95 sticky right-0 z-10 border-l border-slate-50 shadow-[-10px_0_30px_rgba(15,23,42,0.02)] transition-all">
-                      <div className="flex items-center justify-end gap-3">
-                        <button
+                    <td className="px-4 py-3 text-right bg-surface group-hover:bg-muted sticky right-0 z-10 border-l border-border transition-colors">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="secondary"
+                          disabled={!onEdit}
                           onClick={() => onEdit?.(item)}
-                          className="px-4 py-2 text-primary bg-primary/5 hover:bg-primary hover:text-white rounded-xl transition-all font-bold text-[10px] uppercase tracking-wider"
                         >
                           {t('generic.edit')}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant={item.is_active === false ? 'secondary' : 'danger'}
+                          disabled={item.id == null || (item.is_active === false ? !onRestore : !onDelete)}
                           onClick={() => item.is_active === false ? onRestore?.(item.id!) : onDelete?.(item.id!)}
-                          className={`px-4 py-2 rounded-xl transition-all font-bold text-[10px] uppercase tracking-wider ${item.is_active === false
-                              ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white'
-                              : 'text-rose-500 bg-rose-50 hover:bg-rose-500 hover:text-white'
-                            }`}
                           title={item.is_active === false ? t('generic.restoreRecord') : t('generic.deactivateRecord')}
                         >
                           {item.is_active === false ? t('generic.restore') : t('generic.delete')}
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -424,8 +420,8 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
               })
             ) : (
               <tr>
-                <td colSpan={activeColumns.length + 1} className="px-8 py-24 text-center text-slate-300 font-bold italic text-sm">
-                  {t('generic.noRecords')}
+                <td colSpan={activeColumns.length + 1} className="p-4">
+                  <FeedbackState title={t('generic.noRecords')} />
                 </td>
               </tr>
             )}

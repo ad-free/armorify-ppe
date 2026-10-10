@@ -37,7 +37,7 @@ NBE Hoang Duy is a specialized e-commerce platform for Personal Protective Equip
 ### Frontend
 - **Framework**: React 18, Vite 5.x
 - **Language**: TypeScript 5.9.3
-- **Styling**: Tailwind CSS + Shadcn/UI
+- **Styling**: Tailwind CSS 3 + shared CSS tokens and React UI primitives
 - **State management**: Zustand
 - **Data fetching**: TanStack Query (React Query) v5
 - **Animations**: Framer Motion
@@ -112,6 +112,46 @@ The project maintains strict code quality standards through automated tools:
 ### Backend
 - **Ruff**: Ultra-fast Python Linter and Formatter.
 - **mypy**: Static type checking for robust data integrity.
+
+### Phase 1 UI foundation
+
+Storefront and admin share tokens in `frontend/src/index.css`, exposed through
+`frontend/tailwind.config.js`. Use semantic colors instead of page-specific hex values.
+
+| Role | Tokens / convention |
+|---|---|
+| Primary actions | `primary`, `primary-hover`, `primary-soft`; emerald |
+| Neutral surfaces and content | `surface`, `background`, `muted`, `foreground`, `muted-foreground`; white/slate |
+| Feedback | `success`, `warning`, `destructive` and their `*-soft` surfaces |
+| Borders | `border` for surfaces, `input` for interactive field boundaries |
+| Typography | Manrope 400–800; 12/14/16/18/20/24/30px, responsive page headings |
+| Spacing | Tailwind's 4px-based scale; `xs/sm/md/lg/xl` = 4/8/16/24/32px |
+| Shape | `rounded-sm/md/lg` = 4/8/12px; `shadow-sm/md` only for restrained elevation |
+| Containers | 1280px maximum; 16/24/32px gutters on mobile/tablet/desktop |
+
+Reuse `Button`, `FeedbackState`, and `Skeleton` from
+`frontend/src/components/ui/Primitives.tsx`. `Button` supports `primary`, `secondary`,
+`ghost`, and `danger`, forwards its ref/native props, and disables itself while `loading`.
+For links use `btn` plus a variant; for native inputs/selects/textareas use `field`,
+`field-label`, and `field-error`. Associate errors using `aria-invalid` and
+`aria-describedby`. Other shared styles: `card`, `badge` + `badge-neutral/success/warning/error`,
+`page-heading`, `section-heading`, `table-shell`, and `dialog-panel`.
+
+Shared controls have 44px targets and visible keyboard focus. CSS and Framer Motion
+respect reduced-motion preferences. Admin mobile navigation uses a native modal dialog
+with Tab containment, Escape dismissal, and trigger focus restoration. Tables scroll
+inside their own region on narrow screens. Red is reserved for errors, destructive actions,
+and genuine discounts; inactive/cancelled/refunded statuses are neutral.
+
+Verify from `frontend/` with `npm run build && npm run lint`.
+The Node TypeScript config emits declarations only, so builds do not leave a redundant
+`vite.config.js` beside the source configuration or introduce generated-file lint errors.
+
+Phase 2 should migrate page-specific storefront heroes, filters, footer, authentication
+and checkout screens, dashboard cards/charts, and specialized product image/variant editors.
+These still contain legacy uppercase labels, oversized radii, shadows, or decorative motion.
+The removed admin search/sample-notification controls need real integrations before returning.
+
 
 ---
 

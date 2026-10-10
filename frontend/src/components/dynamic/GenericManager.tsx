@@ -4,6 +4,7 @@ import { useGenericResource } from '../../api/generic';
 import { useEntitySchema } from '../../hooks/useSchema';
 import { DynamicTable } from './DynamicTable';
 import { DynamicForm } from './DynamicForm';
+import { Button, FeedbackState, Skeleton } from '@/components/ui/Primitives';
 
 interface GenericManagerProps {
   entityName: string;
@@ -15,23 +16,6 @@ const humanizeEntity = (value: string) =>
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/\b([a-z])/g, (match) => match.toUpperCase());
 
-const LoadingSpinner = () => {
-  return (
-    <div className="flex flex-col items-center justify-center p-24 space-y-6">
-      <div className="w-14 h-14 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
-      <span className="text-gray-400 font-black text-xs uppercase tracking-[0.2em]">Đang tải cấu hình...</span>
-    </div>
-  );
-};
-
-const ErrorDisplay = ({ message }: { message: string }) => {
-  return (
-    <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-700">
-      <h4 className="font-bold">Lỗi tải cấu hình</h4>
-      <p>{message}</p>
-    </div>
-  );
-};
 
 export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) => {
   const [params, setParams] = useState({ skip: 0, limit: 10, sort_by: 'id' });
@@ -80,24 +64,22 @@ export const GenericManager: React.FC<GenericManagerProps> = ({ entityName }) =>
     ? (updateSchema || createSchema || readSchema)
     : (createSchema || updateSchema || readSchema);
 
-  if (isSchemaLoading) return <LoadingSpinner />;
-  if (schemaError) return <ErrorDisplay message={schemaError.message} />;
+  if (isSchemaLoading) return <div role="status" className="card p-6 space-y-4"><p className="text-body">Đang tải cấu hình...</p><Skeleton className="h-48" /></div>;
+  if (schemaError) return <FeedbackState variant="error" title="Lỗi tải cấu hình" description={schemaError.message} />;
   if (!schema || !formSchema) return null;
 
   return (
     <div className="space-y-8 min-w-0">
       {isFormOpen ? (
-        <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-[0_20px_60px_rgba(0,0,0,0.03)] animate-in fade-in slide-in-from-bottom-6 duration-500">
-          <div className="flex items-center justify-between mb-10 border-b border-gray-50 pb-6">
-            <h3 className="text-xl font-black text-gray-900">
+        <div className="space-y-6 min-w-0">
+          <div className="card p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4">
+            <h2 className="section-heading">
               {editingItem ? t('generic.editRecord', { title: normalizeSchemaTitle(formSchema.title) }) : t('generic.newRecord', { title: normalizeSchemaTitle(formSchema.title) })}
-            </h3>
-            <button
-               onClick={() => setIsFormOpen(false)}
-               className="text-xs font-black text-gray-400 uppercase tracking-widest hover:text-rose-500 transition-colors"
+            </h2>
+            <Button variant="secondary" onClick={() => setIsFormOpen(false)}
             >
                Huỷ bỏ
-            </button>
+            </Button>
           </div>
           <DynamicForm 
             entityName={entityName}
