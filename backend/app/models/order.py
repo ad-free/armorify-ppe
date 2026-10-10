@@ -1,5 +1,6 @@
 from decimal import Decimal
 from enum import Enum as PyEnum
+from uuid import UUID as _UUID
 
 from app.models.base import Base, BaseMixin
 from app.models.product import Product
@@ -21,7 +22,7 @@ class OrderStatus(PyEnum):
 class Order(BaseMixin, Base):
     __tablename__ = "orders"
 
-    user_id: Mapped[UUID | None] = mapped_column(
+    user_id: Mapped[_UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=True,
@@ -43,7 +44,7 @@ class Order(BaseMixin, Base):
     subtotal: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     discount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     shipping: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
-    idempotency_key: Mapped[UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    idempotency_key: Mapped[_UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     checkout_payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[OrderStatus] = mapped_column(
         Enum(
@@ -68,17 +69,17 @@ class Order(BaseMixin, Base):
 class OrderItem(BaseMixin, Base):
     __tablename__ = "order_items"
 
-    order_id: Mapped[UUID] = mapped_column(
+    order_id: Mapped[_UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("orders.id", ondelete="CASCADE"),
         nullable=False,
     )
-    product_id: Mapped[UUID] = mapped_column(
+    product_id: Mapped[_UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("products.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    variant_id: Mapped[UUID | None] = mapped_column(
+    variant_id: Mapped[_UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("product_variants.id", ondelete="RESTRICT"),
         nullable=True,

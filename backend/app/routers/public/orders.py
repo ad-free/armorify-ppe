@@ -50,7 +50,11 @@ async def track_order(
 ) -> Order:
     result = await db.execute(
         select(Order)
-        .where(Order.order_code == order_code.strip(), Order.contact_phone == contact_phone.strip(), Order.is_active.is_(True))
+        .where(
+            Order.order_code == order_code.strip(),
+            Order.contact_phone == contact_phone.strip(),
+            Order.is_active.is_(True),
+        )
         .options(selectinload(Order.items))
     )
     order = result.scalar_one_or_none()

@@ -291,7 +291,8 @@ explicit approval for any non-test rollback. No production migration was perform
 Focused checks:
 ```bash
 DATABASE_URL="${CHECKOUT_TEST_DATABASE_URL:?Set a disposable PostgreSQL test URL}" .venv/bin/python -m pytest backend/tests -q
-.venv/bin/python -m ruff check backend
+.venv/bin/python -m ruff check backend --extend-exclude backend/alembic --line-length=120 --target-version=py39 --select=E,F,I,W,UP
+.venv/bin/python -m ruff format backend --exclude backend/alembic --line-length=120 --target-version=py39 --check
 cd frontend
 node src/components/order/checkoutRecovery.check.mjs
 node src/components/catalog/productPurchase.check.mjs
@@ -299,6 +300,13 @@ node src/components/catalog/catalogState.check.mjs
 node src/components/catalog/ProductCard.facts.check.mjs
 npm run build && npm run lint
 ```
+The canonical backend CI gate is `pre-commit run --all-files --show-diff-on-failure`
+using `.pre-commit-config.yaml`: Ruff 0.9.10 with `E,F,I,W,UP` and 120-column
+formatting, plus mypy 1.15.0. A plain `ruff check backend` does not cover that gate.
+The explicit `py39` target above preserves Ruff 0.9.10's default when using a newer
+installed Ruff. Checkout UUID annotations describe native `uuid.UUID` values,
+not SQLAlchemy column-type objects; public/admin response JSON schemas stay unchanged.
+
 Set `CHECKOUT_TEST_DATABASE_URL` to a separate local database named
 `armorify_checkout_test_<32 lowercase hex characters>`, with the already-installed
 `pgcrypto` extension enabled there. The test harness refuses `armorify_dev` and all

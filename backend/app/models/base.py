@@ -1,5 +1,6 @@
 # app/models/base.py
 from datetime import datetime
+from uuid import UUID as _UUID
 
 from sqlalchemy import Boolean, DateTime, func, text
 from sqlalchemy.dialects.postgresql import UUID
@@ -7,7 +8,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class BaseMixin:
-    id: Mapped[UUID] = mapped_column(
+    id: Mapped[_UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         server_default=text("gen_random_uuid()"),

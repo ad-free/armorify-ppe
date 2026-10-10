@@ -1,12 +1,10 @@
 """Public consumers use the migrated local PostgreSQL checkout fixture, not stale mocks."""
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from test_checkout import checkout_db as checkout_db, checkout_schema as checkout_schema
-
 from app.core.database import get_db
 from app.main import app
 from app.models.product import Product
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest.fixture
@@ -18,9 +16,7 @@ async def public_client(checkout_db):
     previous = dict(app.dependency_overrides)
     app.dependency_overrides[get_db] = database
     try:
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             yield client
     finally:
         app.dependency_overrides.clear()
@@ -62,16 +58,12 @@ async def test_health_reports_database_failure_without_internal_details(public_c
 
 
 @pytest.mark.anyio
-async def test_admin_status_update_cannot_overwrite_authoritative_total(
-    public_client, checkout_db
-):
+async def test_admin_status_update_cannot_overwrite_authoritative_total(public_client, checkout_db):
     from app.models.user import User, UserRole
 
     db = checkout_db
     await db.change(User, db.user_id, role=UserRole.ADMIN)
-    created = await public_client.post(
-        "/api/v1/orders/guest", json=await db.payload(), headers=db.auth()
-    )
+    created = await public_client.post("/api/v1/orders/guest", json=await db.payload(), headers=db.auth())
     assert created.status_code == 201, created.text
     order = created.json()
     attempted = await public_client.put(
@@ -80,8 +72,6 @@ async def test_admin_status_update_cannot_overwrite_authoritative_total(
         headers=db.auth(),
     )
     assert attempted.status_code == 422, attempted.text
-    fetched = await public_client.get(
-        f"/api/v1/orders/{order['id']}", headers=db.auth()
-    )
+    fetched = await public_client.get(f"/api/v1/orders/{order['id']}", headers=db.auth())
     assert fetched.json()["total_amount"] == order["total_amount"]
     assert fetched.json()["items"] == order["items"]

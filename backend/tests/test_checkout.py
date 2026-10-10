@@ -19,13 +19,6 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import Depends, FastAPI
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import func, select, text, update
-from sqlalchemy.engine import make_url
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
-
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.core.middleware import SecurityMiddleware
@@ -37,6 +30,12 @@ from app.models.product import Category, Product, ProductVariant
 from app.models.user import User
 from app.routers.protected.orders import router as protected_router
 from app.routers.public.orders import router as public_router
+from fastapi import Depends, FastAPI
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import func, select, text, update
+from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 pytestmark = pytest.mark.anyio
 SHIPPING = Decimal("25000.00")  # Explicit test value, not a business default.
@@ -45,13 +44,10 @@ SHIPPING = Decimal("25000.00")  # Explicit test value, not a business default.
 @pytest.fixture(scope="module")
 def checkout_schema():
     url = make_url(settings.database_url)
-    if (
-        url.host not in {"localhost", "127.0.0.1", "::1"}
-        or not re.fullmatch(r"armorify_checkout_test_[a-f0-9]{32}", url.database or "")
+    if url.host not in {"localhost", "127.0.0.1", "::1"} or not re.fullmatch(
+        r"armorify_checkout_test_[a-f0-9]{32}", url.database or ""
     ):
-        pytest.fail(
-            "Checkout tests require a disposable local armorify_checkout_test_<32hex> database"
-        )
+        pytest.fail("Checkout tests require a disposable local armorify_checkout_test_<32hex> database")
     url = url.set(drivername="postgresql+asyncpg")
     schema = "checkout_test_" + uuid4().hex
     assert re.fullmatch(r"checkout_test_[a-f0-9]{32}", schema)
@@ -63,19 +59,13 @@ def checkout_schema():
             async with engine.begin() as connection:
                 if action == "create":
                     installed = await connection.scalar(
-                        text(
-                            "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pgcrypto')"
-                        )
+                        text("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pgcrypto')")
                     )
                     if not installed:
-                        pytest.fail(
-                            "pgcrypto must already exist; tests will not install extensions"
-                        )
+                        pytest.fail("pgcrypto must already exist; tests will not install extensions")
                     await connection.execute(text(f'CREATE SCHEMA "{schema}"'))
                 else:
-                    await connection.execute(
-                        text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
-                    )
+                    await connection.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
         finally:
             await engine.dispose()
 
@@ -124,15 +114,11 @@ class CheckoutDB:
     def auth(self, other=False):
         return {
             "Authorization": "Bearer "
-            + create_access_token(
-                {"sub": str(self.other_user_id if other else self.user_id)}
-            )
+            + create_access_token({"sub": str(self.other_user_id if other else self.user_id)})
         }
 
     async def quote(self, items=None):
-        response = await self.client.post(
-            "/api/v1/orders/quote", json={"items": items or [self.line()]}
-        )
+        response = await self.client.post("/api/v1/orders/quote", json={"items": items or [self.line()]})
         assert response.status_code == 200, response.text
         return response.json()
 
@@ -168,9 +154,7 @@ class CheckoutDB:
 
     async def change(self, model, identity, **values):
         async with self.sessions.begin() as session:
-            await session.execute(
-                update(model).where(model.id == identity).values(**values)
-            )
+            await session.execute(update(model).where(model.id == identity).values(**values))
 
     async def race(self, payloads, *, path="/api/v1/orders/guest", headers=None):
         # Both requests must acquire separate real sessions before either can submit.
@@ -187,12 +171,7 @@ class CheckoutDB:
         self.barrier = rendezvous
         try:
             return await asyncio.wait_for(
-                asyncio.gather(
-                    *(
-                        self.client.post(path, json=payload, headers=headers)
-                        for payload in payloads
-                    )
-                ),
+                asyncio.gather(*(self.client.post(path, json=payload, headers=headers) for payload in payloads)),
                 timeout=30,
             )
         finally:
@@ -221,7 +200,8 @@ async def checkout_db(checkout_schema, monkeypatch):
                 (
                     await connection.execute(
                         text(
-                            "SELECT tablename FROM pg_tables WHERE schemaname = :schema AND tablename != 'alembic_version'"
+                            "SELECT tablename FROM pg_tables WHERE schemaname = :schema "
+                            "AND tablename != 'alembic_version'"
                         ),
                         {"schema": schema},
                     )
@@ -231,11 +211,7 @@ async def checkout_db(checkout_schema, monkeypatch):
             )
             assert tables and all(re.fullmatch(r"[a-z_]+", table) for table in tables)
             await connection.execute(
-                text(
-                    "TRUNCATE "
-                    + ", ".join(f'"{schema}"."{table}"' for table in tables)
-                    + " CASCADE"
-                )
+                text("TRUNCATE " + ", ".join(f'"{schema}"."{table}"' for table in tables) + " CASCADE")
             )
         ids = [uuid4() for _ in range(7)]
         category, product, other, variant_product, variant, user, other_user = ids
@@ -298,12 +274,8 @@ async def checkout_db(checkout_schema, monkeypatch):
         app = FastAPI()
         app.add_middleware(SecurityMiddleware)
         app.include_router(public_router, prefix="/api/v1")
-        app.include_router(
-            protected_router, prefix="/api/v1", dependencies=[Depends(get_current_user)]
-        )
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        app.include_router(protected_router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             db = CheckoutDB(
                 sessions,
                 product,
@@ -365,9 +337,7 @@ async def test_line_price_injection_is_rejected(checkout_db):
     db = checkout_db
     payload = await db.payload()
     payload["items"][0]["unit_price"] = 1
-    field_error(
-        await db.client.post("/api/v1/orders/guest", json=payload), 422, "unit_price"
-    )
+    field_error(await db.client.post("/api/v1/orders/guest", json=payload), 422, "unit_price")
     field_error(
         await db.client.post("/api/v1/orders/quote", json={"items": payload["items"]}),
         422,
@@ -457,16 +427,12 @@ async def test_idempotency_key_rejects_changed_payload_and_owner(checkout_db):
 @pytest.mark.parametrize("variant", [False, True])
 async def test_concurrent_buyers_cannot_oversell(checkout_db, variant):
     db = checkout_db
-    model, identity = (
-        (ProductVariant, db.variant_id) if variant else (Product, db.product_id)
-    )
+    model, identity = (ProductVariant, db.variant_id) if variant else (Product, db.product_id)
     await db.change(model, identity, stock=1)
     payload = await db.payload([db.line(variant=variant)])
     other = dict(payload, idempotency_key=str(uuid4()))
     responses = await db.race([payload, other])
-    assert sorted(response.status_code for response in responses) == [201, 409], [
-        r.text for r in responses
-    ]
+    assert sorted(response.status_code for response in responses) == [201, 409], [r.text for r in responses]
     field_error(next(r for r in responses if r.status_code == 409), 409, "quantity")
     assert await db.stock(variant=variant) == 0
     assert await db.order_count() == 1
@@ -476,9 +442,7 @@ async def test_concurrent_duplicate_submission_consumes_stock_once(checkout_db):
     db = checkout_db
     payload = await db.payload([db.line(10)])
     responses = await db.race([payload, copy.deepcopy(payload)])
-    assert all(r.status_code in {200, 201} for r in responses), [
-        r.text for r in responses
-    ]
+    assert all(r.status_code in {200, 201} for r in responses), [r.text for r in responses]
     assert responses[0].json()["id"] == responses[1].json()["id"]
     assert await db.stock() == 0
     assert await db.order_count() == 1
@@ -572,12 +536,8 @@ async def test_expired_promotion_rejects_old_quote_without_stock_change(checkout
     db = checkout_db
     sale_id = await add_promotion(db)
     payload = await db.payload([db.line(variant=True)])
-    await db.change(
-        FlashSale, sale_id, end_at=datetime.now(timezone.utc) - timedelta(seconds=1)
-    )
-    field_error(
-        await db.client.post("/api/v1/orders/guest", json=payload), 409, "pricing_token"
-    )
+    await db.change(FlashSale, sale_id, end_at=datetime.now(timezone.utc) - timedelta(seconds=1))
+    field_error(await db.client.post("/api/v1/orders/guest", json=payload), 409, "pricing_token")
     assert await db.stock(variant=True) == 10
     assert await db.order_count() == 0
 
@@ -594,10 +554,7 @@ async def test_partial_stock_failure_rolls_back_every_line(checkout_db):
     field_error(response, 409, "quantity")
     assert await db.stock() == 10
     async with db.sessions() as session:
-        assert (
-            await session.scalar(select(Product.stock).where(Product.id == db.other_id))
-            == 1
-        )
+        assert await session.scalar(select(Product.stock).where(Product.id == db.other_id)) == 1
         assert await session.scalar(select(func.count()).select_from(OrderItem)) == 0
     assert await db.order_count() == 0
     await db.change(Product, db.other_id, stock=10)
@@ -633,14 +590,10 @@ async def test_database_insert_failure_rolls_back_stock_and_idempotency(checkout
         assert await db.stock() == 10
         assert await db.order_count() == 0
         async with db.sessions() as session:
-            assert (
-                await session.scalar(select(func.count()).select_from(OrderItem)) == 0
-            )
+            assert await session.scalar(select(func.count()).select_from(OrderItem)) == 0
     finally:
         async with db.sessions.begin() as session:
-            await session.execute(
-                text("DROP TRIGGER checkout_test_reject_item ON order_items")
-            )
+            await session.execute(text("DROP TRIGGER checkout_test_reject_item ON order_items"))
             await session.execute(text("DROP FUNCTION checkout_test_reject_item()"))
     retry = await db.client.post("/api/v1/orders/guest", json=payload)
     assert retry.status_code == 201, retry.text
@@ -656,14 +609,10 @@ async def test_database_insert_failure_rolls_back_stock_and_idempotency(checkout
         ("/api/v1/orders/", True),
     ],
 )
-async def test_delivery_snapshots_and_guest_authenticated_parity(
-    checkout_db, path, authenticated
-):
+async def test_delivery_snapshots_and_guest_authenticated_parity(checkout_db, path, authenticated):
     db = checkout_db
     payload = await db.payload([db.line(2, variant=True)])
-    response = await db.client.post(
-        path, json=payload, headers=db.auth() if authenticated else None
-    )
+    response = await db.client.post(path, json=payload, headers=db.auth() if authenticated else None)
     assert response.status_code == 201, response.text
     order = response.json()
     for field in [
@@ -694,9 +643,7 @@ async def test_delivery_snapshots_and_guest_authenticated_parity(
     assert item["quantity"] == 2
     assert money(item["unit_price"]) == Decimal("120000")
     assert "product" not in item
-    await db.change(
-        Product, db.variant_product_id, name="Changed hidden name", is_active=False
-    )
+    await db.change(Product, db.variant_product_id, name="Changed hidden name", is_active=False)
     await db.change(
         ProductVariant,
         db.variant_id,
@@ -704,22 +651,14 @@ async def test_delivery_snapshots_and_guest_authenticated_parity(
         attributes={"material": "changed"},
         price_override=Decimal("1"),
     )
-    retry = await db.client.post(
-        path, json=payload, headers=db.auth() if authenticated else None
-    )
+    retry = await db.client.post(path, json=payload, headers=db.auth() if authenticated else None)
     assert retry.status_code in {200, 201}, retry.text
     assert retry.json() == order
     if authenticated:
-        fetched = await db.client.get(
-            f"/api/v1/orders/{order['id']}", headers=db.auth()
-        )
+        fetched = await db.client.get(f"/api/v1/orders/{order['id']}", headers=db.auth())
         assert fetched.status_code == 200, fetched.text
         assert fetched.json()["items"] == order["items"]
-        assert (
-            await db.client.get(
-                f"/api/v1/orders/{order['id']}", headers=db.auth(other=True)
-            )
-        ).status_code == 404
+        assert (await db.client.get(f"/api/v1/orders/{order['id']}", headers=db.auth(other=True))).status_code == 404
 
 
 async def test_authentication_and_immutable_item_routes(checkout_db):
@@ -757,17 +696,13 @@ async def test_authentication_and_immutable_item_routes(checkout_db):
     assert fetched.status_code == 200, fetched.text
     assert fetched.json()["items"] == order["items"]
     assert await db.stock() == 9
-    cancelled = await db.client.post(
-        f"/api/v1/orders/{order['id']}/cancel", headers=db.auth()
-    )
+    cancelled = await db.client.post(f"/api/v1/orders/{order['id']}/cancel", headers=db.auth())
     assert cancelled.status_code == 200, cancelled.text
     assert await db.stock() == 10
 
 
 @pytest.mark.parametrize("change", ["price", "shipping", "quantity"])
-async def test_stale_quote_is_field_specific_and_atomic(
-    checkout_db, monkeypatch, change
-):
+async def test_stale_quote_is_field_specific_and_atomic(checkout_db, monkeypatch, change):
     db = checkout_db
     payload = await db.payload()
     if change == "price":
@@ -776,16 +711,12 @@ async def test_stale_quote_is_field_specific_and_atomic(
         monkeypatch.setattr(settings, "checkout_shipping_fee", Decimal("30000"))
     else:
         payload["items"][0]["quantity"] = 2
-    field_error(
-        await db.client.post("/api/v1/orders/guest", json=payload), 409, "pricing_token"
-    )
+    field_error(await db.client.post("/api/v1/orders/guest", json=payload), 409, "pricing_token")
     assert await db.stock() == 10
     assert await db.order_count() == 0
 
 
-async def test_unconfigured_shipping_blocks_checkout_without_inventing_fee(
-    checkout_db, monkeypatch
-):
+async def test_unconfigured_shipping_blocks_checkout_without_inventing_fee(checkout_db, monkeypatch):
     db = checkout_db
     payload = await db.payload()
     monkeypatch.setattr(settings, "checkout_shipping_fee", None)
@@ -812,9 +743,7 @@ async def test_authenticated_idempotency_cannot_be_replayed_by_another_user(
     first = await db.client.post("/api/v1/orders/", json=payload, headers=db.auth())
     assert first.status_code == 201, first.text
     field_error(
-        await db.client.post(
-            "/api/v1/orders/", json=payload, headers=db.auth(other=True)
-        ),
+        await db.client.post("/api/v1/orders/", json=payload, headers=db.auth(other=True)),
         409,
         "idempotency_key",
     )
@@ -832,9 +761,7 @@ async def test_duplicate_lines_cannot_bypass_checkout_stock_validation(checkout_
     payload = await db.payload([db.line(3), db.line(3)])
     # Each line still fits independently, but the combined quantity no longer does.
     await db.change(Product, db.product_id, stock=5)
-    field_error(
-        await db.client.post("/api/v1/orders/guest", json=payload), 409, "quantity"
-    )
+    field_error(await db.client.post("/api/v1/orders/guest", json=payload), 409, "quantity")
     assert await db.stock() == 5
     assert await db.order_count() == 0
 
@@ -865,9 +792,7 @@ async def test_nonvariant_snapshot_has_no_fabricated_sku_or_dealer_data(checkout
         ("payment_method", "transfer"),
     ],
 )
-async def test_delivery_and_payment_validation_is_field_specific(
-    checkout_db, field, value
-):
+async def test_delivery_and_payment_validation_is_field_specific(checkout_db, field, value):
     db = checkout_db
     payload = await db.payload()
     payload[field] = value
@@ -900,9 +825,7 @@ async def test_earliest_expiring_active_promotion_is_authoritative(checkout_db):
         )
     quote = await db.quote([db.line(variant=True)])
     assert money(quote["items"][0]["unit_price"]) == Decimal("90000")
-    response = await db.client.post(
-        "/api/v1/orders/guest", json=await db.payload([db.line(variant=True)])
-    )
+    response = await db.client.post("/api/v1/orders/guest", json=await db.payload([db.line(variant=True)]))
     assert response.status_code == 201, response.text
     assert money(response.json()["items"][0]["unit_price"]) == Decimal("90000")
 
@@ -911,9 +834,7 @@ async def test_earliest_expiring_active_promotion_is_authoritative(checkout_db):
     "net,expected_shipping",
     [("499999.99", "30000"), ("500000", "0"), ("500000.01", "0")],
 )
-async def test_published_shipping_threshold_boundaries(
-    checkout_db, monkeypatch, net, expected_shipping
-):
+async def test_published_shipping_threshold_boundaries(checkout_db, monkeypatch, net, expected_shipping):
     db = checkout_db
     monkeypatch.setattr(settings, "checkout_shipping_fee", Decimal("30000"))
     monkeypatch.setattr(settings, "checkout_free_shipping_threshold", Decimal("500000"))
@@ -924,14 +845,10 @@ async def test_published_shipping_threshold_boundaries(
     response = await db.client.post("/api/v1/orders/guest", json=await db.payload())
     assert response.status_code == 201, response.text
     assert money(response.json()["shipping"]) == Decimal(expected_shipping)
-    assert money(response.json()["total_amount"]) == Decimal(net) + Decimal(
-        expected_shipping
-    )
+    assert money(response.json()["total_amount"]) == Decimal(net) + Decimal(expected_shipping)
 
 
-async def test_promotion_net_price_controls_free_shipping_eligibility(
-    checkout_db, monkeypatch
-):
+async def test_promotion_net_price_controls_free_shipping_eligibility(checkout_db, monkeypatch):
     db = checkout_db
     monkeypatch.setattr(settings, "checkout_shipping_fee", Decimal("30000"))
     monkeypatch.setattr(settings, "checkout_free_shipping_threshold", Decimal("500000"))
@@ -944,9 +861,7 @@ async def test_promotion_net_price_controls_free_shipping_eligibility(
     assert money(quote["discount"]) == Decimal("150000")
     assert money(quote["shipping"]) == Decimal("30000")
     assert money(quote["total"]) == Decimal("480000")
-    response = await db.client.post(
-        "/api/v1/orders/guest", json=await db.payload([db.line(variant=True)])
-    )
+    response = await db.client.post("/api/v1/orders/guest", json=await db.payload([db.line(variant=True)]))
     assert response.status_code == 201, response.text
     assert money(response.json()["shipping"]) == Decimal("30000")
     assert money(response.json()["total_amount"]) == Decimal("480000")

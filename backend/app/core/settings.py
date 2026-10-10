@@ -86,7 +86,9 @@ class Settings(BaseSettings):
             return None
         fee = Decimal(str(value))
         if not fee.is_finite() or fee < 0 or fee > Decimal("9999999999.99") or fee != fee.quantize(Decimal("0.01")):
-            raise ValueError("Checkout shipping settings must be finite nonnegative amounts with at most two decimal places")
+            raise ValueError(
+                "Checkout shipping settings must be finite nonnegative amounts with at most two decimal places"
+            )
         return fee
 
     @staticmethod

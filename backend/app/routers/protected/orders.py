@@ -5,8 +5,8 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.core.database import DbSession
 from app.core.checkout import cancel_checkout, create_checkout
+from app.core.database import DbSession
 from app.core.deps import CurrentUser
 from app.models.order import Order
 from app.schemas.order import (
@@ -35,7 +35,9 @@ async def create_order(payload: CheckoutCreate, current_user: CurrentUser, db: D
 
 @router.get("/{order_id}", response_model=OrderRead)
 async def get_order(order_id: UUID, current_user: CurrentUser, db: DbSession) -> Order:
-    order = (await db.execute(select(Order).where(Order.id == order_id).options(selectinload(Order.items)))).scalar_one_or_none()
+    order = (
+        await db.execute(select(Order).where(Order.id == order_id).options(selectinload(Order.items)))
+    ).scalar_one_or_none()
     if order is None or order.user_id != current_user.id or not order.is_active:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order

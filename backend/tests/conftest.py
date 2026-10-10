@@ -6,6 +6,10 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    config.pluginmanager.import_plugin("test_checkout")
+
+
 @pytest.fixture
 def anyio_backend() -> str:
     return "asyncio"

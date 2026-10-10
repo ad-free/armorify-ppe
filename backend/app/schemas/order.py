@@ -1,7 +1,7 @@
 # app/schemas/order.py
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Literal
+from typing import Annotated, Generic, Literal, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -17,7 +17,8 @@ class CheckoutInput(BaseModel):
 class CheckoutItem(CheckoutInput):
     product_id: UUID
     variant_id: UUID | None = None
-    quantity: Annotated[int, Field(strict=True, ge=1, le=2_147_483_647)]  # PostgreSQL INTEGER; stock supplies the sales limit.
+    # PostgreSQL INTEGER; stock supplies the sales limit.
+    quantity: Annotated[int, Field(strict=True, ge=1, le=2_147_483_647)]
 
 
 class CheckoutQuoteRequest(CheckoutInput):
@@ -45,6 +46,7 @@ class CheckoutCreate(CheckoutQuoteRequest):
             return None
         # No dependency required: checkout accepts a simple mailbox, not display names.
         import re
+
         if not re.fullmatch(r"[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+", value):
             raise ValueError("Địa chỉ email không hợp lệ")
         return value
@@ -66,6 +68,10 @@ class CheckoutQuoteItem(BaseModel):
     issue: str | None = None
 
 
+def _default_payment_methods() -> list[Literal["cod"]]:
+    return ["cod"]
+
+
 class CheckoutQuote(BaseModel):
     items: list[CheckoutQuoteItem]
     subtotal: Decimal
@@ -75,7 +81,7 @@ class CheckoutQuote(BaseModel):
     pricing_token: str | None
     can_checkout: bool
     shipping_method: Literal["standard"] = "standard"
-    payment_methods: list[Literal["cod"]] = Field(default_factory=lambda: ["cod"])
+    payment_methods: list[Literal["cod"]] = Field(default_factory=_default_payment_methods)
     shipping_message: str | None = None
 
 
@@ -86,7 +92,6 @@ class OrderBase(BaseModel):
     contact_phone: str = Field(..., json_schema_extra={"x-ui-order": 3})
     total_amount: Decimal = Field(..., json_schema_extra={"x-ui-order": 4})
     status: OrderStatus | None = Field(OrderStatus.PENDING, json_schema_extra={"x-ui-order": 5})
-
 
 
 class OrderUpdate(CheckoutInput):
@@ -100,6 +105,7 @@ class OrderItemBase(BaseModel):
     quantity: int
     unit_price: Decimal
 
+
 class OrderItemRead(OrderItemBase):
     id: UUID
     is_active: bool
@@ -111,7 +117,10 @@ class OrderItemRead(OrderItemBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class OrderRead(OrderBase):
+OrderItemT = TypeVar("OrderItemT", bound=OrderItemRead)
+
+
+class _OrderRead(OrderBase, Generic[OrderItemT]):
     id: UUID
     is_active: bool
     created_at: datetime
@@ -129,13 +138,17 @@ class OrderRead(OrderBase):
     subtotal: Decimal | None = None
     discount: Decimal | None = None
     shipping: Decimal | None = None
-    items: list[OrderItemRead] = Field(default_factory=list)
+    items: list[OrderItemT] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
+
+
+class OrderRead(_OrderRead[OrderItemRead]):
+    pass
 
 
 class AdminOrderItemRead(OrderItemRead):
     product: ProductRead | None = None
 
 
-class AdminOrderRead(OrderRead):
-    items: list[AdminOrderItemRead] = Field(default_factory=list)
+class AdminOrderRead(_OrderRead[AdminOrderItemRead]):
+    pass
