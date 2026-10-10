@@ -182,12 +182,56 @@ node src/components/catalog/ProductCard.facts.check.mjs
 npm run build && npm run lint
 ```
 
-Product-detail phase remains: migrate the gallery/specification/variant/review presentation
-to shared tokens; clarify variant-specific availability, price units, standards and quote
-entry points using actual product data. Product-detail, checkout and admin business logic
-are unchanged by Phase 2. Authentication, checkout, dashboard cards/charts, and specialized
-product image/variant editors still retain legacy styling outside this discovery scope.
-The removed admin search/sample-notification controls need real integrations before returning.
+### Phase 3 product details
+
+Product details reuse the shared storefront tokens and controls in a desktop two-column
+layout and a mobile single column. A native selector lists complete supplied variants
+(size, color, attributes and SKU), starts without a selection, and disables unavailable
+combinations. Variant requests must succeed before purchase is enabled, including for
+products with no variants. Selected stock, price and SKU update together; cart lines
+carry the selected `variant_id` and `unit_price`. Quantity checks include units already
+in the local cart and reject incomplete, fractional and over-stock additions.
+
+Percentage campaigns discount the selected variant override rather than the API's
+base-product `flash_sale_price`; zero-percentage fixed-price campaigns use the supplied
+sale price. Expired promotions stop applying and trigger a product refresh. The existing
+API cannot distinguish an explicit fixed sale price with a nonzero percentage from a
+computed base-product sale price; existing percentage-first behavior is retained.
+
+Gallery controls support keyboard arrows, labelled thumbnails, previous/next buttons
+and horizontal touch swipe. Missing/broken images, specifications, standards, descriptions,
+reviews and related products have explicit states. Ratings require actual review results;
+review errors never display a stale summary. Specifications preserve supplied scalar,
+list and structured values. Related products are not presented as verified compatibility.
+
+Shipping and returns link to existing policy pages. Technical support and bulk quote
+actions open the existing contact email with product/selection context; they do not claim
+to submit a quote or order. The compact mobile action returns users to purchase controls,
+is hidden while those controls or the footer are visible, and reserves bottom spacing.
+Floating support widgets are hidden on mobile product routes to avoid covering purchases.
+
+Focused checks, from `frontend/`:
+```bash
+node src/components/catalog/productPurchase.check.mjs
+node src/components/catalog/catalogState.check.mjs
+node src/components/catalog/ProductCard.facts.check.mjs
+npm run build && npm run lint
+```
+
+Phase 3 browser acceptance exercised real components with intercepted contract-shaped
+responses because the local API was unavailable. Verified selection/cart agreement,
+variant-free purchase, stock/quantity boundaries, gallery keyboard/touch, review submission
+and pagination, lifecycle/empty states, and no horizontal overflow at 360/768/1024/1440px.
+This is not evidence of live database or order-creation correctness.
+
+**Cart and checkout phase remaining:** resolve and display each line's variant SKU and
+attributes; revalidate persisted cart quantities, availability and current prices;
+implement authoritative server-side product/variant ownership, active status, pricing
+and stock checks with atomic stock handling. The current guest order endpoint trusts
+client-supplied prices and quantities. Clarify fixed-versus-percentage campaign semantics,
+then align all commerce callers. Checkout policy claims and styling remain outside Phase 3.
+Authentication, dashboard cards/charts, and specialized product editors still retain
+legacy styling. Removed admin search/sample-notification controls need real integrations.
 
 
 ---
