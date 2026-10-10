@@ -15,8 +15,8 @@ NBE Hoang Duy is a specialized e-commerce platform for Personal Protective Equip
 ## 🚀 Key Features
 
 ### 🎨 Frontend & User Experience
-- **Content-rich storefront**: Homepage includes dynamic hero banners, trust highlights, and floor-based category showcases.
-- **Product discovery flow**: Public catalog supports category browsing, search, filtering, sorting, and pagination.
+- **Discovery-first storefront**: One value proposition with product and email-quote actions, followed by categories, featured products, brands, and API-backed active campaigns.
+- **Product discovery flow**: Category, brand, and search results share URL-backed filters, sorting, result counts, removable filter chips, and pagination.
 - **Detailed product pages**: Product detail experience includes image galleries, variants, related products, and review sections.
 - **Commerce-ready checkout**: Cart state is persisted with Zustand and users can complete guest checkout.
 - **Order self-service**: Built-in order tracking form lets customers check order status by code and phone number.
@@ -147,9 +147,39 @@ Verify from `frontend/` with `npm run build && npm run lint`.
 The Node TypeScript config emits declarations only, so builds do not leave a redundant
 `vite.config.js` beside the source configuration or introduce generated-file lint errors.
 
-Phase 2 should migrate page-specific storefront heroes, filters, footer, authentication
-and checkout screens, dashboard cards/charts, and specialized product image/variant editors.
-These still contain legacy uppercase labels, oversized radii, shadows, or decorative motion.
+### Phase 2 product discovery
+
+`CatalogDiscovery.tsx` is shared by category, brand, and search routes. Desktop filters
+use labeled native fields; mobile filters use a native modal dialog with focus containment,
+Escape dismissal, scroll locking, and trigger focus restoration. Search terms, filter values,
+sort, page size, and page remain in the URL. Changing filters resets the page; clearing filters
+preserves search and sort. Invalid price ranges show an actionable error instead of sending
+an invalid request. Out-of-range pages return to the last available page.
+
+Discovery surfaces distinguish loading, request errors with retry, empty catalogs, missing
+categories/brands, and searches without results. Product cards show supplied scalar PPE
+specifications, standards and price units when present, explicit unknowns when absent,
+stock-backed availability, and review summaries only when reviews exist. Out-of-stock
+cards cannot add items to the cart. Featured products are labeled as curated—not as
+best sellers, because no sales/popularity data is exposed.
+
+The footer groups products, policies, contact, and business purchasing. Quote actions open
+an email to the existing contact address; they do not submit through the unconnected
+contact-page form. The catalog API's documented “No active flash sale found” response
+means no campaign is displayed; other campaign failures remain visible with retry.
+
+Focused regression checks, from `frontend/`:
+```bash
+node src/components/catalog/catalogState.check.mjs
+node src/components/catalog/ProductCard.facts.check.mjs
+npm run build && npm run lint
+```
+
+Product-detail phase remains: migrate the gallery/specification/variant/review presentation
+to shared tokens; clarify variant-specific availability, price units, standards and quote
+entry points using actual product data. Product-detail, checkout and admin business logic
+are unchanged by Phase 2. Authentication, checkout, dashboard cards/charts, and specialized
+product image/variant editors still retain legacy styling outside this discovery scope.
 The removed admin search/sample-notification controls need real integrations before returning.
 
 

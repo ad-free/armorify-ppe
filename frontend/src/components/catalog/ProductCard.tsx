@@ -13,6 +13,28 @@ import { useAuthStore } from '@/store/authStore';
 import { formatCurrency } from '@/lib/currency';
 import { getMediaUrl } from '@/lib/api';
 
+function getCardFacts(raw: ProductRead['specifications']) {
+  const entries: [unknown, unknown][] = Array.isArray(raw)
+    ? raw.flatMap((row) => row && typeof row === 'object' && 'name' in row && 'value' in row
+      ? [[row.name, row.value] as [unknown, unknown]] : [])
+    : raw && typeof raw === 'object' ? Object.entries(raw) : [];
+  const rows = entries.flatMap(([name, value]) => {
+    if (typeof name !== 'string' || !name.trim()) return [];
+    if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') return [];
+    if (typeof value === 'number' && !Number.isFinite(value)) return [];
+    if (!String(value).trim()) return [];
+    const label = name.trim().replace(/_/g, ' ');
+    const key = label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+    return [{ label, value: String(value).trim(), key }];
+  });
+  const unitKeys = /^(don vi|don vi tinh|unit|price unit|sales unit|unit of measure)$/;
+  const standardKeys = /^(tieu chuan|chung nhan|standard|standards|certification|certifications)$/;
+  const unit = rows.find((row) => unitKeys.test(row.key))?.value;
+  const standards = rows.filter((row) => standardKeys.test(row.key));
+  const details = rows.filter((row) => !unitKeys.test(row.key) && !standardKeys.test(row.key));
+  return { unit, standards, details: details.slice(0, 2) };
+}
+
 interface ProductCardProps {
   product: ProductRead;
 }
@@ -23,6 +45,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { user } = useAuthStore();
   const { toggleItem, isInWishlist } = useWishlistStore();
   const isFavorite = isInWishlist(product.id);
+  const inStock = product.stock > 0;
+  const { unit, standards, details } = getCardFacts(product.specifications);
 
   const fmt = (val: number) => formatCurrency(val, { locale: i18n.language === 'vi' ? 'vi-VN' : 'en-US' });
 
@@ -81,20 +105,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Brand & Category */}
         <div className="flex flex-col gap-2 mb-3">
           {product.brand ? (
-            <span className="text-caption">
+            <Link
+              to={`/brand/${product.brand.slug}`}
+              aria-label={`Thương hiệu: ${product.brand.name}`}
+              className="text-caption inline-flex min-h-11 items-center break-words hover:text-primary"
+            >
               {product.brand.name}
-            </span>
+            </Link>
           ) : (
             <span className="text-caption">Sản phẩm</span>
           )}
 
-          <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-            <StarRating value={Number(product.rating_avg) || 0} readOnly size="xs" />
-            <span className="font-semibold">{Number(product.rating_avg) > 0 ? Number(product.rating_avg).toFixed(1) : '0.0'}</span>
-            <span>
-              ({product.rating_count || 0})
-            </span>
-          </div>
+          {product.rating_count > 0 && (
+            <div
+              className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground"
+              aria-label={`${Number(product.rating_avg).toFixed(1)} trên 5, ${product.rating_count} đánh giá`}
+            >
+              <StarRating value={Number(product.rating_avg) || 0} readOnly size="xs" />
+              <span className="font-semibold">{Number(product.rating_avg).toFixed(1)}</span>
+              <span>({product.rating_count})</span>
+            </div>
+          )}
         </div>
 
         {/* Title */}
@@ -103,6 +134,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {product.name}
           </h3>
         </Link>
+
+        <dl className="mb-3 space-y-2 break-words text-xs">
+          {standards.length === 0 && (
+            <div className="text-muted-foreground">
+              <dt className="sr-only">Tiêu chuẩn</dt>
+              <dd>Tiêu chuẩn chưa cung cấp</dd>
+            </div>
+          )}
+          {[...standards, ...details].map((fact, index) => (
+            <div key={`${fact.label}-${index}`}>
+              <dt className="text-muted-foreground">{fact.label}</dt>
+              <dd className="font-medium text-foreground">{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
 
         {/* Pricing Stack */}
         <div className="flex flex-col gap-2 mt-auto">
@@ -117,6 +163,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </span>
             )}
           </div>
+          <p className="break-words text-xs text-muted-foreground">
+            {unit ? `Giá / ${unit}` : 'Đơn vị chưa cung cấp'}
+          </p>
 
           {/* Dealer price */}
           {product.dealer_price && (
@@ -126,23 +175,29 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </div>
           )}
         </div>
+        <p className={`mt-3 text-xs font-medium ${inStock ? 'text-success' : 'text-muted-foreground'}`}>
+          {inStock ? `Còn hàng (${product.stock})` : 'Hết hàng'}
+        </p>
 
         {/* Action Button */}
         <div className="mt-4 pt-3 border-t border-border">
           <Button
+            disabled={!inStock}
+            aria-label={`${inStock ? 'Thêm vào giỏ' : 'Hết hàng'}: ${product.name}`}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              if (!inStock) return;
               addItem(product, 1);
               authToast.success(
                 'Thêm thành công',
                 `Đã thêm ${product.name} vào giỏ hàng.`
               );
             }}
-            className="w-full px-2"
+            className="w-full whitespace-normal px-2 text-xs sm:text-sm"
           >
             <ShoppingCart size={16} aria-hidden="true" />
-            Thêm vào giỏ
+            {inStock ? 'Thêm vào giỏ' : 'Hết hàng'}
           </Button>
         </div>
       </div>
