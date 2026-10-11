@@ -3,8 +3,6 @@ import {
   ShoppingBag,
   TrendingUp,
   AlertCircle,
-  ArrowUpRight,
-  ArrowDownRight,
   Users,
   Calendar,
   CreditCard,
@@ -23,6 +21,7 @@ import {
 } from 'recharts';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
+import { orderStatusLabel } from '@/lib/orderStatus';
 import { motion } from 'framer-motion';
 
 interface CustomTooltipProps {
@@ -37,7 +36,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
       <div className="bg-white/90 backdrop-blur-md border border-gray-100 p-4 rounded-2xl shadow-xl">
         <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
         <p className="text-lg font-black text-gray-900">
-          {(payload[0].value || 0).toLocaleString()}đ
+          {Number(payload[0].value || 0).toLocaleString('vi-VN')}đ
         </p>
         <p className="text-xs font-bold text-primary mt-1">
           {payload[1]?.value} Đơn hàng
@@ -62,14 +61,12 @@ const Dashboard: React.FC = () => {
     const s = dashboard.stats;
     return [
       {
-        label: 'Tổng Doanh Thu',
-        value: fmtMoney(s.total_revenue),
-        subValue: (s.total_revenue || 0).toLocaleString() + 'đ',
+        label: 'Doanh Thu Đã Thu',
+        value: fmtMoney(Number(s.total_revenue)),
+        subValue: Number(s.total_revenue || 0).toLocaleString('vi-VN') + 'đ',
         icon: TrendingUp,
         color: 'text-emerald-500',
         bg: 'bg-emerald-50',
-        trend: `+${s.revenue_growth || 0}%`,
-        isUp: (s.revenue_growth || 0) >= 0
       },
       {
         label: 'Đơn Hàng',
@@ -78,8 +75,6 @@ const Dashboard: React.FC = () => {
         icon: ShoppingBag,
         color: 'text-blue-500',
         bg: 'bg-blue-50',
-        trend: `+${s.order_growth || 0}%`,
-        isUp: (s.order_growth || 0) >= 0
       },
       {
         label: 'Khách Hàng',
@@ -88,8 +83,6 @@ const Dashboard: React.FC = () => {
         icon: Users,
         color: 'text-purple-500',
         bg: 'bg-purple-50',
-        trend: '+2.1%',
-        isUp: true
       },
       {
         label: 'Sắp Hết Hàng',
@@ -98,8 +91,6 @@ const Dashboard: React.FC = () => {
         icon: AlertCircle,
         color: 'text-rose-500',
         bg: 'bg-rose-50',
-        trend: s.low_stock_count > 0 ? 'Cần nhập' : 'Ổn định',
-        isUp: s.low_stock_count === 0
       },
     ];
   }, [dashboard]);
@@ -146,10 +137,11 @@ const Dashboard: React.FC = () => {
                 <div className={`${stat.bg} ${stat.color} w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
                   <Icon size={28} strokeWidth={2.5} />
                 </div>
-                <div className={`flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-full ${stat.isUp ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                  {stat.isUp ? <ArrowUpRight size={14} strokeWidth={3} /> : <ArrowDownRight size={14} strokeWidth={3} />}
-                  {stat.trend}
-                </div>
+                {isLowStock && (
+                  <span className={`text-xs font-black px-3 py-1.5 rounded-full ${dashboard?.stats.low_stock_count ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                    {dashboard?.stats.low_stock_count ? 'Cần nhập' : 'Ổn định'}
+                  </span>
+                )}
               </div>
               <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">{stat.label}</h3>
               <p className="text-3xl font-black text-gray-900 tracking-tight">{stat.value}</p>
@@ -180,19 +172,19 @@ const Dashboard: React.FC = () => {
           <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-center">
             <div>
               <h3 className="font-black text-gray-900 text-lg">Phân Tích Doanh Thu</h3>
-              <p className="text-xs font-bold text-gray-400 mt-0.5 uppercase tracking-tighter">Biểu đồ 30 ngày gần nhất</p>
+              <p className="text-xs font-bold text-gray-400 mt-0.5">Đơn đang hoạt động, trạng thái đơn và giao hàng đều đã giao, đã thanh toán • Theo ngày tạo đơn, 30 ngày gần nhất</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
                 <Calendar size={14} className="text-gray-400" />
-                <span className="text-[11px] font-black text-gray-600">THÁNG NÀY</span>
+                <span className="text-[11px] font-black text-gray-600">30 NGÀY</span>
               </div>
             </div>
           </div>
           <div className="p-8 h-[450px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={dashboard?.revenue_chart || []}
+                data={(dashboard?.revenue_chart || []).map((point) => ({ ...point, revenue: Number(point.revenue) }))}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
                 <defs>
@@ -244,7 +236,7 @@ const Dashboard: React.FC = () => {
         >
           <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-center bg-white sticky top-0 z-10">
             <h3 className="font-black text-gray-900 text-lg">Đơn Hàng Mới</h3>
-            <Link to="/admin/manage/order" className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
+            <Link to="/admin/orders" aria-label="Xem tất cả đơn hàng" className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
               <ChevronRight size={20} className="text-gray-400" />
             </Link>
           </div>
@@ -258,7 +250,7 @@ const Dashboard: React.FC = () => {
               </div>
             ) : (
               dashboard.recent_orders.map((order) => (
-                <div key={order.id} className="px-8 py-5 border-b border-gray-50 hover:bg-gray-50/50 transition-colors flex items-center justify-between group cursor-pointer">
+                <Link key={order.id} to={`/admin/orders/${order.id}`} className="px-8 py-5 border-b border-gray-50 hover:bg-gray-50/50 transition-colors flex items-center justify-between group">
                   <div className="flex gap-4 items-center min-w-0">
                     <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 border border-gray-100 group-hover:bg-primary/10 group-hover:text-primary group-hover:border-primary/20 transition-all flex-shrink-0">
                       <CreditCard size={20} />
@@ -274,19 +266,19 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="text-right flex-shrink-0 ml-4">
                     <p className="text-[14px] font-black text-gray-900">{Number(order.total_amount).toLocaleString('vi-VN')}đ</p>
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg mt-1 inline-block ${order.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg mt-1 inline-block ${order.status === 'delivered' ? 'bg-emerald-50 text-emerald-600' :
                       order.status === 'cancelled' ? 'bg-rose-50 text-rose-600' :
                         'bg-amber-50 text-amber-500'
                       }`}>
-                      {order.status}
+                      {orderStatusLabel(order.status)}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>
           <div className="p-6 bg-gray-50/50 border-t border-gray-50">
-            <Link to="/admin/manage/order" className="w-full flex items-center justify-center py-4 bg-white border border-gray-200 rounded-2xl text-[11px] font-black text-gray-600 uppercase tracking-widest hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm">
+            <Link to="/admin/orders" className="w-full flex items-center justify-center py-4 bg-white border border-gray-200 rounded-2xl text-[11px] font-black text-gray-600 uppercase tracking-widest hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm">
               Quản Lý Đơn Hàng
             </Link>
           </div>

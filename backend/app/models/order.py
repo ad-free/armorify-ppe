@@ -1,10 +1,11 @@
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum as PyEnum
 from uuid import UUID as _UUID
 
 from app.models.base import Base, BaseMixin
 from app.models.product import Product
-from sqlalchemy import Enum, ForeignKey, Index, Integer, Numeric, String, text
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, Numeric, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -46,6 +47,11 @@ class Order(BaseMixin, Base):
     shipping: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     idempotency_key: Mapped[_UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     checkout_payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    carrier_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    tracking_number: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    shipped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
     status: Mapped[OrderStatus] = mapped_column(
         Enum(
             OrderStatus,
@@ -57,12 +63,16 @@ class Order(BaseMixin, Base):
         server_default=text("'pending'"),
     )
     items: Mapped[list["OrderItem"]] = relationship(back_populates="order")
+    events: Mapped[list["OrderEvent"]] = relationship(
+        back_populates="order", order_by="(OrderEvent.created_at, OrderEvent.id)"
+    )
 
     __table_args__ = (
         Index("ix_orders_user_id", "user_id"),
         Index("ix_orders_order_code", "order_code", unique=True),
         Index("ix_orders_contact_phone", "contact_phone"),
         Index("ix_orders_idempotency_key", "idempotency_key", unique=True),
+        CheckConstraint("version >= 1", name="ck_orders_version_positive"),
     )
 
 
@@ -96,3 +106,27 @@ class OrderItem(BaseMixin, Base):
         Index("ix_order_items_order_id", "order_id"),
         Index("ix_order_items_product_id", "product_id"),
     )
+
+
+class OrderEvent(Base):
+    """Internal append-only audit evidence, not a customer-facing order snapshot."""
+
+    __tablename__ = "order_events"
+
+    id: Mapped[_UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    order_id: Mapped[_UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("orders.id", ondelete="RESTRICT"), nullable=False
+    )
+    actor_id: Mapped[_UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    previous_state: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    new_state: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    event_metadata: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.clock_timestamp()
+    )
+    order: Mapped[Order] = relationship(back_populates="events")
+
+    __table_args__ = (Index("ix_order_events_order_created", "order_id", "created_at"),)

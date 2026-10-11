@@ -7,6 +7,8 @@ const labels: Record<string, string> = {
   unpaid: 'Chưa thanh toán',
   paid: 'Đã thanh toán',
   unfulfilled: 'Chưa hoàn tất giao hàng',
+  processing: 'Đang chuẩn bị hàng',
+  unknown: 'Chưa xác định',
 };
 
 export function orderStatusLabel(status: string | null | undefined): string {

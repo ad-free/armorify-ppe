@@ -113,6 +113,11 @@ The project maintains strict code quality standards through automated tools:
 - **Ruff**: Ultra-fast Python Linter and Formatter.
 - **mypy**: Static type checking for robust data integrity.
 
+GitHub CI runs when a pull request is opened or reopened, and whenever new commits
+are pushed to its branch (`synchronize`). Branch pushes without a pull request do
+not trigger CI. Pull requests targeting `release/*` remain excluded. Backend and
+frontend checks retain their changed-path filters; CI does not publish releases.
+
 ### Phase 1 UI foundation
 
 Storefront and admin share tokens in `frontend/src/index.css`, exposed through
@@ -257,6 +262,8 @@ states become `cancelled` in the same transaction. Repeated/concurrent cancellat
 returns the cancelled order without another stock increment. Unknown historical
 reservations, paid orders and progressed fulfillment require admin reconciliation.
 Admin cancellation uses the same path, and cancelled orders cannot be reopened.
+Cancellation requires a customer or admin audit actor; missing actor IDs are rejected
+before stock or state writes.
 Purchased item mutation routes remain removed.
 
 Standard retail shipping implements the published policy: **30,000 VND below
@@ -352,9 +359,74 @@ were zero at inspection. No rollback or further database changes were attempted.
 Treat this schema revision change as an environmental risk, not proof that all local
 data was untouched. Downgrading an in-use schema would discard the new checkout data.
 
-**Admin order-management phase remaining:** payment verification and fulfillment
-transitions, shipment/tracking data, paid-order refunds and historical reservation
-reconciliation, verified B2B contracts, unknown-state presentation, and safe audited adjustments.
+### Phase 5 professional admin orders
+
+`/admin/orders` and `/admin/orders/:orderId` replace the generic order editor.
+`/admin/manage/order` redirects to the list while retaining query parameters.
+Search, order/payment/fulfillment/date filters, sorting and pagination live in the URL;
+detail/back navigation retains them. Details use purchased item and delivery snapshots,
+never current catalog or customer profile values. Unknown historical data stays unknown.
+
+Admin-only APIs:
+- `GET /api/v1/admin/orders`: `{items,total,page,page_size}`, default newest first;
+  search matches code/name/phone literally. Filters include unknown (NULL) payment and
+  fulfillment; dates are inclusive UTC days. Sort fields are `created_at`, `order_code`
+  and `total_amount`, with `asc`/`desc` direction and stable UUID tie-breaking.
+- `GET /api/v1/admin/orders/{id}`: saved snapshots/totals, shipment fields, `version`,
+  allowed actions with disabled reasons, and chronological internal events.
+- `POST /api/v1/admin/orders/{id}/actions`: strict `action` and `expected_version`;
+  stale versions and ineligible transitions return field-specific `409` errors.
+  The old unrestricted `PUT` and status `PATCH` endpoints are removed.
+
+The workflow is `confirm` (pending → confirmed), `process` (unfulfilled → processing),
+`ship` (confirmed/processing → shipped/shipped), and `deliver` (shipped/shipped →
+delivered/delivered). COD is the only supported payment method. `pay` records
+unpaid → paid only when both order and fulfillment are delivered; delivery and
+payment remain separate audited actions and do not claim a gateway charge.
+`cancel` accepts only pending/confirmed, unpaid, unfulfilled
+reservations and reuses Phase 4 restock exactly once. State actions require complete,
+internally consistent Phase 4 snapshots; historical orders remain readable but fail
+closed. Every action locks the order, checks its version and atomically appends an
+actor/state/timestamp event in the same transaction.
+
+`ship`/`tracking` accept optional carrier (120 characters) and tracking number
+(160 characters); explicit null clears a shipment field. Tracking edits require
+matching shipped/delivered order and fulfillment states. `note` appends an internal
+note (1–2000 normalized Unicode characters), including for historical/cancelled
+orders. Notes normalize CRLF to LF and permit line feeds/tabs; blank input,
+NUL, bidi controls and other unsafe control/format characters are rejected.
+Shipment fields remain single-line. Notes never overwrite customer delivery notes.
+Shipment events save previous/new carrier, tracking number, shipped timestamp and
+delivered timestamp directly in immutable event states. The timeline displays those
+changes, including removals; older events without that evidence remain unknown.
+Internal shipment history and notes never appear in customer/public responses. No carrier links,
+integrations, refunds, or payment gateways are implied. State changes require a UI
+confirmation; conflicts require explicit reload/review rather than automatic replay.
+
+Migration `e5b72c19a406` follows `c4a91f027b63`: nullable shipment data/timestamps,
+positive version counter, and `order_events` with an UPDATE/DELETE rejection trigger.
+No historical shipment backfill. Apply it before the new API; normal DDL locks apply.
+Downgrade removes shipment/audit/version data, so a non-test rollback needs a backup
+and explicit approval. A privileged database owner can still alter/truncate audit
+tables; append-only protection is not protection against database administrators.
+
+Dashboard realized revenue requires active orders with order status `delivered`,
+fulfillment status `delivered` and payment status `paid`. The total and chart share
+that predicate, excluding inconsistent or prematurely paid orders. The chart groups
+qualifying orders by creation date, not payment date. Unsupported growth trends are
+omitted; recent orders link to the dedicated detail.
+
+Verification uses only the Phase 4 guarded disposable PostgreSQL database naming
+contract above. New backend checks are `test_admin_orders.py` and `test_dashboard.py`;
+run the complete suite and existing Ruff gates, plus all existing frontend checks and:
+```bash
+cd frontend
+node src/pages/admin/orderWorkflow.check.mjs
+npm run build && npm run lint
+```
+
+Paid-order refunds, historical reservation reconciliation and verified B2B contracts
+remain outside this phase. They require explicit business rules and real integrations.
 
 Authentication, dashboard cards/charts, and specialized product editors still retain
 legacy styling. Removed admin search/sample-notification controls need real integrations.

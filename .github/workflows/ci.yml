@@ -1,15 +1,13 @@
-name: CI & Deploy
+name: CI
 
 on:
-  push:
-    branches-ignore: [release/*]
   pull_request:
+    types: [opened, synchronize, reopened]
     branches-ignore: [release/*]
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
+  pull-requests: read
 
 jobs:
   filter:
@@ -87,67 +85,3 @@ jobs:
 
       - name: Run linting
         run: npm run lint
-
-  release-note:
-    name: Create Release Note
-    needs:
-      - filter
-    if: always() && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0                # ← REQUIRED: fetch full git history
-
-      - name: Generate release notes
-        id: notes
-        run: |
-          # Get the previous tag (if none, use first commit)
-          PREV_TAG=$(git tag --sort=-creatordate | sed -n '2p')
-          if [ -z "$PREV_TAG" ]; then
-            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
-          fi
-
-          # Collect commits since last release
-          COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
-
-          # Categorize by conventional commit prefix
-          FEATURES=$(echo "$COMMITS"     | grep -E "^\- feat"     || echo "")
-          FIXES=$(echo "$COMMITS"        | grep -E "^\- fix"      || echo "")
-          CHORES=$(echo "$COMMITS"       | grep -E "^\- chore"    || echo "")
-          OTHERS=$(echo "$COMMITS"       | grep -vE "^\- (feat|fix|chore)" || echo "")
-
-          # Build the body
-          BODY=""
-
-          if [ -n "$FEATURES" ]; then
-            BODY="${BODY}### ✨ New Features\n${FEATURES}\n\n"
-          fi
-          if [ -n "$FIXES" ]; then
-            BODY="${BODY}### 🐛 Bug Fixes\n${FIXES}\n\n"
-          fi
-          if [ -n "$CHORES" ]; then
-            BODY="${BODY}### 🔧 Chores\n${CHORES}\n\n"
-          fi
-          if [ -n "$OTHERS" ]; then
-            BODY="${BODY}### 📦 Other Changes\n${OTHERS}\n\n"
-          fi
-
-          # Release summary
-          BODY="${BODY}---\n### 🚀 Release Info\n"
-          BODY="${BODY}\n**Commit:** ${{ github.sha }}\n"
-          BODY="${BODY}**Triggered by:** ${{ github.actor }}\n"
-
-          # Save to file to avoid quoting issues
-          printf "$BODY" > release_notes.md
-          cat release_notes.md
-
-      - name: Create release note
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: release-${{ github.run_number }}
-          name: Release ${{ github.run_number }} — ${{ github.ref_name }}
-          body_path: release_notes.md        # ← use file instead of inline body
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

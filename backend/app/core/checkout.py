@@ -284,9 +284,22 @@ async def create_checkout(db: AsyncSession, payload: CheckoutCreate, user_id: UU
         raise
 
 
-async def cancel_checkout(db: AsyncSession, order_id: UUID, user_id: UUID | None) -> Order:
+async def cancel_checkout(
+    db: AsyncSession,
+    order_id: UUID,
+    user_id: UUID | None,
+    *,
+    commit: bool = True,
+    actor_id: UUID | None = None,
+    metadata: dict | None = None,
+) -> Order:
     """Void an unfulfilled COD reservation once; unknown historical stock stays untouched."""
+    from app.core.order_workflow import has_checkout_snapshot, order_state, record_order_event
+
     try:
+        event_actor_id = actor_id or user_id
+        if event_actor_id is None:
+            raise ValueError("Cancellation requires an audit actor")
         order = (
             await db.execute(
                 select(Order)
@@ -298,14 +311,15 @@ async def cancel_checkout(db: AsyncSession, order_id: UUID, user_id: UUID | None
         ).scalar_one_or_none()
         if order is None:
             raise HTTPException(status_code=404, detail="Order not found")
-        reserved = order.idempotency_key is not None and bool(order.checkout_payload_hash)
+        reserved = has_checkout_snapshot(order)
         if (
             reserved
             and order.status == OrderStatus.CANCELLED
             and order.payment_status == "cancelled"
             and order.fulfillment_status == "cancelled"
         ):
-            await db.commit()
+            if commit:
+                await db.commit()
             return order
         if (
             not reserved
@@ -321,6 +335,7 @@ async def cancel_checkout(db: AsyncSession, order_id: UUID, user_id: UUID | None
                 "Đơn hàng không thể hủy ở trạng thái hiện tại.",
                 "cancellation_ineligible",
             )
+        previous = order_state(order)
         products = {
             product.id: product
             for product in (
@@ -378,7 +393,12 @@ async def cancel_checkout(db: AsyncSession, order_id: UUID, user_id: UUID | None
         order.status = OrderStatus.CANCELLED
         order.payment_status = "cancelled"
         order.fulfillment_status = "cancelled"
-        await db.commit()
+        record_order_event(db, order, event_actor_id, "cancel", previous, metadata or {})
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
+        await db.refresh(order, attribute_names=["updated_at"])
         return order
     except Exception:
         await db.rollback()

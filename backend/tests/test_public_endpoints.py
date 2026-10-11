@@ -66,9 +66,9 @@ async def test_admin_status_update_cannot_overwrite_authoritative_total(public_c
     created = await public_client.post("/api/v1/orders/guest", json=await db.payload(), headers=db.auth())
     assert created.status_code == 201, created.text
     order = created.json()
-    attempted = await public_client.put(
-        f"/api/v1/admin/orders/{order['id']}",
-        json={"total_amount": 1},
+    attempted = await public_client.post(
+        f"/api/v1/admin/orders/{order['id']}/actions",
+        json={"action": "confirm", "expected_version": 1, "total_amount": 1},
         headers=db.auth(),
     )
     assert attempted.status_code == 422, attempted.text

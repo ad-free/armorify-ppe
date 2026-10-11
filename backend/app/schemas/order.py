@@ -7,7 +7,6 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.order import OrderStatus
-from app.schemas.product import ProductRead
 
 
 class CheckoutInput(BaseModel):
@@ -94,10 +93,6 @@ class OrderBase(BaseModel):
     status: OrderStatus | None = Field(OrderStatus.PENDING, json_schema_extra={"x-ui-order": 5})
 
 
-class OrderUpdate(CheckoutInput):
-    status: OrderStatus | None = None
-
-
 class OrderItemBase(BaseModel):
     order_id: UUID
     product_id: UUID
@@ -143,12 +138,4 @@ class _OrderRead(OrderBase, Generic[OrderItemT]):
 
 
 class OrderRead(_OrderRead[OrderItemRead]):
-    pass
-
-
-class AdminOrderItemRead(OrderItemRead):
-    product: ProductRead | None = None
-
-
-class AdminOrderRead(_OrderRead[AdminOrderItemRead]):
     pass

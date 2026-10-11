@@ -10,6 +10,13 @@ import { useAuthStore } from './store/authStore';
 import { GET } from './lib/api';
 import type { UserRead } from './types/api';
 import { Button, FeedbackState, Skeleton } from './components/ui/Primitives';
+const AdminOrders = React.lazy(() => import('./pages/admin/Orders'));
+const AdminOrderDetail = React.lazy(() => import('./pages/admin/OrderDetail'));
+
+const LegacyOrdersRedirect = () => {
+  const { search } = useLocation();
+  return <Navigate to={`/admin/orders${search}`} replace />;
+};
 
 // Lazy load the pages we built
 const HomePage = React.lazy(() => import('./pages/public/HomePage'));
@@ -206,6 +213,9 @@ function App() {
               path="/admin"
               element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/login" replace />}
             />
+            <Route path="/admin/orders" element={user?.role === 'admin' ? <AdminOrders /> : <Navigate to="/login" replace />} />
+            <Route path="/admin/orders/:orderId" element={user?.role === 'admin' ? <AdminOrderDetail /> : <Navigate to="/login" replace />} />
+            <Route path="/admin/manage/order" element={user?.role === 'admin' ? <LegacyOrdersRedirect /> : <Navigate to="/login" replace />} />
             <Route
               path="/admin/manage/:entityId"
               element={user?.role === 'admin' ? <ResourceManagerPage /> : <Navigate to="/login" replace />}
