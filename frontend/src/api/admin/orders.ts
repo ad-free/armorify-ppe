@@ -3,7 +3,11 @@ import type { Money, OrderRead } from '@/types/api';
 
 export type OrderAction = 'confirm' | 'process' | 'ship' | 'deliver' | 'pay' | 'cancel' | 'tracking' | 'note';
 export interface AllowedOrderAction { action: OrderAction; allowed: boolean; reason: string | null }
-export interface OrderState { status: string | null; payment_status: string | null; fulfillment_status: string | null }
+export interface OrderState {
+  status: string | null; payment_status: string | null; fulfillment_status: string | null;
+  carrier_name?: string | null; tracking_number?: string | null;
+  shipped_at?: string | null; delivered_at?: string | null;
+}
 export interface OrderEvent {
   id: string; actor_id: string | null; event_type: string;
   previous_state: OrderState | null; new_state: OrderState | null;

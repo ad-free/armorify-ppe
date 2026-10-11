@@ -19,6 +19,10 @@ def order_state(order: Order) -> dict:
         "status": order.status.value,
         "payment_status": order.payment_status,
         "fulfillment_status": order.fulfillment_status,
+        "carrier_name": order.carrier_name,
+        "tracking_number": order.tracking_number,
+        "shipped_at": order.shipped_at.isoformat() if order.shipped_at else None,
+        "delivered_at": order.delivered_at.isoformat() if order.delivered_at else None,
     }
 
 
@@ -72,21 +76,15 @@ def action_reason(order: Order, action: str) -> str | None:
     if order.payment_status not in ("unpaid", "paid"):
         return "The payment state is unknown or cancelled."
     status, fulfillment = order.status, order.fulfillment_status
+    if action == "pay":
+        if status == OrderStatus.DELIVERED and fulfillment == "delivered" and order.payment_status == "unpaid":
+            return None
+        return "COD payment can only be recorded for an unpaid order after delivery."
     valid = {
         "confirm": status == OrderStatus.PENDING and fulfillment == "unfulfilled",
         "process": status == OrderStatus.CONFIRMED and fulfillment == "unfulfilled",
         "ship": status == OrderStatus.CONFIRMED and fulfillment == "processing",
         "deliver": status == OrderStatus.SHIPPED and fulfillment == "shipped",
-        "pay": status != OrderStatus.CANCELLED
-        and order.payment_status == "unpaid"
-        and (status, fulfillment)
-        in {
-            (OrderStatus.PENDING, "unfulfilled"),
-            (OrderStatus.CONFIRMED, "unfulfilled"),
-            (OrderStatus.CONFIRMED, "processing"),
-            (OrderStatus.SHIPPED, "shipped"),
-            (OrderStatus.DELIVERED, "delivered"),
-        },
         "cancel": status in (OrderStatus.PENDING, OrderStatus.CONFIRMED)
         and fulfillment == "unfulfilled"
         and order.payment_status == "unpaid",
@@ -180,11 +178,11 @@ async def apply_order_action(db: AsyncSession, order_id: UUID, payload: AdminOrd
             elif payload.action == "ship":
                 order.status = OrderStatus.SHIPPED
                 order.fulfillment_status = "shipped"
-                order.shipped_at = func.clock_timestamp()
+                order.shipped_at = await db.scalar(select(func.clock_timestamp()))
             elif payload.action == "deliver":
                 order.status = OrderStatus.DELIVERED
                 order.fulfillment_status = "delivered"
-                order.delivered_at = func.clock_timestamp()
+                order.delivered_at = await db.scalar(select(func.clock_timestamp()))
             elif payload.action == "pay":
                 order.payment_status = "paid"
             if payload.action in {"ship", "tracking"}:

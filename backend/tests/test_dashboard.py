@@ -33,22 +33,25 @@ async def test_dashboard_requires_admin_and_empty_totals_are_real(checkout_db):
     assert dashboard["recent_orders"] == []
 
 
-async def test_dashboard_paid_active_revenue_and_immutable_recent_snapshots(checkout_db):
+async def test_dashboard_delivered_paid_active_revenue_and_immutable_recent_snapshots(checkout_db):
     db = checkout_db
     db.app.include_router(dashboard_router, prefix="/api/v1")
     await db.change(User, db.user_id, role=UserRole.ADMIN)
     today = datetime.now(timezone.utc).replace(hour=12, minute=0, second=0, microsecond=0)
     cases = [
-        (OrderStatus.DELIVERED, "paid", True, today - timedelta(days=1)),
-        (OrderStatus.DELIVERED, "unpaid", True, today - timedelta(days=1)),
-        (OrderStatus.CANCELLED, "paid", True, today - timedelta(days=1)),
-        (OrderStatus.DELIVERED, "paid", False, today - timedelta(days=1)),
-        (OrderStatus.PENDING, None, True, today - timedelta(days=1)),
-        (OrderStatus.DELIVERED, "paid", True, today - timedelta(days=40)),
-        (OrderStatus.SHIPPED, "paid", True, today - timedelta(days=2)),
+        (OrderStatus.DELIVERED, "delivered", "paid", True, today - timedelta(days=1)),
+        (OrderStatus.DELIVERED, "delivered", "unpaid", True, today - timedelta(days=1)),
+        (OrderStatus.CANCELLED, "delivered", "paid", True, today - timedelta(days=1)),
+        (OrderStatus.DELIVERED, "delivered", "paid", False, today - timedelta(days=1)),
+        (OrderStatus.PENDING, "unfulfilled", "paid", True, today - timedelta(days=1)),
+        (OrderStatus.DELIVERED, "delivered", "paid", True, today - timedelta(days=40)),
+        (OrderStatus.SHIPPED, "shipped", "paid", True, today - timedelta(days=2)),
+        (OrderStatus.CONFIRMED, "delivered", "paid", True, today - timedelta(days=1)),
+        (OrderStatus.DELIVERED, "shipped", "paid", True, today - timedelta(days=1)),
+        (OrderStatus.DELIVERED, None, "paid", True, today - timedelta(days=1)),
     ]
     orders = []
-    for status, payment, active, created_at in cases:
+    for status, fulfillment, payment, active, created_at in cases:
         response = await db.client.post("/api/v1/orders/guest", json=await db.payload())
         assert response.status_code == 201, response.text
         order = response.json()
@@ -57,6 +60,7 @@ async def test_dashboard_paid_active_revenue_and_immutable_recent_snapshots(chec
             Order,
             order["id"],
             status=status,
+            fulfillment_status=fulfillment,
             payment_status=payment,
             is_active=active,
             created_at=created_at,
@@ -78,13 +82,12 @@ async def test_dashboard_paid_active_revenue_and_immutable_recent_snapshots(chec
     assert response.status_code == 200, response.text
     dashboard = response.json()
     amount = Decimal(orders[0]["total_amount"])
-    assert Decimal(dashboard["stats"]["total_revenue"]) == amount * 3
+    assert Decimal(dashboard["stats"]["total_revenue"]) == amount * 2
     assert dashboard["stats"]["total_orders"] == len(cases)
     assert dashboard["stats"]["total_users"] == 2
     assert dashboard["stats"]["low_stock_count"] == 1
     assert set(dashboard["stats"]) == {"total_revenue", "total_orders", "total_users", "low_stock_count"}
     assert dashboard["revenue_chart"] == [
-        {"date": (today - timedelta(days=2)).date().isoformat(), "revenue": str(amount), "orders": 1},
         {"date": (today - timedelta(days=1)).date().isoformat(), "revenue": str(amount), "orders": 1},
     ]
     recent = {order["id"]: order for order in dashboard["recent_orders"]}

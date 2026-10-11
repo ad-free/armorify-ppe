@@ -19,10 +19,11 @@ router = APIRouter(prefix="/admin/dashboard", tags=["admin-dashboard"], dependen
 @router.get("/", response_model=DashboardData)
 async def get_dashboard_data(db: DbSession):
     # 1. Stats
-    # Realized revenue: active, noncancelled orders explicitly recorded as paid.
+    # Realized revenue: active orders with both delivery states complete and payment recorded.
     realized_revenue = and_(
         Order.is_active.is_(True),
-        Order.status != OrderStatus.CANCELLED,
+        Order.status == OrderStatus.DELIVERED,
+        Order.fulfillment_status == "delivered",
         Order.payment_status == "paid",
     )
     revenue_res = await db.execute(select(func.sum(Order.total_amount)).where(realized_revenue))

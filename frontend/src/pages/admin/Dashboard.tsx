@@ -172,7 +172,7 @@ const Dashboard: React.FC = () => {
           <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-center">
             <div>
               <h3 className="font-black text-gray-900 text-lg">Phân Tích Doanh Thu</h3>
-              <p className="text-xs font-bold text-gray-400 mt-0.5">Đơn đang hoạt động, đã thanh toán, không bị hủy • Theo ngày tạo đơn, 30 ngày gần nhất</p>
+              <p className="text-xs font-bold text-gray-400 mt-0.5">Đơn đang hoạt động, trạng thái đơn và giao hàng đều đã giao, đã thanh toán • Theo ngày tạo đơn, 30 ngày gần nhất</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">

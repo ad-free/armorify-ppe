@@ -373,8 +373,10 @@ Admin-only APIs:
 
 The workflow is `confirm` (pending → confirmed), `process` (unfulfilled → processing),
 `ship` (confirmed/processing → shipped/shipped), and `deliver` (shipped/shipped →
-delivered/delivered). Known noncancelled COD orders may record unpaid → paid without
-claiming a gateway charge. `cancel` accepts only pending/confirmed, unpaid, unfulfilled
+delivered/delivered). COD is the only supported payment method. `pay` records
+unpaid → paid only when both order and fulfillment are delivered; delivery and
+payment remain separate audited actions and do not claim a gateway charge.
+`cancel` accepts only pending/confirmed, unpaid, unfulfilled
 reservations and reuses Phase 4 restock exactly once. State actions require complete,
 internally consistent Phase 4 snapshots; historical orders remain readable but fail
 closed. Every action locks the order, checks its version and atomically appends an
@@ -383,9 +385,14 @@ actor/state/timestamp event in the same transaction.
 `ship`/`tracking` accept optional carrier (120 characters) and tracking number
 (160 characters); explicit null clears a shipment field. Tracking edits require
 matching shipped/delivered order and fulfillment states. `note` appends an internal
-note (1–2000 characters), including for historical/cancelled orders. Blank/control
-character inputs are rejected. Notes never overwrite customer delivery notes and
-internal events never appear in customer/public tracking responses. No carrier links,
+note (1–2000 normalized Unicode characters), including for historical/cancelled
+orders. Notes normalize CRLF to LF and permit line feeds/tabs; blank input,
+NUL, bidi controls and other unsafe control/format characters are rejected.
+Shipment fields remain single-line. Notes never overwrite customer delivery notes.
+Shipment events save previous/new carrier, tracking number, shipped timestamp and
+delivered timestamp directly in immutable event states. The timeline displays those
+changes, including removals; older events without that evidence remain unknown.
+Internal shipment history and notes never appear in customer/public responses. No carrier links,
 integrations, refunds, or payment gateways are implied. State changes require a UI
 confirmation; conflicts require explicit reload/review rather than automatic replay.
 
@@ -396,9 +403,11 @@ Downgrade removes shipment/audit/version data, so a non-test rollback needs a ba
 and explicit approval. A privileged database owner can still alter/truncate audit
 tables; append-only protection is not protection against database administrators.
 
-Dashboard realized revenue includes only active, noncancelled orders recorded paid.
-Its chart buckets those qualifying orders by order creation date, not payment date.
-Unsupported growth trends are omitted; recent orders link to the dedicated detail.
+Dashboard realized revenue requires active orders with order status `delivered`,
+fulfillment status `delivered` and payment status `paid`. The total and chart share
+that predicate, excluding inconsistent or prematurely paid orders. The chart groups
+qualifying orders by creation date, not payment date. Unsupported growth trends are
+omitted; recent orders link to the dedicated detail.
 
 Verification uses only the Phase 4 guarded disposable PostgreSQL database naming
 contract above. New backend checks are `test_admin_orders.py` and `test_dashboard.py`;

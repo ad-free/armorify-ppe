@@ -8,13 +8,24 @@ from app.models.order import Order, OrderEvent, OrderItem, OrderStatus
 from app.models.product import Product
 from app.models.user import User, UserRole
 from app.routers.admin.orders import router
+from app.schemas.admin_order import AdminOrderAction
 from httpx import ASGITransport, AsyncClient
+from pydantic import ValidationError
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import DBAPIError
 from test_checkout import field_error
 
 pytestmark = pytest.mark.anyio
 ACTIONS = ("confirm", "process", "ship", "deliver", "pay", "cancel", "tracking", "note")
+SHIPMENT_FIELDS = ("carrier_name", "tracking_number", "shipped_at", "delivered_at")
+
+
+def audit_state(order):
+    state = {key: order[key] for key in ("status", "payment_status", "fulfillment_status", *SHIPMENT_FIELDS)}
+    for key in ("shipped_at", "delivered_at"):
+        if state[key] is not None:
+            state[key] = datetime.fromisoformat(state[key]).isoformat()
+    return state
 
 
 @pytest.fixture
@@ -52,13 +63,13 @@ async def act(db, order, action, version=None, **fields):
 @pytest.mark.parametrize(
     "status,fulfillment,payment,allowed",
     [
-        ("pending", "unfulfilled", "unpaid", {"confirm", "pay", "cancel", "note"}),
+        ("pending", "unfulfilled", "unpaid", {"confirm", "cancel", "note"}),
         ("pending", "unfulfilled", "paid", {"confirm", "note"}),
-        ("confirmed", "unfulfilled", "unpaid", {"process", "pay", "cancel", "note"}),
+        ("confirmed", "unfulfilled", "unpaid", {"process", "cancel", "note"}),
         ("confirmed", "unfulfilled", "paid", {"process", "note"}),
-        ("confirmed", "processing", "unpaid", {"ship", "pay", "note"}),
+        ("confirmed", "processing", "unpaid", {"ship", "note"}),
         ("confirmed", "processing", "paid", {"ship", "note"}),
-        ("shipped", "shipped", "unpaid", {"deliver", "pay", "tracking", "note"}),
+        ("shipped", "shipped", "unpaid", {"deliver", "tracking", "note"}),
         ("shipped", "shipped", "paid", {"deliver", "tracking", "note"}),
         ("delivered", "delivered", "unpaid", {"pay", "tracking", "note"}),
         ("delivered", "delivered", "paid", {"tracking", "note"}),
@@ -67,6 +78,9 @@ async def act(db, order, action, version=None, **fields):
         ("confirmed", "shipped", "unpaid", {"note"}),
         ("shipped", "unfulfilled", "unpaid", {"note"}),
         ("delivered", "shipped", "paid", {"note"}),
+        ("delivered", "shipped", "unpaid", {"note"}),
+        ("shipped", "delivered", "unpaid", {"note"}),
+        ("delivered", "unfulfilled", "unpaid", {"note"}),
         ("confirmed", "unfulfilled", None, {"note"}),
     ],
 )
@@ -99,12 +113,8 @@ async def test_transition_matrix_is_authoritative(admin_db, status, fulfillment,
         assert len(after["events"]) == 1
         event = after["events"][0]
         assert event["event_type"] == action and event["actor_id"] == str(db.user_id)
-        assert event["previous_state"] == {
-            "status": status,
-            "payment_status": payment,
-            "fulfillment_status": fulfillment,
-        }
-        assert event["new_state"] == {key: after[key] for key in event["previous_state"]}
+        assert event["previous_state"] == audit_state(before)
+        assert event["new_state"] == audit_state(after)
         assert set(event["metadata"]) <= {"note", "carrier_name", "tracking_number"}
         assert await db.stock() == before_stock + (1 if action == "cancel" else 0)
 
@@ -114,6 +124,7 @@ async def test_shipment_payment_notes_snapshots_and_customer_separation(admin_db
     order = await create(db, items=[db.line(2, variant=True)])
     original = order.copy()
     await db.change(Product, db.variant_product_id, name="Changed catalog", price=1, is_active=False)
+    order = await detail(db, order)
     for action, fields in [
         ("confirm", {}),
         ("process", {}),
@@ -124,9 +135,39 @@ async def test_shipment_payment_notes_snapshots_and_customer_separation(admin_db
         ("pay", {}),
         ("tracking", {"carrier_name": None, "tracking_number": None}),
     ]:
+        before = order
+        if action in {"confirm", "process", "ship", "deliver"}:
+            rejected = await act(db, order, "pay")
+            field_error(rejected, 409, "action")
+            reason = next(entry["reason"] for entry in order["allowed_actions"] if entry["action"] == "pay")
+            assert reason == "COD payment can only be recorded for an unpaid order after delivery."
+            assert rejected.json()["detail"][0]["msg"] == reason
+            assert await detail(db, order) == before
         response = await act(db, order, action, **fields)
         assert response.status_code == 200, response.text
         order = response.json()
+        assert order["events"][:-1] == before["events"]
+        event = order["events"][-1]
+        assert event["previous_state"] == audit_state(before)
+        assert event["new_state"] == audit_state(order)
+        if action == "ship":
+            assert before["shipped_at"] is None and order["shipped_at"] is not None
+            assert order["carrier_name"] == "Carrier" and order["tracking_number"] == "TRACK-1"
+        if action == "tracking" and fields.get("tracking_number") == "TRACK-2":
+            assert event["previous_state"]["tracking_number"] == "TRACK-1"
+            assert event["new_state"]["tracking_number"] == "TRACK-2"
+        if action == "deliver":
+            assert order["payment_status"] == "unpaid"
+            assert before["delivered_at"] is None and order["delivered_at"] is not None
+        if action == "pay":
+            assert event["previous_state"]["payment_status"] == "unpaid"
+            assert event["new_state"]["payment_status"] == "paid"
+            assert order["shipped_at"] == before["shipped_at"]
+            assert order["delivered_at"] == before["delivered_at"]
+        if action == "tracking" and fields.get("tracking_number") is None:
+            assert event["previous_state"]["carrier_name"] == "Carrier"
+            assert event["previous_state"]["tracking_number"] == "TRACK-2"
+            assert event["new_state"]["carrier_name"] is None and event["new_state"]["tracking_number"] is None
         assert order["items"] == original["items"]
         for field in (
             "user_id",
@@ -159,6 +200,16 @@ async def test_shipment_payment_notes_snapshots_and_customer_separation(admin_db
     assert customer.json()["items"] == original["items"]
     assert "events" not in customer.json() and "allowed_actions" not in customer.json()
     assert "Private internal evidence" not in customer.text
+    listed = await db.client.get("/api/v1/orders/", headers=db.auth())
+    tracked = await db.client.get(
+        "/api/v1/orders/track", params={"order_code": order["order_code"], "contact_phone": order["contact_phone"]}
+    )
+    assert listed.status_code == tracked.status_code == 200
+    for public in (customer, listed, tracked):
+        bodies = public.json() if isinstance(public.json(), list) else [public.json()]
+        for body in bodies:
+            assert not set(("events", "allowed_actions", *SHIPMENT_FIELDS)).intersection(body)
+        assert "TRACK-1" not in public.text and "TRACK-2" not in public.text
     forbidden = await db.client.get(f"/api/v1/orders/{order['id']}", headers=db.auth(other=True))
     assert forbidden.status_code == 404
     cancelled = await db.client.post(f"/api/v1/orders/{order['id']}/cancel", headers=db.auth())
@@ -232,12 +283,15 @@ async def test_historical_tracking_is_only_safe_for_matching_shipped_state(admin
         ({"expected_version": 0}, "expected_version"),
         ({"expected_version": 1.5}, "expected_version"),
         ({"note": " "}, "note"),
-        ({"note": "bad\ntext"}, "note"),
+        ({"note": "bad\rtext"}, "note"),
         ({"note": "bad\x00text"}, "note"),
         ({"note": "a" * 2001}, "note"),
         ({"carrier_name": "a" * 121}, "carrier_name"),
         ({"tracking_number": "a" * 161}, "tracking_number"),
         ({"tracking_number": "\u202ehidden"}, "tracking_number"),
+        ({"carrier_name": "bad\ntext"}, "carrier_name"),
+        ({"carrier_name": "bad\r\ntext"}, "carrier_name"),
+        ({"tracking_number": "bad\ttext"}, "tracking_number"),
         ({"total_amount": 0}, "total_amount"),
         ({"status": "delivered"}, "status"),
         ({"user_id": str(uuid4())}, "user_id"),
@@ -341,25 +395,46 @@ async def test_audit_failure_rolls_back_cancellation_and_inventory(admin_db):
         async with AsyncClient(
             transport=ASGITransport(app=db.app, raise_app_exceptions=False), base_url="http://test"
         ) as client:
-            for action in ("confirm", "cancel", "note"):
+            stamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+            for action, status, fulfillment, fields in [
+                ("confirm", "pending", "unfulfilled", {}),
+                ("cancel", "pending", "unfulfilled", {}),
+                ("note", "pending", "unfulfilled", {"note": "Must roll back"}),
+                ("ship", "confirmed", "processing", {"carrier_name": "New carrier", "tracking_number": "New"}),
+                ("tracking", "shipped", "shipped", {"carrier_name": "New carrier", "tracking_number": "New"}),
+                ("tracking", "shipped", "shipped", {"carrier_name": None, "tracking_number": None}),
+                ("deliver", "shipped", "shipped", {}),
+                ("pay", "delivered", "delivered", {}),
+            ]:
+                await db.change(
+                    Order,
+                    order["id"],
+                    status=OrderStatus(status),
+                    fulfillment_status=fulfillment,
+                    carrier_name="Original carrier",
+                    tracking_number="Original tracking",
+                    shipped_at=stamp if status in {"shipped", "delivered"} else None,
+                    delivered_at=stamp if status == "delivered" else None,
+                )
+                before = await detail(db, order)
                 response = await client.post(
                     f"/api/v1/admin/orders/{order['id']}/actions",
                     headers=db.auth(),
                     json={
                         "action": action,
                         "expected_version": 1,
-                        **({"note": "Must roll back"} if action == "note" else {}),
+                        **fields,
                     },
                 )
                 assert response.status_code == 500
                 assert "forced audit failure" not in response.text
                 assert await db.stock() == 8 and await db.stock(variant=True) == 7
-                current = await detail(db, order)
-                assert current["status"] == "pending" and current["version"] == 1 and current["events"] == []
+                assert await detail(db, order) == before
     finally:
         async with db.sessions.begin() as session:
             await session.execute(text("DROP TRIGGER admin_test_reject_event ON order_events"))
             await session.execute(text("DROP FUNCTION admin_test_reject_event()"))
+    await db.change(Order, order["id"], status=OrderStatus.PENDING, fulfillment_status="unfulfilled")
     retried = await act(db, order, "cancel")
     assert retried.status_code == 200
     assert await db.stock() == await db.stock(variant=True) == 10
@@ -373,10 +448,17 @@ async def test_guest_replay_never_exposes_internal_events(admin_db):
     order = created.json()
     noted = await act(db, order, "note", note="Internal only")
     assert noted.status_code == 200
+    order = noted.json()
+    for action in ("confirm", "process", "ship", "deliver"):
+        response = await act(db, order, action, **({"tracking_number": "Private shipment"} if action == "ship" else {}))
+        assert response.status_code == 200
+        order = response.json()
     replay = await db.client.post("/api/v1/orders/guest", json=payload)
     assert replay.status_code == 201
     assert "events" not in replay.json() and "allowed_actions" not in replay.json()
     assert "Internal only" not in replay.text
+    assert "Private shipment" not in replay.text
+    assert not set(SHIPMENT_FIELDS).intersection(replay.json())
     assert replay.json()["items"] == order["items"]
     assert await db.stock() == 9
 
@@ -510,3 +592,75 @@ async def test_concurrent_confirmation_only_appends_once(admin_db):
     current = await detail(db, order)
     assert current["status"] == "confirmed" and current["version"] == 2
     assert len(current["events"]) == 1 and current["events"][0]["event_type"] == "confirm"
+
+
+@pytest.mark.parametrize(
+    "note,normalized",
+    [
+        ("  first\r\n\tsecond\r\nthird  ", "first\n\tsecond\nthird"),
+        ("first\n\tsecond", "first\n\tsecond"),
+        (" \r\n" + "é" * 1998 + "\r\nx\t ", "é" * 1998 + "\nx"),
+        (" \t" + "N" * 2000 + "\r\n ", "N" * 2000),
+    ],
+)
+async def test_notes_normalize_before_character_limit(admin_db, note, normalized):
+    order = await create(admin_db)
+    response = await act(admin_db, order, "note", note=note)
+    assert response.status_code == 200, response.text
+    assert response.json()["events"][-1]["metadata"]["note"] == normalized
+
+
+@pytest.mark.parametrize(
+    "note",
+    [
+        "\r\n\t ",
+        "first\rsecond",
+        "bad\x00text",
+        "bad\x01text",
+        "bad\x0btext",
+        "bad\x0ctext",
+        "bad\x7ftext",
+        "bad\x85text",
+        "bad\u200btext",
+        "bad\u200dtext",
+        "bad\u202etext",
+        "bad\u2066text",
+        "bad\u0378text",
+        "bad\ue000text",
+        "x" * 1999 + "\r\ny",
+    ],
+)
+async def test_notes_reject_unsafe_controls_and_normalized_overflow(admin_db, note):
+    order = await create(admin_db)
+    before = await detail(admin_db, order)
+    field_error(await act(admin_db, order, "note", note=note), 422, "note")
+    assert await detail(admin_db, order) == before
+
+
+async def test_notes_reject_surrogate_codepoints():
+    with pytest.raises(ValidationError):
+        AdminOrderAction(action="note", expected_version=1, note="bad\ud800text")
+
+
+async def test_historical_events_keep_original_states_without_shipment_backfill(admin_db):
+    db = admin_db
+    order = await create(db)
+    old_state = {"status": "pending", "payment_status": "unpaid", "fulfillment_status": "unfulfilled"}
+    async with db.sessions.begin() as session:
+        session.add(
+            OrderEvent(
+                order_id=order["id"],
+                actor_id=db.user_id,
+                event_type="note",
+                previous_state=old_state,
+                new_state=old_state,
+                event_metadata={"note": "Historical evidence"},
+            )
+        )
+    before = await detail(db, order)
+    historical = before["events"][0]
+    assert historical["previous_state"] == historical["new_state"] == old_state
+    response = await act(db, before, "note", note="Current evidence")
+    assert response.status_code == 200, response.text
+    assert response.json()["events"][0] == historical
+    assert response.json()["events"][-1]["new_state"] == audit_state(before)

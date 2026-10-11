@@ -1,4 +1,4 @@
-import type { OrderAction, OrderActionRequest } from '@/api/admin/orders';
+import type { OrderAction, OrderActionRequest, OrderState } from '@/api/admin/orders';
 
 export const orderFilters = {
   status: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],
@@ -15,7 +15,7 @@ export const actionImplications: Record<OrderAction, string> = {
   process: 'Bắt đầu chuẩn bị hàng. Sau bước này không thể hủy đơn qua quy trình này.',
   ship: 'Xác nhận đã bàn giao hàng cho đơn vị vận chuyển. Không tự động đặt dịch vụ vận chuyển.',
   deliver: 'Xác nhận khách đã nhận hàng. Thao tác này không ghi nhận thanh toán.',
-  pay: 'Chỉ xác nhận khi đã thực nhận tiền COD. Không thực hiện thu tiền qua cổng thanh toán.',
+  pay: 'Chỉ ghi nhận COD cho đơn đã giao, chưa thanh toán và khi đã thực nhận tiền. Giao hàng và thanh toán là hai thao tác riêng; không thu tiền qua cổng thanh toán.',
   cancel: 'Hủy đơn và hoàn lại tồn kho đã giữ. Không thực hiện hoàn tiền; chỉ áp dụng cho đơn chưa thanh toán và chưa chuẩn bị hàng.',
   tracking: 'Lưu thông tin vận chuyển nội bộ. Không tạo yêu cầu vận chuyển.',
   note: 'Ghi chú được lưu trong lịch sử đơn hàng.',
@@ -61,12 +61,36 @@ export function updateOrderParams(params: URLSearchParams, changes: Record<strin
 
 export function orderActionRequest(action: OrderAction, version: number, fields: { note?: string; carrier_name?: string; tracking_number?: string } = {}): OrderActionRequest {
   const request: OrderActionRequest = { action, expected_version: version };
-  if (action === 'note') request.note = fields.note?.trim() ?? '';
+  if (action === 'note') {
+    const normalized = (fields.note ?? '').replace(/\r\n/g, '\n');
+    const note = normalized.trim();
+    const message = /[^\P{C}\n\t]/u.test(normalized)
+      ? 'Ghi chú không được chứa ký tự điều khiển ngoài xuống dòng và tab.'
+      : !note || Array.from(note).length > 2000 ? 'Ghi chú phải có từ 1 đến 2000 ký tự sau khi bỏ khoảng trắng đầu và cuối.' : null;
+    if (message) throw { status: 422, details: { field: 'note', message } };
+    request.note = note;
+  }
   if (action === 'ship' || action === 'tracking') {
     request.carrier_name = fields.carrier_name?.trim() || null;
     request.tracking_number = fields.tracking_number?.trim() || null;
   }
   return request;
+}
+
+export const shipmentFields = [
+  ['carrier_name', 'Đơn vị vận chuyển'], ['tracking_number', 'Mã vận đơn'],
+  ['shipped_at', 'Bàn giao lúc (máy chủ)'], ['delivered_at', 'Đã giao lúc (máy chủ)'],
+] as const;
+
+export function formatShipmentEvidence(state: OrderState | null, field: typeof shipmentFields[number][0]): string {
+  const value = state?.[field];
+  if (value === undefined) return 'Chưa được lưu trong lịch sử';
+  if (value === null) return 'Không có';
+  if (field === 'shipped_at' || field === 'delivered_at') {
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toLocaleString('vi-VN') : 'Thời điểm chưa xác định';
+  }
+  return value;
 }
 
 export interface OrderMutationFailure { conflict: boolean; message: string; fields: Record<string, string> }

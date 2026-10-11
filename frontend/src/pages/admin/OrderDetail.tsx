@@ -9,7 +9,7 @@ import { QuoteTotals } from '@/components/order/QuoteReview';
 import { orderStatusLabel } from '@/lib/orderStatus';
 import { actionImplications, actionLabels, orderActionRequest, orderMutationFailure } from './orderWorkflow';
 import type { OrderMutationFailure } from './orderWorkflow';
-import { MoneyValue, OrderDate, OrderLoading, OrderStatuses, SnapshotField } from './OrderShared';
+import { MoneyValue, OrderDate, OrderLoading, OrderStatuses, ShipmentEvidence, SnapshotField } from './OrderShared';
 
 const transitions: OrderAction[] = ['confirm', 'process', 'ship', 'deliver', 'pay', 'cancel'];
 
@@ -92,7 +92,21 @@ function OrderDetailJourney({ orderId }: { orderId: string }) {
               <SnapshotField label="Khách hàng" value={order.customer_name} /><SnapshotField label="Số điện thoại" value={order.contact_phone} /><SnapshotField label="Email" value={order.email} /><SnapshotField label="Địa chỉ" value={order.address} /><SnapshotField label="Tỉnh / thành phố" value={order.province} /><SnapshotField label="Quận / huyện" value={order.district} /><SnapshotField label="Phường / xã" value={order.ward} /><SnapshotField label="Phương thức giao hàng" value={order.shipping_method === 'standard' ? 'Giao hàng tiêu chuẩn' : order.shipping_method} /><SnapshotField label="Phương thức thanh toán" value={order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : order.payment_method} />
             </dl><div className="border-t border-border pt-4"><h3 className="font-semibold">Lưu ý giao hàng đã lưu</h3><p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{order.delivery_note || 'Chưa có thông tin'}</p></div><p className="text-caption">Dữ liệu thiếu của đơn cũ được hiển thị là chưa xác định; không thay thế bằng hồ sơ khách hàng hiện tại.</p></section>
             <section className="card p-4 sm:p-6 space-y-4" aria-labelledby="order-items-title"><h2 id="order-items-title" className="section-heading">Sản phẩm đã đặt</h2>{order.items.length ? <ul className="divide-y divide-border">{order.items.map((item) => <li key={item.id} className="min-w-0 py-4 first:pt-0"><div className="flex flex-wrap justify-between gap-3"><div className="min-w-0 flex-1 basis-48"><h3 className="font-semibold break-words [overflow-wrap:anywhere]">{item.product_name || 'Tên sản phẩm chưa xác định'}</h3><p className="text-caption break-words">SKU đã lưu: {item.sku || 'Chưa xác định'}</p>{item.attributes ? Object.entries(item.attributes).map(([key, value]) => <p key={key} className="text-caption break-words [overflow-wrap:anywhere]">{key}: {typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? String(value) : 'Chưa xác định'}</p>) : <p className="text-caption">Thuộc tính chưa xác định</p>}</div><div className="text-sm"><p>{item.quantity} × <MoneyValue value={item.unit_price} /></p><p className="font-semibold"><MoneyValue value={item.unit_price == null ? null : Number(item.unit_price) * item.quantity} /></p></div></div></li>)}</ul> : <p className="text-body">Thông tin sản phẩm của đơn cũ chưa xác định.</p>}<div className="border-t border-border pt-4"><QuoteTotals quote={{ subtotal: order.subtotal, discount: order.discount, shipping: order.shipping, total: order.total_amount }} /></div></section>
-            <section className="card p-4 sm:p-6 space-y-4" aria-labelledby="order-audit-title"><h2 id="order-audit-title" className="section-heading">Lịch sử đơn hàng</h2><p className="text-caption">Theo thứ tự thời gian từ cũ đến mới. Lịch sử trước khi áp dụng quy trình này có thể không có dữ liệu.</p>{events.length ? <ol className="space-y-4">{events.map((event) => <li key={event.id} className="border-l-2 border-border pl-4 min-w-0"><h3 className="font-semibold break-words">{actionLabels[event.event_type as OrderAction] ?? event.event_type}</h3><p className="text-caption"><OrderDate value={event.created_at} /> · Người thao tác: <span className="[overflow-wrap:anywhere]">{event.actor_id ?? 'Chưa xác định'}</span></p><p className="text-sm break-words">Trước: <AuditState state={event.previous_state} /></p><p className="text-sm break-words">Sau: <AuditState state={event.new_state} /></p>{event.metadata?.note && <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{event.metadata.note}</p>}{event.metadata?.carrier_name && <p className="text-sm break-words [overflow-wrap:anywhere]">Đơn vị vận chuyển: {event.metadata.carrier_name}</p>}{event.metadata?.tracking_number && <p className="text-sm break-words [overflow-wrap:anywhere]">Mã vận đơn: {event.metadata.tracking_number}</p>}</li>)}</ol> : <p className="text-body">Chưa có lịch sử được ghi nhận.</p>}</section>
+            <section className="card p-4 sm:p-6 space-y-4" aria-labelledby="order-audit-title">
+              <h2 id="order-audit-title" className="section-heading">Lịch sử đơn hàng</h2>
+              <p className="text-caption">Theo thứ tự thời gian từ cũ đến mới. Lịch sử trước khi áp dụng quy trình này có thể không có dữ liệu.</p>
+              {events.length ? <ol className="space-y-4">{events.map((event) =>
+                <li key={event.id} className="border-l-2 border-border pl-4 min-w-0">
+                  <h3 className="font-semibold break-words">{actionLabels[event.event_type as OrderAction] ?? event.event_type}</h3>
+                  <p className="text-caption"><OrderDate value={event.created_at} /> · Người thao tác: <span className="[overflow-wrap:anywhere]">{event.actor_id ?? 'Chưa xác định'}</span></p>
+                  <p className="text-sm break-words">Trước: <AuditState state={event.previous_state} /></p>
+                  <p className="text-sm break-words">Sau: <AuditState state={event.new_state} /></p>
+                  {['ship', 'tracking', 'deliver'].includes(event.event_type) && <ShipmentEvidence previous={event.previous_state} next={event.new_state} />}
+                  {event.metadata?.note && <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{event.metadata.note}</p>}
+                  {event.new_state?.carrier_name === undefined && event.metadata?.carrier_name && <p className="text-sm break-words [overflow-wrap:anywhere]">Đơn vị vận chuyển đã ghi trong sự kiện: {event.metadata.carrier_name}</p>}
+                  {event.new_state?.tracking_number === undefined && event.metadata?.tracking_number && <p className="text-sm break-words [overflow-wrap:anywhere]">Mã vận đơn đã ghi trong sự kiện: {event.metadata.tracking_number}</p>}
+                </li>)}</ol> : <p className="text-body">Chưa có lịch sử được ghi nhận.</p>}
+            </section>
           </div>
           <div className="min-w-0 space-y-6">
             <section className="card p-4 sm:p-6 space-y-4" aria-labelledby="order-actions-title"><h2 ref={actionsHeading} tabIndex={-1} id="order-actions-title" className="section-heading">Thao tác tiếp theo</h2><p className="text-caption">Chỉ các thao tác được hệ thống cho phép mới có thể thực hiện.</p><ul className="space-y-3">{transitions.map((action) => { const permission = permissions.get(action); return <li key={action}><Button className="w-full" variant={action === 'cancel' ? 'danger' : 'secondary'} disabled={blocked || !permission?.allowed} aria-describedby={!permission?.allowed ? `reason-${action}` : undefined} onClick={() => ask(action)}>{actionLabels[action]}</Button>{!permission?.allowed && <p id={`reason-${action}`} className="text-caption mt-1 break-words">{permission?.reason || 'Không được phép với trạng thái hiện tại hoặc dữ liệu lịch sử chưa xác định.'}</p>}</li>; })}</ul></section>
@@ -105,14 +119,16 @@ function OrderDetailJourney({ orderId }: { orderId: string }) {
               <h2 id="order-note-title" className="section-heading">Ghi chú nội bộ</h2>
               <form className="space-y-3" onSubmit={(event) => {
                 event.preventDefault();
-                if (note.trim() && permissions.get('note')?.allowed) void submit(orderActionRequest('note', order.version, { note }));
+                if (!permissions.get('note')?.allowed) return;
+                try { void submit(orderActionRequest('note', order.version, { note })); }
+                catch (error) { setFailure(orderMutationFailure(error)); setSuccess(''); }
               }}>
                 <label htmlFor="order-note" className="field-label">Nội dung ghi chú</label>
-                <textarea id="order-note" className="field" value={note} onChange={(event) => setNote(event.target.value)} required maxLength={2000}
+                <textarea id="order-note" className="field" value={note} onChange={(event) => setNote(event.target.value)} required
                   disabled={blocked || !permissions.get('note')?.allowed} aria-invalid={Boolean(failure?.fields.note)}
                   aria-describedby={failure?.fields.note ? 'note-error' : 'note-hint'} />
                 {failure?.fields.note && <p id="note-error" className="field-error">{failure.fields.note}</p>}
-                <p id="note-hint" className="text-caption">{permissions.get('note')?.allowed ? 'Ghi chú được lưu vào lịch sử, không thay đổi lưu ý giao hàng của khách.' : permissions.get('note')?.reason || 'Không được phép thêm ghi chú.'}</p>
+                <p id="note-hint" className="text-caption">{permissions.get('note')?.allowed ? 'Tối đa 2000 ký tự sau khi bỏ khoảng trắng đầu và cuối; cho phép xuống dòng và tab. Ghi chú được lưu vào lịch sử, không thay đổi lưu ý giao hàng của khách.' : permissions.get('note')?.reason || 'Không được phép thêm ghi chú.'}</p>
                 <Button type="submit" className="w-full" loading={saving} disabled={blocked || !note.trim() || !permissions.get('note')?.allowed}>Thêm ghi chú</Button>
               </form>
             </section>

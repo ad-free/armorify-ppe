@@ -3,6 +3,7 @@ import { orderStatusLabel } from '@/lib/orderStatus';
 import { MoneyValue } from '@/components/order/QuoteReview';
 import { Skeleton } from '@/components/ui/Primitives';
 import type { OrderState } from '@/api/admin/orders';
+import { formatShipmentEvidence, shipmentFields } from './orderWorkflow';
 
 export function OrderStatuses({ order }: { order: OrderState }) {
   return <dl className="flex flex-wrap gap-3 text-sm">
@@ -14,6 +15,15 @@ export function OrderStatuses({ order }: { order: OrderState }) {
 export function OrderDate({ value }: { value: string | null | undefined }) {
   if (!value || !Number.isFinite(new Date(value).getTime())) return <>Chưa xác định</>;
   return <time dateTime={value}>{new Date(value).toLocaleString('vi-VN')}</time>;
+}
+
+export function ShipmentEvidence({ previous, next }: { previous: OrderState | null; next: OrderState | null }) {
+  return <dl className="mt-2 space-y-2 text-sm">{shipmentFields.map(([field, label]) =>
+    <div key={field} className="min-w-0"><dt className="text-caption">{label}</dt>
+      <dd className="break-words [overflow-wrap:anywhere]">
+        Trước: {formatShipmentEvidence(previous, field)} → Sau: {formatShipmentEvidence(next, field)}
+      </dd>
+    </div>)}</dl>;
 }
 
 export function OrderLoading() {

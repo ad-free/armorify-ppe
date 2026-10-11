@@ -23,12 +23,17 @@ class AdminOrderAction(BaseModel):
 
     @field_validator("carrier_name", "tracking_number", "note", mode="before")
     @classmethod
-    def safe_text(cls, value):
+    def safe_text(cls, value, info):
         if value is None:
             return None
         if not isinstance(value, str):
             raise ValueError("Must be text")
-        if any(unicodedata.category(character).startswith("C") for character in value):
+        if info.field_name == "note":
+            value = value.replace("\r\n", "\n")
+        if any(
+            unicodedata.category(character).startswith("C") and not (info.field_name == "note" and character in "\n\t")
+            for character in value
+        ):
             raise ValueError("Control characters are not allowed")
         value = value.strip()
         if not value:
