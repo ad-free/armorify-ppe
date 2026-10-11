@@ -154,7 +154,7 @@ const Dashboard: React.FC = () => {
           );
 
           if (isLowStock) {
-            return <Link key={index} to="/admin/manage/product?stock=low">{CardContent}</Link>;
+            return <Link key={index} to="/admin/products?low_stock=true">{CardContent}</Link>;
           }
 
           return <React.Fragment key={index}>{CardContent}</React.Fragment>;

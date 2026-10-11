@@ -38,7 +38,7 @@ async def get_dashboard_data(db: DbSession):
     total_users = users_count_res.scalar() or 0
 
     # Low Stock (less than 10)
-    low_stock_res = await db.execute(select(func.count(Product.id)).where(Product.stock < 10))
+    low_stock_res = await db.execute(select(func.count(Product.id)).where(Product.available_stock < 10))
     low_stock_count = low_stock_res.scalar() or 0
 
     stats = DashboardStats(

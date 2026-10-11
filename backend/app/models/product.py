@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 from app.models.base import Base, BaseMixin
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     ForeignKey,
@@ -16,10 +17,15 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
+    case,
+    cast,
+    func,
+    select,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 
 class Category(BaseMixin, Base):
@@ -54,6 +60,7 @@ class Product(BaseMixin, Base):
     price: Mapped[Numeric] = mapped_column(Numeric(12, 2), nullable=False)
     dealer_price: Mapped[Numeric | None] = mapped_column(Numeric(12, 2), nullable=True)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default=text("1"))
     is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     category_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -96,6 +103,7 @@ class Product(BaseMixin, Base):
             name="ck_products_dealer_price_positive",
         ),
         CheckConstraint("stock >= 0", name="ck_products_stock_nonneg"),
+        CheckConstraint("version >= 1", name="ck_products_version_positive"),
         CheckConstraint(
             "slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'",
             name="ck_products_slug_format",
@@ -123,7 +131,17 @@ class ProductVariant(BaseMixin, Base):
     )
     product: Mapped[Product] = relationship(back_populates="variants")
 
+    @property
+    def available_stock(self) -> int:
+        return self.stock if self.is_active else 0
+
+    @property
+    def stock_status(self) -> str:
+        balance = self.available_stock
+        return "out_of_stock" if balance == 0 else "low_stock" if balance < 10 else "in_stock"
+
     __table_args__ = (
+        UniqueConstraint("id", "product_id", name="uq_variants_id_product"),
         Index("ix_variants_product_id", "product_id"),
         Index(
             "ix_variants_sku",
@@ -133,3 +151,30 @@ class ProductVariant(BaseMixin, Base):
         ),
         CheckConstraint("stock >= 0", name="ck_variants_stock_nonneg"),
     )
+
+
+# Correlated expressions keep list filtering/sorting and serialization authoritative
+# without loading variants or counting the legacy base balance twice.
+
+_active_variants = (
+    select(ProductVariant.id)
+    .where(ProductVariant.product_id == Product.id, ProductVariant.is_active.is_(True))
+    .correlate_except(ProductVariant)
+    .exists()
+)
+_variant_stock = (
+    select(func.coalesce(func.sum(cast(ProductVariant.stock, BigInteger)), 0))
+    .where(ProductVariant.product_id == Product.id, ProductVariant.is_active.is_(True))
+    .correlate_except(ProductVariant)
+    .scalar_subquery()
+)
+Product.has_variants = column_property(_active_variants)
+_available_stock = case((_active_variants, _variant_stock), else_=cast(Product.stock, BigInteger))
+Product.available_stock = column_property(_available_stock)
+Product.stock_status = column_property(
+    case(
+        (_available_stock == 0, "out_of_stock"),
+        (_available_stock < 10, "low_stock"),
+        else_="in_stock",
+    )
+)

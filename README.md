@@ -428,8 +428,98 @@ npm run build && npm run lint
 Paid-order refunds, historical reservation reconciliation and verified B2B contracts
 remain outside this phase. They require explicit business rules and real integrations.
 
-Authentication, dashboard cards/charts, and specialized product editors still retain
-legacy styling. Removed admin search/sample-notification controls need real integrations.
+Authentication and dashboard cards/charts still retain legacy styling.
+Removed admin search/sample-notification controls need real integrations.
+
+### Phase 6 professional catalog and inventory
+
+Catalog administration uses `/admin/products`, `/admin/products/new`, and
+`/admin/products/:productId`. The old product/variant/image manager routes redirect
+to the catalog. Listing URLs retain `q`, category/brand IDs, `is_active`,
+`is_featured`, `is_new`, `variant_mode`, `low_stock`, `sort_by`, `page`, and `limit`.
+The dashboard low-stock card links to `/admin/products?low_stock=true`.
+
+Inventory is server-authoritative: active variants own their balances; their sum
+is `available_stock`. Without active variants, `Product.stock` owns the balance.
+`has_variants` and `stock_status` accompany product responses. Inactive variants
+retain their stored balances but report no sellable stock. Listing cards never
+purchase directly; customers select options on the product page.
+
+Stock is not editable through metadata forms. Staff use
+`POST /api/v1/admin/catalog/products/{id}/inventory-adjustments` with optional
+`variant_id`, a nonzero signed integer `quantity_delta`, and a required `reason`.
+The product/variant locks, balance change and append-only movement share the same
+transaction. Checkout deductions and cancellation restorations use that service.
+Historical balances have no fabricated opening movements. Movement UPDATE/DELETE
+is rejected by ORM hooks and PostgreSQL triggers; composite ownership and RESTRICT
+references protect the audit trail.
+
+Admin product listing is paginated (`items`, `total`, `skip`, `limit`), searches
+name/slug/active variant SKU, and whitelists `newest`, `name_asc`, `name_desc`,
+`price_asc`, `price_desc`, `stock_asc`. The dedicated detail response includes all
+variants/images, computed stock, version, and the latest 50 movements. Public
+responses omit metadata versions, inventory reasons/actors and saved-cart counts.
+Product PUT requires `expected_version`; stale edits return field-specific 409
+errors. Reloading a stale editor preserves its draft for comparison.
+
+Variants require meaningful selection attributes, globally unique active SKUs and
+unique normalized option combinations within their product. Price overrides are
+explicit; an empty override inherits the product price. Deactivation that affects
+persisted carts requires `confirm_cart_impact`. Product/variant DELETE is replaced
+by guarded PUT deactivation; immutable order-item snapshots are not rewritten.
+Active products require existing active categories/brands. Hiding a reference
+used by an active product returns a conflict rather than cascading deactivation.
+
+The editor uses bounded specification key/value rows (32 entries, 8192 JSON bytes,
+64-character keys, 512-character string values). Existing nested facts can remain
+unchanged during unrelated metadata edits. Only administrator-supplied facts are
+stored; the editor does not generate PPE standards or certifications.
+
+Product media uses
+`POST /api/v1/admin/catalog/product-images/products/{id}/upload` (multipart `file`,
+`alt_text`, `position`, `is_cover`). Image PUT accepts metadata only; DELETE hides
+the image without removing history. One active cover owns `cover_image_url`.
+Unmanaged historical cover URLs remain a fallback only until managed image rows
+exist. Ordering and selection are distinct; the storefront gallery initially
+selects the managed cover without changing thumbnail order.
+
+Pillow **12.3.0** is required because the repository previously had no vetted image
+decoder: filename/MIME checks cannot validate pixels or malformed containers.
+Uploads are fully verified/decoded and re-encoded as metadata-free JPEG, PNG or
+WebP with server-generated canonical filenames. SVG, animation, unsupported or
+mismatched extensions, malformed data and appended payloads are rejected. Failed
+database persistence removes the newly written file. Defaults are 8 MiB and
+20 million pixels, configurable through `PRODUCT_IMAGE_MAX_BYTES` and
+`PRODUCT_IMAGE_MAX_PIXELS`. `PRODUCT_MEDIA_DIR` defaults to
+`backend/static/product-images`, mounted at `/static/product-images`.
+Existing non-product image fields keep their upload interaction:
+`/admin/catalog/uploads/images` now uses the same bounded decoder and canonical
+storage instead of trusting supplied filenames or MIME types. Product images use
+the dedicated database-backed workflow so failed persistence cleans up the file.
+
+Migration chain: `e5b72c19a406` → `f6a10c202611` (versions/inventory movements)
+→ `f6b20c202611` (cover selection/integrity). Existing active image rows receive a
+deterministic cover, preferring the legacy cover URL. Downgrade removes the new
+inventory ledger: do not roll back a populated ledger without preserving its
+evidence. No production migration is authorized by these development checks.
+
+Verification uses only the existing guard-approved local PostgreSQL database
+pattern `armorify_checkout_test_<32 lowercase hex>`, with generated
+`checkout_test_<32 lowercase hex>` schemas and preinstalled `pgcrypto`.
+Never point the test suite at `armorify_dev`. Upload tests use pytest `tmp_path`;
+browser media fixtures belong in a temporary directory, not repository media.
+
+```bash
+DATABASE_URL="${CHECKOUT_TEST_DATABASE_URL:?Set a guarded disposable PostgreSQL URL}" \
+  .venv/bin/python -m pytest backend/tests -q
+.venv/bin/python -m ruff check backend --extend-exclude backend/alembic --line-length=120 --target-version=py39 --select=E,F,I,W,UP
+.venv/bin/python -m ruff format backend --exclude backend/alembic --line-length=120 --target-version=py39 --check
+cd frontend
+node src/pages/admin/catalogWorkflow.check.mjs
+node src/components/catalog/mediaUrl.check.mjs
+node src/components/catalog/productPurchase.check.mjs
+npm run build && npm run lint
+```
 
 
 ---

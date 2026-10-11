@@ -19,6 +19,7 @@ from app.models import (  # noqa: F401 -- imports register migration metadata
     cart,
     cms,
     flash_sale,
+    inventory,
     order,
     product,
     product_image,

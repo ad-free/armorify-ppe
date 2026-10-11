@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from uuid import UUID, uuid4
 
+from app.core.inventory import adjust_inventory
 from app.core.settings import settings
 from app.models.flash_sale import FlashSale, FlashSaleItem
 from app.models.order import Order, OrderItem, OrderStatus
@@ -95,7 +96,7 @@ def _evaluate(payload, products, variants, sales, promos) -> CheckoutQuote:
     ):
         promotions.setdefault(promo.product_id, promo)
     by_id = {v.id: v for v in variants}
-    variant_products = {v.product_id for v in variants}
+    variant_products = {v.product_id for v in variants if v.is_active}
     quantities: Counter[tuple[UUID, UUID | None]] = Counter()
     for item in payload.items:
         quantities[(item.product_id, item.variant_id)] += item.quantity
@@ -245,8 +246,6 @@ async def create_checkout(db: AsyncSession, payload: CheckoutCreate, user_id: UU
                 "Giá hoặc phí vận chuyển đã thay đổi. Vui lòng kiểm tra lại đơn hàng.",
                 "stale_pricing",
             )
-        products, variants, _, _ = catalog
-        variants_by_id = {v.id: v for v in variants}
         order = Order(
             order_code=f"ODR-{uuid4().hex.upper()}",
             user_id=user_id,
@@ -261,9 +260,19 @@ async def create_checkout(db: AsyncSession, payload: CheckoutCreate, user_id: UU
             **payload.model_dump(exclude={"items", "idempotency_key", "pricing_token"}),
         )
         order.items = []
+        # Persist the order before its inventory audit rows reference it.
+        db.add(order)
+        await db.flush()
         for line in quote.items:
-            inventory = variants_by_id[line.variant_id] if line.variant_id else products[line.product_id]
-            inventory.stock -= line.quantity
+            await adjust_inventory(
+                db,
+                line.product_id,
+                line.variant_id,
+                -line.quantity,
+                "checkout",
+                order_id=order.id,
+                reason="Checkout reservation",
+            )
             order.items.append(
                 OrderItem(
                     product_id=line.product_id,
@@ -275,7 +284,6 @@ async def create_checkout(db: AsyncSession, payload: CheckoutCreate, user_id: UU
                     attributes=line.attributes,
                 )
             )
-        db.add(order)
         await db.flush()
         await db.commit()
         return order
@@ -388,8 +396,17 @@ async def cancel_checkout(
                     "Không thể hoàn lại tồn kho an toàn. Vui lòng liên hệ hỗ trợ.",
                     "restock_unavailable",
                 )
-        for key, quantity in quantities.items():
-            inventory[key].stock += quantity
+        for key, quantity in sorted(quantities.items(), key=lambda item: (str(item[0][0]), str(item[0][1]))):
+            await adjust_inventory(
+                db,
+                key[0],
+                key[1],
+                quantity,
+                "cancellation",
+                order_id=order.id,
+                admin_actor_id=event_actor_id,
+                reason="Order cancellation",
+            )
         order.status = OrderStatus.CANCELLED
         order.payment_status = "cancelled"
         order.fulfillment_status = "cancelled"

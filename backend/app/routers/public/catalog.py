@@ -83,7 +83,7 @@ async def list_products(
     price_max: Decimal | None = None,
     is_new: bool | None = None,
     sort_by: Literal["newest", "price_asc", "price_desc", "featured"] = "newest",
-    q: str | None = Query(default=None, min_length=1),
+    q: str | None = Query(default=None, min_length=1, max_length=200),
     rating_min: Decimal | None = None,
 ) -> PaginatedResponse[ProductRead]:
     filters: list[ColumnElement[bool]] = [Product.is_active.is_(True)]
@@ -117,7 +117,18 @@ async def list_products(
         filters.append(Product.is_new.is_(is_new))
     if q is not None:
         term = f"%{q}%"
-        filters.append(or_(Product.name.ilike(term), Product.description.ilike(term)))
+        active_sku = (
+            select(ProductVariant.id)
+            .where(
+                ProductVariant.product_id == Product.id,
+                ProductVariant.is_active.is_(True),
+                ProductVariant.sku.ilike(term),
+            )
+            .exists()
+        )
+        filters.append(
+            or_(Product.name.ilike(term), Product.slug.ilike(term), Product.description.ilike(term), active_sku)
+        )
     if rating_min is not None:
         filters.append(Product.rating_avg >= rating_min)
 

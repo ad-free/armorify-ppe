@@ -59,6 +59,8 @@ app = FastAPI(
 )
 
 static_dir = Path(__file__).resolve().parent.parent / "static"
+settings.product_media_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/static/product-images", StaticFiles(directory=settings.product_media_dir), name="product-images")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 app.add_middleware(SecurityMiddleware)
 app.add_middleware(

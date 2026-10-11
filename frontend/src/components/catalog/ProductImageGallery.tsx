@@ -12,17 +12,18 @@ interface Props {
 
 export const ProductImageGallery: React.FC<Props> = ({ images, productName }) => {
   const { t } = useTranslation();
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
-  const currentIndex = Math.min(activeIndex, Math.max(0, images.length - 1));
+  const selectedIndex = images.findIndex(image => image.id === activeImageId);
+  const currentIndex = selectedIndex >= 0 ? selectedIndex : Math.max(0, images.findIndex(image => image.is_cover));
   const mainImage = images[currentIndex];
   const mainUrl = mainImage ? getMediaUrl(mainImage.url) : '';
   const mainFailed = !mainUrl || failedImages.has(mainUrl);
 
   const navigate = (direction: number) => {
     if (images.length > 1) {
-      setActiveIndex((currentIndex + direction + images.length) % images.length);
+      setActiveImageId(images[(currentIndex + direction + images.length) % images.length].id);
     }
   };
 
@@ -136,7 +137,7 @@ export const ProductImageGallery: React.FC<Props> = ({ images, productName }) =>
                     name: productName,
                   })}
                   aria-pressed={currentIndex === index}
-                  onClick={() => setActiveIndex(index)}
+                  onClick={() => setActiveImageId(image.id)}
                   className={`flex aspect-square min-h-11 min-w-11 items-center justify-center overflow-hidden rounded-md border-2 bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                     currentIndex === index ? 'border-primary' : 'border-border hover:border-primary'
                   }`}
