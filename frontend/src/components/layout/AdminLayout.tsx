@@ -28,7 +28,7 @@ interface AdminLayoutProps {
 
 const ADMIN_MENU = [
   { id: 'dashboard', labelKey: 'admin.menu.dashboard', icon: BarChart3, path: '/admin' },
-  { id: 'order', labelKey: 'admin.menu.order', icon: ShoppingBag, path: '/admin/manage/order' },
+  { id: 'order', labelKey: 'admin.menu.order', icon: ShoppingBag, path: '/admin/orders' },
   { id: 'product', labelKey: 'admin.menu.product', icon: Package, path: '/admin/manage/product' },
   { id: 'flash-sale', labelKey: 'admin.menu.flash_sale', icon: Zap, path: '/admin/manage/flash-sale' },
   { id: 'catalog', labelKey: 'admin.menu.catalog', icon: Grid, path: '/admin/manage/catalog' },

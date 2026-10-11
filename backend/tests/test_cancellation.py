@@ -175,27 +175,38 @@ async def test_admin_cancellation_shares_restock_and_cannot_reopen(checkout_db):
     assert created.status_code == 201, created.text
     order = created.json()
     path = f"/api/v1/admin/orders/{order['id']}"
-    cancelled = await db.client.put(path, json={"status": "cancelled"}, headers=db.auth())
+    cancelled = await db.client.post(
+        path + "/actions", json={"action": "cancel", "expected_version": 1}, headers=db.auth()
+    )
     assert cancelled.status_code == 200, cancelled.text
     assert cancelled.json()["user_id"] is None
     assert cancelled.json()["payment_status"] == "cancelled"
     assert cancelled.json()["fulfillment_status"] == "cancelled"
     assert await db.stock() == 10
-    repeated = await db.client.patch(path + "/status", json={"status": "cancelled"}, headers=db.auth())
-    assert repeated.status_code == 200, repeated.text
-    for method, target in [("PUT", path), ("PATCH", path + "/status")]:
-        reopened = await db.client.request(method, target, json={"status": "confirmed"}, headers=db.auth())
-        assert reopened.status_code == 409, reopened.text
+    repeated = await db.client.post(
+        path + "/actions", json={"action": "cancel", "expected_version": 2}, headers=db.auth()
+    )
+    assert repeated.status_code == 409, repeated.text
+    reopened = await db.client.post(
+        path + "/actions", json={"action": "confirm", "expected_version": 2}, headers=db.auth()
+    )
+    assert reopened.status_code == 409, reopened.text
     assert await db.stock() == 10
 
 
-async def test_admin_shipping_and_customer_cancellation_serialize(checkout_db):
+async def test_admin_processing_and_customer_cancellation_serialize(checkout_db):
     db = checkout_db
     db.app.include_router(admin_router, prefix="/api/v1", dependencies=[Depends(require_admin)])
     await db.change(User, db.user_id, role=UserRole.ADMIN)
     created = await db.client.post("/api/v1/orders/", json=await db.payload([db.line(3)]), headers=db.auth())
     assert created.status_code == 201, created.text
     order = created.json()
+    confirmed = await db.client.post(
+        f"/api/v1/admin/orders/{order['id']}/actions",
+        json={"action": "confirm", "expected_version": 1},
+        headers=db.auth(),
+    )
+    assert confirmed.status_code == 200, confirmed.text
     arrived = 0
     release = asyncio.Event()
 
@@ -211,9 +222,9 @@ async def test_admin_shipping_and_customer_cancellation_serialize(checkout_db):
         cancelled, shipped = await asyncio.wait_for(
             asyncio.gather(
                 db.client.post(f"/api/v1/orders/{order['id']}/cancel", headers=db.auth()),
-                db.client.patch(
-                    f"/api/v1/admin/orders/{order['id']}/status",
-                    json={"status": "shipped"},
+                db.client.post(
+                    f"/api/v1/admin/orders/{order['id']}/actions",
+                    json={"action": "process", "expected_version": 2},
                     headers=db.auth(),
                 ),
             ),
@@ -229,7 +240,8 @@ async def test_admin_shipping_and_customer_cancellation_serialize(checkout_db):
             assert saved.payment_status == saved.fulfillment_status == "cancelled"
             assert await db.stock() == 10
         else:
-            assert saved.status == OrderStatus.SHIPPED
+            assert saved.status == OrderStatus.CONFIRMED
+            assert saved.fulfillment_status == "processing"
             assert saved.payment_status == "unpaid"
             assert await db.stock() == 7
 

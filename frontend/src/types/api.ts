@@ -318,17 +318,15 @@ export interface OrderRead {
 }
 
 export interface DashboardStats {
-  total_revenue: number;
+  total_revenue: Money;
   total_orders: number;
   total_users: number;
   low_stock_count: number;
-  revenue_growth: number;
-  order_growth: number;
 }
 
 export interface RevenueChartPoint {
   date: string;
-  revenue: number;
+  revenue: Money;
   orders: number;
 }
 

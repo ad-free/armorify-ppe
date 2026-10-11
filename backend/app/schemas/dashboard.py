@@ -11,8 +11,6 @@ class DashboardStats(BaseModel):
     total_orders: int
     total_users: int
     low_stock_count: int
-    revenue_growth: float  # Percentage
-    order_growth: float  # Percentage
 
 
 class RevenueChartPoint(BaseModel):

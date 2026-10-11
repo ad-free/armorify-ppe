@@ -1,90 +1,92 @@
-from datetime import datetime
+from datetime import date, datetime, time, timezone
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func, or_, select
 
-from app.core.checkout import cancel_checkout
+from app.core.checkout import checkout_error
 from app.core.database import DbSession
-from app.models.order import Order, OrderItem, OrderStatus
-from app.schemas.order import AdminOrderRead, OrderUpdate
+from app.core.deps import require_admin
+from app.core.order_workflow import apply_order_action, load_order, order_detail
+from app.models.order import Order, OrderStatus
+from app.models.user import User
+from app.schemas.admin_order import AdminOrderAction, AdminOrderListItem, AdminOrderPage, AdminOrderRead
 
-router = APIRouter(prefix="/admin/orders", tags=["admin-orders"])
+AdminUser = Annotated[User, Depends(require_admin)]
+router = APIRouter(prefix="/admin/orders", tags=["admin-orders"], dependencies=[Depends(require_admin)])
 
 
-class OrderStatusUpdate(BaseModel):
-    status: OrderStatus
-
-
-@router.get("", response_model=list[AdminOrderRead])
+@router.get("", response_model=AdminOrderPage)
 async def list_orders(
     db: DbSession,
-    status_filter: OrderStatus | None = None,
-    from_date: datetime | None = None,
-    to_date: datetime | None = None,
-) -> list[Order]:
-    stmt = (
-        select(Order)
-        .where(Order.is_active.is_(True))
-        .options(selectinload(Order.items).selectinload(OrderItem.product))
-        .order_by(Order.created_at.desc())
+    search: str | None = Query(default=None, max_length=128),
+    status: OrderStatus | None = None,
+    payment_status: Literal["unpaid", "paid", "cancelled", "unknown"] | None = None,
+    fulfillment_status: Literal["unfulfilled", "processing", "shipped", "delivered", "cancelled", "unknown"]
+    | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    sort_by: Literal["created_at", "order_code", "total_amount"] = "created_at",
+    sort_order: Literal["asc", "desc"] = "desc",
+    page: int = Query(default=1, ge=1, le=1_000_000),
+    page_size: int = Query(default=20, ge=1, le=100),
+) -> AdminOrderPage:
+    if from_date and to_date and from_date > to_date:
+        raise checkout_error(422, "to_date", "End date must not precede start date.", "invalid_date_range")
+    conditions = [Order.is_active.is_(True)]
+    if search and search.strip():
+        term = "%" + search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        conditions.append(
+            or_(
+                *(
+                    column.ilike(term, escape="\\")
+                    for column in (Order.order_code, Order.customer_name, Order.contact_phone)
+                )
+            )
+        )
+    if status is not None:
+        conditions.append(Order.status == status)
+    for column, value in ((Order.payment_status, payment_status), (Order.fulfillment_status, fulfillment_status)):
+        if value is not None:
+            conditions.append(column.is_(None) if value == "unknown" else column == value)
+    if from_date:
+        conditions.append(Order.created_at >= datetime.combine(from_date, time.min, timezone.utc))
+    if to_date:
+        conditions.append(Order.created_at <= datetime.combine(to_date, time.max, timezone.utc))
+    total = await db.scalar(select(func.count()).select_from(Order).where(*conditions))
+    columns = [
+        Order.id,
+        Order.order_code,
+        Order.customer_name,
+        Order.contact_phone,
+        Order.total_amount,
+        Order.status,
+        Order.payment_status,
+        Order.fulfillment_status,
+        Order.created_at,
+    ]
+    sort = getattr(Order, sort_by)
+    ordering = [sort.asc(), Order.id.asc()] if sort_order == "asc" else [sort.desc(), Order.id.desc()]
+    rows = (
+        (
+            await db.execute(
+                select(*columns).where(*conditions).order_by(*ordering).offset((page - 1) * page_size).limit(page_size)
+            )
+        )
+        .mappings()
+        .all()
     )
-
-    if status_filter is not None:
-        stmt = stmt.where(Order.status == status_filter)
-    if from_date is not None:
-        stmt = stmt.where(Order.created_at >= from_date)
-    if to_date is not None:
-        stmt = stmt.where(Order.created_at <= to_date)
-
-    result = await db.execute(stmt)
-    return list(result.scalars().all())
+    return AdminOrderPage(
+        items=[AdminOrderListItem.model_validate(row) for row in rows], total=total or 0, page=page, page_size=page_size
+    )
 
 
 @router.get("/{order_id}", response_model=AdminOrderRead)
-async def get_order(order_id: UUID, db: DbSession) -> Order:
-    stmt = select(Order).where(Order.id == order_id).options(selectinload(Order.items).selectinload(OrderItem.product))
-    result = await db.execute(stmt)
-    order = result.scalar_one_or_none()
-    if order is None or not order.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    return order
+async def get_order(order_id: UUID, db: DbSession) -> AdminOrderRead:
+    return order_detail(await load_order(db, order_id))
 
 
-@router.put("/{order_id}", response_model=AdminOrderRead)
-async def update_order(order_id: UUID, payload: OrderUpdate, db: DbSession) -> Order:
-    if payload.status is None:
-        return await get_order(order_id, db)
-    return await update_order_status(order_id, OrderStatusUpdate(status=payload.status), db)
-
-
-@router.patch("/{order_id}/status", response_model=AdminOrderRead)
-async def update_order_status(order_id: UUID, payload: OrderStatusUpdate, db: DbSession) -> Order:
-    stmt = (
-        select(Order)
-        .where(Order.id == order_id)
-        .options(selectinload(Order.items).selectinload(OrderItem.product))
-        .with_for_update(of=Order)
-        .execution_options(populate_existing=True)
-    )
-    result = await db.execute(stmt)
-    order = result.scalar_one_or_none()
-
-    if order is None or not order.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-
-    if payload.status == OrderStatus.CANCELLED:
-        await cancel_checkout(db, order_id, order.user_id)
-        return await get_order(order_id, db)
-    if order.status == OrderStatus.CANCELLED:
-        raise HTTPException(status_code=409, detail="A cancelled order cannot be reopened")
-
-    order.status = payload.status
-    db.add(order)
-    await db.commit()
-
-    # Re-fetch for clean serialization
-    result = await db.execute(stmt)
-    return result.scalar_one()
+@router.post("/{order_id}/actions", response_model=AdminOrderRead)
+async def order_action(order_id: UUID, payload: AdminOrderAction, db: DbSession, actor: AdminUser) -> AdminOrderRead:
+    return order_detail(await apply_order_action(db, order_id, payload, actor.id))
