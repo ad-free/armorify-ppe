@@ -4,14 +4,14 @@ from uuid import UUID
 
 from app.core.checkout import checkout_error
 from app.models.order import Order, OrderEvent, OrderStatus
-from app.schemas.admin_order import AdminOrderAction, AdminOrderRead, AllowedOrderAction, OrderEventRead
+from app.schemas.admin_order import AdminOrderAction, AdminOrderRead, AllowedOrderAction, OrderAction, OrderEventRead
 from app.schemas.order import OrderRead
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-ACTIONS = ("confirm", "process", "ship", "deliver", "pay", "cancel", "tracking", "note")
+ACTIONS: tuple[OrderAction, ...] = ("confirm", "process", "ship", "deliver", "pay", "cancel", "tracking", "note")
 
 
 def order_state(order: Order) -> dict:

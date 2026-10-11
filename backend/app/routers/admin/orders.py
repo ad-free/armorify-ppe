@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, or_, select
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.checkout import checkout_error
 from app.core.database import DbSession
@@ -34,7 +35,7 @@ async def list_orders(
 ) -> AdminOrderPage:
     if from_date and to_date and from_date > to_date:
         raise checkout_error(422, "to_date", "End date must not precede start date.", "invalid_date_range")
-    conditions = [Order.is_active.is_(True)]
+    conditions: list[ColumnElement[bool]] = [Order.is_active.is_(True)]
     if search and search.strip():
         term = "%" + search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
         conditions.append(

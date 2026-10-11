@@ -113,6 +113,11 @@ The project maintains strict code quality standards through automated tools:
 - **Ruff**: Ultra-fast Python Linter and Formatter.
 - **mypy**: Static type checking for robust data integrity.
 
+GitHub CI runs when a pull request is opened or reopened, and whenever new commits
+are pushed to its branch (`synchronize`). Branch pushes without a pull request do
+not trigger CI. Pull requests targeting `release/*` remain excluded. Backend and
+frontend checks retain their changed-path filters; CI does not publish releases.
+
 ### Phase 1 UI foundation
 
 Storefront and admin share tokens in `frontend/src/index.css`, exposed through
@@ -257,6 +262,8 @@ states become `cancelled` in the same transaction. Repeated/concurrent cancellat
 returns the cancelled order without another stock increment. Unknown historical
 reservations, paid orders and progressed fulfillment require admin reconciliation.
 Admin cancellation uses the same path, and cancelled orders cannot be reopened.
+Cancellation requires a customer or admin audit actor; missing actor IDs are rejected
+before stock or state writes.
 Purchased item mutation routes remain removed.
 
 Standard retail shipping implements the published policy: **30,000 VND below

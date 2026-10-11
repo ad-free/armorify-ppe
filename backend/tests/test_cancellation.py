@@ -1,18 +1,40 @@
 """Cancellation uses real PostgreSQL transactions in the disposable checkout target."""
 
 import asyncio
+from uuid import UUID
 
 import pytest
+from app.core.checkout import cancel_checkout
 from app.core.deps import require_admin
-from app.models.order import Order, OrderStatus
+from app.models.order import Order, OrderEvent, OrderStatus
 from app.models.product import Product, ProductVariant
 from app.models.user import User, UserRole
 from app.routers.admin.orders import router as admin_router
 from fastapi import Depends
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
 pytestmark = pytest.mark.anyio
+
+
+async def test_cancellation_without_audit_actor_cannot_change_order_or_stock(checkout_db):
+    db = checkout_db
+    created = await db.client.post("/api/v1/orders/guest", json=await db.payload())
+    assert created.status_code == 201, created.text
+    order_id = UUID(created.json()["id"])
+    async with db.sessions() as session:
+        with pytest.raises(ValueError):
+            await cancel_checkout(session, order_id, None)
+        saved = await session.get(Order, order_id)
+        assert saved.status == OrderStatus.PENDING
+        assert saved.payment_status == "unpaid"
+        assert saved.fulfillment_status == "unfulfilled"
+        assert saved.version == 1
+        event_count = await session.scalar(
+            select(func.count()).select_from(OrderEvent).where(OrderEvent.order_id == order_id)
+        )
+        assert event_count == 0
+    assert await db.stock() == 9
 
 
 @pytest.mark.parametrize("variant", [False, True])

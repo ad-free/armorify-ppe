@@ -297,6 +297,9 @@ async def cancel_checkout(
     from app.core.order_workflow import has_checkout_snapshot, order_state, record_order_event
 
     try:
+        event_actor_id = actor_id or user_id
+        if event_actor_id is None:
+            raise ValueError("Cancellation requires an audit actor")
         order = (
             await db.execute(
                 select(Order)
@@ -390,7 +393,7 @@ async def cancel_checkout(
         order.status = OrderStatus.CANCELLED
         order.payment_status = "cancelled"
         order.fulfillment_status = "cancelled"
-        record_order_event(db, order, actor_id or user_id, "cancel", previous, metadata or {})
+        record_order_event(db, order, event_actor_id, "cancel", previous, metadata or {})
         if commit:
             await db.commit()
         else:
