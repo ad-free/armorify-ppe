@@ -11,6 +11,7 @@ class DashboardStats(BaseModel):
     total_orders: int
     total_users: int
     low_stock_count: int
+    hidden_count: int
 
 
 class RevenueChartPoint(BaseModel):

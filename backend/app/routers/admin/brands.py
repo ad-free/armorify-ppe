@@ -1,8 +1,9 @@
 # app/routers/admin/brands.py
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
+from app.core.catalog_admin import commit, update_reference
 from app.core.database import DbSession
 from app.core.deps import require_staff
 from app.crud.crud_brand import brand_crud
@@ -28,20 +29,16 @@ async def list_brands(
 
 @router.post("/", response_model=BrandRead, status_code=status.HTTP_201_CREATED)
 async def create_brand(payload: BrandCreate, db: DbSession) -> Brand:
-    return await brand_crud.create(db, payload)
+    brand = Brand(**payload.model_dump())
+    db.add(brand)
+    return await commit(db, brand)
 
 
 @router.put("/{brand_id}", response_model=BrandRead)
 async def update_brand(brand_id: UUID, payload: BrandUpdate, db: DbSession) -> Brand:
-    brand = await brand_crud.update(db, brand_id, payload)
-    if brand is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Brand not found")
-    return brand
+    return await update_reference(db, Brand, brand_id, payload.model_dump(exclude_unset=True))
 
 
 @router.delete("/{brand_id}", response_model=BrandRead)
 async def delete_brand(brand_id: UUID, db: DbSession) -> Brand:
-    brand = await brand_crud.soft_delete(db, brand_id)
-    if brand is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Brand not found")
-    return brand
+    return await update_reference(db, Brand, brand_id, {"is_active": False})

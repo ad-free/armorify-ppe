@@ -362,11 +362,11 @@ async def test_quantities_are_strict_positive_integers(checkout_db, quantity):
 
 @pytest.mark.parametrize(
     "selection",
-    ["foreign_variant", "inactive_product", "inactive_variant", "missing_variant"],
+    ["foreign_variant", "inactive_product", "inactive_variant", "missing_variant", "missing_inactive_variant"],
 )
 async def test_invalid_catalog_selection_never_creates_an_order(checkout_db, selection):
     db = checkout_db
-    line = db.line(variant=selection in {"inactive_variant", "missing_variant"})
+    line = db.line(variant=selection in {"inactive_variant", "missing_variant", "missing_inactive_variant"})
     payload = await db.payload([line])
     if selection == "foreign_variant":
         line["variant_id"] = str(db.variant_id)
@@ -375,6 +375,8 @@ async def test_invalid_catalog_selection_never_creates_an_order(checkout_db, sel
     elif selection == "inactive_variant":
         await db.change(ProductVariant, db.variant_id, is_active=False)
     else:
+        if selection == "missing_inactive_variant":
+            await db.change(ProductVariant, db.variant_id, is_active=False)
         line["variant_id"] = None
     payload["items"] = [line]
     quote = await db.quote([line])
@@ -384,10 +386,18 @@ async def test_invalid_catalog_selection_never_creates_an_order(checkout_db, sel
     assert quote["items"][0]["product_name"] is None
     assert quote["items"][0]["unit_price"] is None
     response = await db.client.post("/api/v1/orders/guest", json=payload)
-    assert response.status_code in {409, 422}, response.text
+    if selection in {"inactive_variant", "missing_variant", "missing_inactive_variant"}:
+        field_error(response, 409, "variant_id")
+    else:
+        assert response.status_code in {409, 422}, response.text
     assert await db.order_count() == 0
     assert await db.stock() == 10
     assert await db.stock(variant=True) == 10
+    async with db.sessions() as session:
+        product = await session.get(Product, db.variant_product_id)
+        assert product.stock == 99
+        assert product.has_variants is True
+        assert product.available_stock == (0 if selection in {"inactive_variant", "missing_inactive_variant"} else 10)
 
 
 async def test_idempotent_retry_precedes_stock_and_repricing(checkout_db):

@@ -38,14 +38,26 @@ async def get_dashboard_data(db: DbSession):
     total_users = users_count_res.scalar() or 0
 
     # Low Stock (less than 10)
-    low_stock_res = await db.execute(select(func.count(Product.id)).where(Product.stock < 10))
+    low_stock_res = await db.execute(
+        select(func.count(Product.id)).where(Product.available_stock < 10)  # type: ignore[attr-defined]
+    )
     low_stock_count = low_stock_res.scalar() or 0
+
+    # Variant-owned but with nothing sellable: hidden, not merely low.
+    hidden_res = await db.execute(
+        select(func.count(Product.id)).where(
+            Product.has_variants.is_(True),  # type: ignore[attr-defined]
+            Product.available_stock == 0,  # type: ignore[attr-defined]
+        )
+    )
+    hidden_count = hidden_res.scalar() or 0
 
     stats = DashboardStats(
         total_revenue=total_revenue,
         total_orders=total_orders,
         total_users=total_users,
         low_stock_count=low_stock_count,
+        hidden_count=hidden_count,
     )
 
     # 2. Revenue Chart (Last 30 days)

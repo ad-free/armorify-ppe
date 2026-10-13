@@ -5,7 +5,7 @@ from decimal import Decimal
 from enum import Enum
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_ENV_FILE = ".env"
@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     # Published standard shipping policy: 30,000 VND; free from 500,000 VND.
     checkout_shipping_fee: Decimal | None = Decimal("30000")
     checkout_free_shipping_threshold: Decimal | None = Decimal("500000")
+    product_media_dir: Path = Path(__file__).resolve().parents[2] / "static" / "product-images"
+    product_image_max_bytes: int = Field(default=8 * 1024 * 1024, ge=1, le=64 * 1024 * 1024)
+    product_image_max_pixels: int = Field(default=20_000_000, ge=1, le=100_000_000)
 
     @field_validator("checkout_shipping_fee", "checkout_free_shipping_threshold", mode="before")
     @classmethod

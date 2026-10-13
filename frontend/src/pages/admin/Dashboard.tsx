@@ -87,7 +87,7 @@ const Dashboard: React.FC = () => {
       {
         label: 'Sắp Hết Hàng',
         value: (s.low_stock_count || 0).toString(),
-        subValue: 'Tồn kho dưới 10',
+        subValue: `Tồn kho dưới 10${s.hidden_count ? ` · ${s.hidden_count} đang ẩn` : ''}`,
         icon: AlertCircle,
         color: 'text-rose-500',
         bg: 'bg-rose-50',
@@ -154,7 +154,7 @@ const Dashboard: React.FC = () => {
           );
 
           if (isLowStock) {
-            return <Link key={index} to="/admin/manage/product?stock=low">{CardContent}</Link>;
+            return <Link key={index} to="/admin/products?low_stock=true">{CardContent}</Link>;
           }
 
           return <React.Fragment key={index}>{CardContent}</React.Fragment>;

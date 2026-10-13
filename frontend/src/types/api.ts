@@ -29,6 +29,7 @@ export interface ProductImageRead {
   alt_text: string | null;
   position: number;
   is_active: boolean;
+  is_cover: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -67,7 +68,6 @@ export interface ProductCreate {
   description?: string | null;
   price: number;
   dealer_price?: number | null;
-  stock?: number;
   is_featured?: boolean;
   category_id: string;
   brand_id?: string | null;
@@ -140,6 +140,9 @@ export interface ProductRead {
   price: number;
   dealer_price: number | null;
   stock: number;
+  has_variants: boolean;
+  available_stock: number;
+  stock_status: 'out_of_stock' | 'low_stock' | 'in_stock';
   is_featured: boolean;
   category_id: string;
   specifications: Record<string, unknown> | unknown[] | null;
@@ -169,6 +172,8 @@ export interface ProductVariantRead {
   size: string | null;
   color: string | null;
   stock: number;
+  available_stock: number;
+  stock_status: 'out_of_stock' | 'low_stock' | 'in_stock';
   price_override: string | null;
   attributes: Record<string, unknown> | null;
   is_active: boolean;
@@ -322,6 +327,7 @@ export interface DashboardStats {
   total_orders: number;
   total_users: number;
   low_stock_count: number;
+  hidden_count: number;
 }
 
 export interface RevenueChartPoint {

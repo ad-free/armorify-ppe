@@ -52,7 +52,11 @@ export default function CartPage() {
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <section aria-label="Sản phẩm trong giỏ" className="space-y-4">
           <h2 className="sr-only">Sản phẩm trong giỏ</h2>
-          {quote.data ? quote.data.items.map((line) => <QuoteLine key={`${line.product_id}:${line.variant_id ?? ''}`} line={line}><QuantityControls line={line} disabled={quote.isFetching} /></QuoteLine>) : items.map((item) => <article key={`${item.product.id}:${item.variant_id ?? ''}`} className="card p-4"><h2 className="font-semibold">Đang chờ kiểm tra sản phẩm</h2><p className="text-caption">Số lượng: {item.quantity} · Chưa có giá và tồn kho mới.</p><Button variant="ghost" className="mt-2" onClick={() => remove(item.product.id, item.variant_id)}>Xóa sản phẩm khỏi giỏ</Button></article>)}
+          {quote.data ? quote.data.items.map((line) => {
+            const snapshot = items.find((item) => item.product.id === line.product_id && (item.variant_id ?? null) === (line.variant_id ?? null));
+            const stale = !line.product_name && snapshot;
+            return <QuoteLine key={`${line.product_id}:${line.variant_id ?? ''}`} line={line}>{stale ? <p role="alert" className="field-error">Dòng này không còn mua được (sản phẩm đã đổi cấu hình, bị ẩn hoặc hết hàng). {snapshot.product.slug ? <Link className="underline" to={`/products/${snapshot.product.slug}`}>Chọn lại phân loại</Link> : null} Bạn có thể xóa dòng này bên dưới.</p> : null}<QuantityControls line={line} disabled={quote.isFetching} /></QuoteLine>;
+          }) : items.map((item) => <article key={`${item.product.id}:${item.variant_id ?? ''}`} className="card p-4"><h2 className="font-semibold">Đang chờ kiểm tra sản phẩm</h2><p className="text-caption">Số lượng: {item.quantity} · Chưa có giá và tồn kho mới.</p><Button variant="ghost" className="mt-2" onClick={() => remove(item.product.id, item.variant_id)}>Xóa sản phẩm khỏi giỏ</Button></article>)}
           <Link to="/categories" className="btn btn-secondary">Tiếp tục chọn sản phẩm</Link>
         </section>
         <section className="card space-y-4 p-4 sm:p-6" aria-labelledby="cart-summary">

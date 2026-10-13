@@ -36,6 +36,13 @@ const getResourcePath = (entity: string) => {
 export const genericApiClient = {
   fetchList: async (entity: string, params: QueryParams) => {
     const path = getResourcePath(entity);
+    if (path === 'admin/catalog/products') {
+      const { include_inactive, ...filters } = params;
+      const page = await GET<{ items: Record<string, unknown>[] }>('/admin/catalog/products', {
+        params: { ...filters, ...(include_inactive === false ? { is_active: true } : {}) },
+      });
+      return page.items;
+    }
     return GET<Record<string, unknown>[]>(`/${path}/`, { params });
   },
 
@@ -52,9 +59,8 @@ export const genericApiClient = {
   uploadImage: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return POST<{ url: string }>(`/admin/catalog/uploads/images`, formData);
+    return POST<{ url: string }>('/admin/catalog/uploads/images', formData);
   },
-
   update: async (entity: string, id: string | number, data: Record<string, unknown>) => {
     const path = getResourcePath(entity);
     return PUT<Record<string, unknown>>(`/${path}/${id}`, data);

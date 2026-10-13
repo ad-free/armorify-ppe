@@ -22,8 +22,8 @@ export const SERVER_ORIGIN = (() => {
  * Converts any image URL stored in the database to a fully-qualified URL that
  * works regardless of the current server IP or domain.
  *
- * - Absolute URLs  (legacy, stored with an old IP): the pathname is extracted
- *   and re-attached to the *current* SERVER_ORIGIN.
+ * - Absolute external URLs: preserved for historical catalog media.
+ * - Absolute legacy /static URLs: reattached to the current SERVER_ORIGIN.
  * - Relative paths (new format, e.g. "/static/uploads/abc.jpg"): SERVER_ORIGIN
  *   is prepended.
  * - Null / empty   : returns an empty string so <img> renders nothing.
@@ -31,9 +31,8 @@ export const SERVER_ORIGIN = (() => {
 export const getMediaUrl = (url: string | null | undefined): string => {
   if (!url) return '';
   try {
-    // Handles absolute URLs — rewrite the origin to the current server.
     const parsed = new URL(url);
-    return `${SERVER_ORIGIN}${parsed.pathname}`;
+    return parsed.pathname.startsWith('/static/') ? `${SERVER_ORIGIN}${parsed.pathname}` : parsed.href;
   } catch {
     // Relative path — just prepend the origin.
     return `${SERVER_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;

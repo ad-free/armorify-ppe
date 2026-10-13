@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 from app.models.order import Order, OrderStatus
-from app.models.product import Product
+from app.models.product import Product, ProductVariant
 from app.models.user import User, UserRole
 from app.routers.admin.dashboard import router as dashboard_router
 from sqlalchemy import event
@@ -28,6 +28,7 @@ async def test_dashboard_requires_admin_and_empty_totals_are_real(checkout_db):
         "total_orders": 0,
         "total_users": 2,
         "low_stock_count": 0,
+        "hidden_count": 0,
     }
     assert dashboard["revenue_chart"] == []
     assert dashboard["recent_orders"] == []
@@ -86,7 +87,14 @@ async def test_dashboard_delivered_paid_active_revenue_and_immutable_recent_snap
     assert dashboard["stats"]["total_orders"] == len(cases)
     assert dashboard["stats"]["total_users"] == 2
     assert dashboard["stats"]["low_stock_count"] == 1
-    assert set(dashboard["stats"]) == {"total_revenue", "total_orders", "total_users", "low_stock_count"}
+    assert dashboard["stats"]["hidden_count"] == 0
+    assert set(dashboard["stats"]) == {
+        "total_revenue",
+        "total_orders",
+        "total_users",
+        "low_stock_count",
+        "hidden_count",
+    }
     assert dashboard["revenue_chart"] == [
         {"date": (today - timedelta(days=1)).date().isoformat(), "revenue": str(amount), "orders": 1},
     ]
@@ -101,3 +109,22 @@ async def test_dashboard_delivered_paid_active_revenue_and_immutable_recent_snap
     assert not any(
         "from products" in statement.lower() and "count(" not in statement.lower() for statement in statements
     )
+
+
+async def test_dashboard_hidden_count_tracks_fully_hidden_variant_products(checkout_db):
+    db = checkout_db
+    db.app.include_router(dashboard_router, prefix="/api/v1")
+    await db.change(User, db.user_id, role=UserRole.ADMIN)
+
+    async def stats():
+        response = await db.client.get(DASHBOARD_PATH, headers=db.auth())
+        assert response.status_code == 200, response.text
+        return response.json()["stats"]
+
+    assert (await stats())["hidden_count"] == 0
+    await db.change(ProductVariant, db.variant_id, is_active=False)
+    hidden = await stats()
+    assert hidden["hidden_count"] == 1
+    assert hidden["low_stock_count"] == 1
+    await db.change(ProductVariant, db.variant_id, is_active=True)
+    assert (await stats())["hidden_count"] == 0

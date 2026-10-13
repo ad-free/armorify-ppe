@@ -70,7 +70,7 @@ function ProductExperience({ product, refreshProduct }: { product: ProductRead; 
   const rating = distributionValid && reviewCount > 0 ? entries.reduce((sum, [star, count]) => sum + Number(star) * Number(count), 0) / reviewCount : product.rating_count === reviewCount ? Number(product.rating_avg) : NaN;
   const showRating = !reviews.isError && !!reviews.data?.items.length && reviewCount > 0 && Number.isFinite(rating) && rating >= 1 && rating <= 5;
   const description = useMemo(() => product.description ? DOMPurify.sanitize(marked.parse(product.description, { async: false }) as string, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling'], USE_PROFILES: { html: true } }) : '', [product.description]);
-  const imageList = images.data?.length ? images.data : product.cover_image_url ? [{ id: 'cover', product_id: product.id, url: product.cover_image_url, alt_text: product.name, position: 0, is_active: true, created_at: '', updated_at: '' }] : [];
+  const imageList = images.data?.length ? images.data : product.cover_image_url ? [{ id: 'cover', product_id: product.id, url: product.cover_image_url, alt_text: product.name, position: 0, is_active: true, is_cover: true, created_at: '', updated_at: '' }] : [];
   const relatedProducts = related.data?.filter((item) => item.id !== product.id && item.is_active) ?? [];
 
   useEffect(() => {
@@ -102,6 +102,7 @@ function ProductExperience({ product, refreshProduct }: { product: ProductRead; 
 
   const status = variants.isError ? text('Không thể kiểm tra lựa chọn. Thử lại trước khi mua.', 'Unable to verify options. Retry before purchasing.')
     : variants.isLoading ? text('Đang kiểm tra lựa chọn và tồn kho…', 'Checking options and stock…')
+    : product.has_variants && product.available_stock <= 0 ? text('Hết hàng ở các biến thể đang hiển thị. Liên hệ để hỏi về sản phẩm.', 'Out of stock across listed variants. Contact us to ask about this item.')
     : !state.complete ? text('Chọn một phân loại để xem giá, SKU và tồn kho.', 'Select an option to confirm price, SKU and stock.')
     : state.stock <= 0 ? text('Hết hàng. Bạn có thể liên hệ để hỏi về sản phẩm.', 'Out of stock. Contact us to ask about this item.')
     : text(`Còn ${state.stock} · Có thể thêm ${state.remaining}`, `${state.stock} in stock · ${state.remaining} available to add`);

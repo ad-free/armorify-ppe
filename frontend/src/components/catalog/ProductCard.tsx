@@ -42,7 +42,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { user } = useAuthStore();
   const { toggleItem, isInWishlist } = useWishlistStore();
   const isFavorite = isInWishlist(product.id);
-  const inStock = product.stock > 0;
+  const inStock = product.available_stock > 0;
   const { unit, standards, details } = getCardFacts(product.specifications);
 
   const fmt = (val: number) => formatCurrency(val, { locale: i18n.language === 'vi' ? 'vi-VN' : 'en-US' });
@@ -173,7 +173,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
         <p className={`mt-3 text-xs font-medium ${inStock ? 'text-success' : 'text-muted-foreground'}`}>
-          {inStock ? `Còn hàng (${product.stock})` : 'Hết hàng'}
+          {inStock ? `Còn hàng (${product.available_stock})` : 'Hết hàng'}
         </p>
 
         {/* Action Button */}

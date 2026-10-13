@@ -278,10 +278,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
     const payload = { ...data } as Record<string, unknown>;
 
     for (const [key, value] of Object.entries(data)) {
-      if (value instanceof File) {
-        const uploaded = await genericApiClient.uploadImage(value);
-        payload[key] = uploaded.url;
-      } else if (value === '') {
+      if (value === '') {
         // Convert empty strings to null for the backend
         payload[key] = null;
       } else if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) {
@@ -685,53 +682,36 @@ const FormFieldAdapter = ({
     'aria-invalid': Boolean(error),
     'aria-describedby': error ? `field-${entityName}-${fieldKey}-error` : undefined,
   };
-
   const [isUploading, setIsUploading] = useState(false);
 
   if (isFileField(fieldKey, schema)) {
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
       if (!file) return;
-
       onManualEdit?.();
       setIsUploading(true);
-
       try {
         const uploaded = await genericApiClient.uploadImage(file);
         field.onChange(uploaded.url);
         authToast.success('Tải ảnh thành công!', 'Ảnh đã sẵn sàng để lưu.');
-      } catch (err) {
-        console.error('Upload error:', err);
+      } catch (error) {
+        console.error('Upload error:', error);
         authToast.error('Tải ảnh thất bại', 'Vui lòng kiểm tra lại kết nối hoặc định dạng ảnh.');
       } finally {
         setIsUploading(false);
       }
     };
-
     return (
       <div className="space-y-4">
         <label className={`card relative flex items-center justify-center w-full px-4 py-6 border-dashed cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-primary ${isUploading ? 'bg-muted' : 'hover:border-primary'}`}>
           <div className="flex flex-col items-center">
             <div className="w-11 h-11 rounded-md flex items-center justify-center mb-3 bg-muted text-muted-foreground">
-              {isUploading ? (
-                <div className="w-6 h-6 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
-              ) : (
-                <Columns size={24} />
-              )}
+              {isUploading ? <div className="w-6 h-6 border-3 border-primary/30 border-t-primary rounded-full animate-spin" /> : <Columns size={24} />}
             </div>
-            <p className="text-sm font-semibold">
-              {isUploading ? 'Đang xử lý dữ liệu...' : 'Nhấn để tải hình ảnh lên'}
-            </p>
-            <p className="text-caption mt-2">Định dạng JPG, PNG, WEBP (Tối đa 5MB)</p>
+            <p className="text-sm font-semibold">{isUploading ? 'Đang xử lý dữ liệu...' : 'Nhấn để tải hình ảnh lên'}</p>
+            <p className="text-caption mt-2">Định dạng JPG, PNG, WEBP. Giới hạn kích thước được kiểm tra trên máy chủ.</p>
           </div>
-          <input
-            type="file"
-            {...accessibilityProps}
-            accept="image/*"
-            className="sr-only"
-            onChange={handleFileChange}
-            disabled={isUploading}
-          />
+          <input type="file" {...accessibilityProps} accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handleFileChange} disabled={isUploading} />
         </label>
 
         {typeof field.value === 'string' && field.value ? (

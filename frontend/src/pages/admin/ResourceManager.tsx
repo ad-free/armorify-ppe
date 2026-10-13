@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { GenericManager } from '../../components/dynamic/GenericManager';
-import { ProductManager } from '../../components/admin/ProductManager';
 
 export const ResourceManagerPage: React.FC = () => {
   const { t } = useTranslation();
@@ -20,11 +19,7 @@ export const ResourceManagerPage: React.FC = () => {
 
   return (
     <AdminLayout title={activeEntityLabel} subtitle={entityHelpText}>
-      {activeEntity === 'product' ? (
-        <ProductManager />
-      ) : (
-        <GenericManager entityName={activeEntity} />
-      )}
+      <GenericManager entityName={activeEntity} />
     </AdminLayout>
   );
 };

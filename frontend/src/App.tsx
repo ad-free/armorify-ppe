@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Toaster } from 'react-hot-toast';
 import { FloatingContact } from './components/common/FloatingContact';
@@ -12,6 +12,14 @@ import type { UserRead } from './types/api';
 import { Button, FeedbackState, Skeleton } from './components/ui/Primitives';
 const AdminOrders = React.lazy(() => import('./pages/admin/Orders'));
 const AdminOrderDetail = React.lazy(() => import('./pages/admin/OrderDetail'));
+const AdminProducts = React.lazy(() => import('./pages/admin/Products'));
+const AdminProductEditor = React.lazy(() => import('./pages/admin/ProductEditor'));
+const LegacyProductsRedirect = () => {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  if (params.get('stock') === 'low') { params.delete('stock'); params.set('low_stock', 'true'); }
+  return <Navigate to={`/admin/products?${params}`} replace />;
+};
 
 const LegacyOrdersRedirect = () => {
   const { search } = useLocation();
@@ -182,7 +190,6 @@ function App() {
   return (
     <ErrorBoundary>
       <GlobalToaster />
-      <BrowserRouter>
         <ScrollToTop />
         <AppLayout t={t}>
           <Routes>
@@ -216,6 +223,12 @@ function App() {
             <Route path="/admin/orders" element={user?.role === 'admin' ? <AdminOrders /> : <Navigate to="/login" replace />} />
             <Route path="/admin/orders/:orderId" element={user?.role === 'admin' ? <AdminOrderDetail /> : <Navigate to="/login" replace />} />
             <Route path="/admin/manage/order" element={user?.role === 'admin' ? <LegacyOrdersRedirect /> : <Navigate to="/login" replace />} />
+            <Route path="/admin/products" element={user?.role === 'admin' ? <AdminProducts /> : <Navigate to="/login" replace />} />
+            <Route path="/admin/products/new" element={user?.role === 'admin' ? <AdminProductEditor /> : <Navigate to="/login" replace />} />
+            <Route path="/admin/products/:productId" element={user?.role === 'admin' ? <AdminProductEditor /> : <Navigate to="/login" replace />} />
+            <Route path="/admin/manage/product" element={user?.role === 'admin' ? <LegacyProductsRedirect /> : <Navigate to="/login" replace />} />
+            <Route path="/admin/manage/variant" element={user?.role === 'admin' ? <LegacyProductsRedirect /> : <Navigate to="/login" replace />} />
+            <Route path="/admin/manage/product_image" element={user?.role === 'admin' ? <LegacyProductsRedirect /> : <Navigate to="/login" replace />} />
             <Route
               path="/admin/manage/:entityId"
               element={user?.role === 'admin' ? <ResourceManagerPage /> : <Navigate to="/login" replace />}
@@ -223,7 +236,6 @@ function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </AppLayout>
-      </BrowserRouter>
     </ErrorBoundary>
   );
 }
