@@ -1,4 +1,5 @@
 # app/models/product.py
+from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 from uuid import UUID as _UUID
@@ -11,7 +12,9 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -20,6 +23,7 @@ from sqlalchemy import (
     UniqueConstraint,
     case,
     cast,
+    event,
     func,
     select,
     text,
@@ -175,3 +179,41 @@ Product.stock_status = column_property(
         else_="in_stock",
     )
 )
+
+
+class CatalogVisibilityEvent(Base):
+    """Append-only record of variant visibility toggles and the staff actor behind them."""
+
+    __tablename__ = "catalog_visibility_events"
+
+    id: Mapped[_UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    product_id: Mapped[_UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("products.id", ondelete="RESTRICT"), nullable=False
+    )
+    variant_id: Mapped[_UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("product_variants.id", ondelete="RESTRICT"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(String(16), nullable=False)
+    admin_actor_id: Mapped[_UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.clock_timestamp()
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["variant_id", "product_id"],
+            ["product_variants.id", "product_variants.product_id"],
+            name="fk_visibility_variant_owner",
+            ondelete="RESTRICT",
+        ),
+        Index("ix_visibility_events_product_created", "product_id", "created_at"),
+        CheckConstraint("action IN ('variant_hidden', 'variant_shown')", name="ck_visibility_action"),
+    )
+
+
+@event.listens_for(CatalogVisibilityEvent, "before_update")
+@event.listens_for(CatalogVisibilityEvent, "before_delete")
+def reject_visibility_mutation(mapper, connection, target):
+    raise ValueError("Visibility events are append-only")

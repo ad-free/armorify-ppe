@@ -12,7 +12,7 @@ from app.core.product_media import store_image_file
 from app.crud.base import CRUDBase
 from app.models.cart import CartItem
 from app.models.inventory import InventoryMovement
-from app.models.product import Category, Product, ProductVariant
+from app.models.product import CatalogVisibilityEvent, Category, Product, ProductVariant
 from app.models.product_image import ProductImage
 from app.models.user import User
 from app.schemas.product import (
@@ -174,11 +174,20 @@ async def get_product(product_id: UUID, db: DbSession):
             .limit(50)
         )
     ).all()
+    visibility_events = (
+        await db.scalars(
+            select(CatalogVisibilityEvent)
+            .where(CatalogVisibilityEvent.product_id == product_id)
+            .order_by(CatalogVisibilityEvent.created_at.desc(), CatalogVisibilityEvent.id)
+            .limit(20)
+        )
+    ).all()
     return {
         **AdminProductRead.model_validate(product).model_dump(),
         "variants": variant_results,
         "images": images,
         "recent_movements": movements,
+        "recent_visibility_events": visibility_events,
     }
 
 
@@ -223,14 +232,14 @@ async def list_variants(
 
 
 @router.post("/variants", response_model=AdminVariantRead, status_code=status.HTTP_201_CREATED)
-async def create_variant(payload: VariantCreate, db: DbSession):
-    variant = await save_variant(db, payload)
+async def create_variant(payload: VariantCreate, db: DbSession, actor: User = Depends(require_staff)):
+    variant = await save_variant(db, payload, admin_actor_id=actor.id)
     return (await variant_reads(db, [variant]))[0]
 
 
 @router.put("/variants/{variant_id}", response_model=AdminVariantRead)
-async def update_variant(variant_id: UUID, payload: VariantUpdate, db: DbSession):
-    variant = await save_variant(db, payload, variant_id)
+async def update_variant(variant_id: UUID, payload: VariantUpdate, db: DbSession, actor: User = Depends(require_staff)):
+    variant = await save_variant(db, payload, variant_id, admin_actor_id=actor.id)
     return (await variant_reads(db, [variant]))[0]
 
 

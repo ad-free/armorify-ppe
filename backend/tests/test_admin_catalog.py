@@ -494,3 +494,27 @@ async def test_inactive_variant_options_cannot_be_duplicated(catalog_db):
     )
     assert response.status_code == 409, response.text
     assert response.json()["detail"][0]["type"] == "duplicate_options"
+
+
+async def test_visibility_toggle_records_append_only_events(catalog_db):
+    db = catalog_db
+    assert (await detail(db, db.variant_product_id)).get("recent_visibility_events") == []
+    hide = await db.client.put(f"{BASE}/variants/{db.variant_id}", json={"is_active": False}, headers=db.auth())
+    assert hide.status_code == 200, hide.text
+    events = (await detail(db, db.variant_product_id))["recent_visibility_events"]
+    assert [(row["action"], row["variant_id"], row["product_id"]) for row in events] == [
+        ("variant_hidden", str(db.variant_id), str(db.variant_product_id))
+    ]
+    assert events[0]["admin_actor_id"] == str(db.user_id)
+    repeat = await db.client.put(f"{BASE}/variants/{db.variant_id}", json={"is_active": False}, headers=db.auth())
+    assert repeat.status_code == 200, repeat.text
+    assert len((await detail(db, db.variant_product_id))["recent_visibility_events"]) == 1
+    show = await db.client.put(f"{BASE}/variants/{db.variant_id}", json={"is_active": True}, headers=db.auth())
+    assert show.status_code == 200, show.text
+    events = (await detail(db, db.variant_product_id))["recent_visibility_events"]
+    assert [row["action"] for row in events] == ["variant_shown", "variant_hidden"]
+    untouched = await db.client.put(
+        f"{BASE}/variants/{db.variant_id}", json={"price_override": "130.00"}, headers=db.auth()
+    )
+    assert untouched.status_code == 200, untouched.text
+    assert len((await detail(db, db.variant_product_id))["recent_visibility_events"]) == 2

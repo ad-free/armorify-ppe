@@ -19,7 +19,10 @@ export interface CatalogMovement {
   id: string; variant_id: string | null; quantity_delta: number; resulting_balance: number;
   source_type: string; order_id: string | null; admin_actor_id: string | null; reason: string; created_at: string;
 }
-export interface CatalogDetail extends CatalogProduct { variants: CatalogVariant[]; images: CatalogImage[]; recent_movements: CatalogMovement[] }
+export interface CatalogVisibilityEvent {
+  id: string; product_id: string; variant_id: string; action: 'variant_hidden' | 'variant_shown'; admin_actor_id: string | null; created_at: string;
+}
+export interface CatalogDetail extends CatalogProduct { variants: CatalogVariant[]; images: CatalogImage[]; recent_movements: CatalogMovement[]; recent_visibility_events: CatalogVisibilityEvent[] }
 export interface CatalogOption { id: string; name: string; is_active: boolean }
 export const listProducts = (params: Record<string, string | number | boolean>, signal?: AbortSignal) => GET<{items: CatalogProduct[]; total: number; skip: number; limit: number}>('/admin/catalog/products', { params, signal });
 export const getProduct = (id: string, signal?: AbortSignal) => GET<CatalogDetail>(`/admin/catalog/products/${id}`, { signal });

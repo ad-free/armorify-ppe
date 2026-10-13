@@ -2,7 +2,7 @@
 
 from app.models.brand import Brand
 from app.models.cart import CartItem
-from app.models.product import Category, Product, ProductVariant
+from app.models.product import CatalogVisibilityEvent, Category, Product, ProductVariant
 from app.models.product_image import ProductImage
 from fastapi import HTTPException
 from sqlalchemy import func, select, text
@@ -117,7 +117,7 @@ async def cart_count(db, variant_id):
     )
 
 
-async def save_variant(db, payload, variant_id=None):
+async def save_variant(db, payload, variant_id=None, admin_actor_id=None):
     values = payload.model_dump(exclude_unset=True)
     confirmed = values.pop("confirm_cart_impact", False)
     if variant_id is None:
@@ -165,6 +165,15 @@ async def save_variant(db, payload, variant_id=None):
         changed = any(getattr(variant, field) != value for field, value in values.items())
         if changed and await cart_count(db, variant_id) and not confirmed:
             conflict("confirm_cart_impact", "This variant is in saved carts; confirm the change", "cart_impact")
+        if "is_active" in values and values["is_active"] != variant.is_active:
+            db.add(
+                CatalogVisibilityEvent(
+                    product_id=product_id,
+                    variant_id=variant_id,
+                    action="variant_shown" if values["is_active"] else "variant_hidden",
+                    admin_actor_id=admin_actor_id,
+                )
+            )
         for field, value in values.items():
             setattr(variant, field, value)
     else:

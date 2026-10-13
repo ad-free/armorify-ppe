@@ -195,9 +195,17 @@ class ProductBrandRead(BaseModel):
 class ProductRead(ProductBase):
     id: UUID
     stock: int = 0
-    available_stock: int = 0
-    has_variants: bool = False
-    stock_status: str = "out_of_stock"
+    available_stock: int = Field(
+        default=0,
+        description="Sellable balance: active variant stock sum, or Product.stock when variant-free.",
+    )
+    has_variants: bool = Field(
+        default=False,
+        description="True while any variant row exists, even hidden; base stock never becomes sellable again.",
+    )
+    stock_status: str = Field(
+        default="out_of_stock", description="Derived from available_stock: 0 is out_of_stock, below 10 is low_stock."
+    )
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -241,7 +249,7 @@ class VariantUpdate(CatalogInput):
 class VariantRead(VariantBase):
     id: UUID
     stock: int = 0
-    available_stock: int = 0
+    available_stock: int = Field(default=0, description="Sellable variant balance; 0 while the variant is hidden.")
     stock_status: str = "out_of_stock"
     is_active: bool
     created_at: datetime
@@ -284,7 +292,18 @@ class ProductPage(BaseModel):
     limit: int
 
 
+class VisibilityEventRead(BaseModel):
+    id: UUID
+    product_id: UUID
+    variant_id: UUID
+    action: str
+    admin_actor_id: UUID | None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ProductDetail(AdminProductRead):
     variants: list[AdminVariantRead]
     images: list[ProductImageRead]
     recent_movements: list[InventoryMovementRead]
+    recent_visibility_events: list[VisibilityEventRead]

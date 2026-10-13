@@ -327,6 +327,7 @@ export interface DashboardStats {
   total_orders: number;
   total_users: number;
   low_stock_count: number;
+  hidden_count: number;
 }
 
 export interface RevenueChartPoint {

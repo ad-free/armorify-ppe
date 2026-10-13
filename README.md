@@ -455,7 +455,12 @@ The product/variant locks, balance change and append-only movement share the sam
 transaction. Checkout deductions and cancellation restorations use that service.
 Historical balances have no fabricated opening movements. Movement UPDATE/DELETE
 is rejected by ORM hooks and PostgreSQL triggers; composite ownership and RESTRICT
-references protect the audit trail.
+references protect the audit trail. Variant hide/show toggles append
+`catalog_visibility_events` rows (actor + timestamp, latest 20 on the admin detail
+response) under the same append-only protection, so hiding sellable stock is traceable.
+The dashboard reports `hidden_count` (variant-owned products with zero sellable stock)
+alongside `low_stock_count`. Saved cart lines that become unpurchasable (for example a
+base line from before variants existed) are flagged on the cart page with a reselect link.
 
 Admin product listing is paginated (`items`, `total`, `skip`, `limit`), searches
 name/slug/active variant SKU, and whitelists `newest`, `name_asc`, `name_desc`,
