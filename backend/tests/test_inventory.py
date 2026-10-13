@@ -59,9 +59,14 @@ async def test_authoritative_stock_has_no_fabricated_opening_history(checkout_db
     await db.change(ProductVariant, db.variant_id, is_active=False)
     async with db.sessions() as session:
         product = await session.get(Product, db.variant_product_id)
-        assert (product.has_variants, product.available_stock) == (False, 99)
+        assert (product.stock, product.has_variants, product.available_stock, product.stock_status) == (
+            99,
+            True,
+            0,
+            "out_of_stock",
+        )
     base_line = {"product_id": str(db.variant_product_id), "variant_id": None, "quantity": 1}
-    assert (await db.quote([base_line]))["can_checkout"]
+    assert not (await db.quote([base_line]))["can_checkout"]
     assert not (await db.quote([db.line(variant=True)]))["can_checkout"]
     foreign = dict(db.line(), variant_id=str(db.variant_id))
     assert not (await db.quote([foreign]))["can_checkout"]
@@ -80,12 +85,20 @@ async def test_strict_owner_allows_preparing_inactive_inventory(checkout_db):
     await db.change(Product, db.variant_product_id, is_active=False)
     await db.change(ProductVariant, db.variant_id, is_active=False)
     await adjust(db, 2, product_id=db.variant_product_id, variant_id=db.variant_id)
-    await adjust(db, 3, product_id=db.variant_product_id)
+    with pytest.raises(HTTPException) as error:
+        await adjust(db, 3, product_id=db.variant_product_id)
+    assert error.value.status_code == 409
     assert await db.stock(variant=True) == 12
     async with db.sessions() as session:
         product = await session.get(Product, db.variant_product_id)
-        assert (product.stock, product.available_stock, product.version) == (102, 102, 3)
-    assert len(await movements(db)) == 2
+        assert (product.stock, product.has_variants, product.available_stock, product.version) == (
+            99,
+            True,
+            0,
+            2,
+        )
+    history = await movements(db)
+    assert [(m.variant_id, m.quantity_delta, m.resulting_balance) for m in history] == [(db.variant_id, 2, 12)]
 
 
 @pytest.mark.parametrize(
@@ -179,16 +192,41 @@ async def test_checkout_and_cancellation_record_once_and_preserve_snapshot(check
     assert all(m.variant_id == db.variant_id and str(m.order_id) == order["id"] for m in history)
 
 
-async def test_base_cancellation_restores_historical_owner_after_variant_added(checkout_db):
+@pytest.mark.parametrize("variant_active", [False, True])
+async def test_base_cancellation_restores_historical_owner_after_variant_added(checkout_db, variant_active):
     db = checkout_db
     created = await db.client.post("/api/v1/orders/", json=await db.payload([db.line(2)]), headers=db.auth())
     assert created.status_code == 201, created.text
+    assert await db.stock() == 8
+    variant_id = uuid4()
     async with db.sessions.begin() as session:
-        session.add(ProductVariant(product_id=db.product_id, sku="NEW-OPTION", size="L", stock=4))
+        session.add(
+            ProductVariant(
+                id=variant_id,
+                product_id=db.product_id,
+                sku="NEW-OPTION",
+                size="L",
+                stock=4,
+                is_active=variant_active,
+            )
+        )
     cancelled = await db.client.post(f"/api/v1/orders/{created.json()['id']}/cancel", headers=db.auth())
     assert cancelled.status_code == 200, cancelled.text
-    assert await db.stock() == 10
-    assert (await movements(db))[-1].variant_id is None
+    assert cancelled.json()["items"] == created.json()["items"]
+    async with db.sessions() as session:
+        product = await session.get(Product, db.product_id)
+        variant = await session.get(ProductVariant, variant_id)
+        assert (product.stock, product.has_variants, product.available_stock) == (
+            10,
+            True,
+            4 if variant_active else 0,
+        )
+        assert variant.stock == 4
+    history = await movements(db)
+    assert [(m.source_type, m.variant_id, m.quantity_delta, m.resulting_balance) for m in history] == [
+        ("checkout", None, -2, 8),
+        ("cancellation", None, 2, 10),
+    ]
 
 
 async def test_movement_insert_failure_rolls_back_checkout_everywhere(checkout_db):

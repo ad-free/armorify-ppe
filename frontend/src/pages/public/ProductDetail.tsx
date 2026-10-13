@@ -102,6 +102,7 @@ function ProductExperience({ product, refreshProduct }: { product: ProductRead; 
 
   const status = variants.isError ? text('Không thể kiểm tra lựa chọn. Thử lại trước khi mua.', 'Unable to verify options. Retry before purchasing.')
     : variants.isLoading ? text('Đang kiểm tra lựa chọn và tồn kho…', 'Checking options and stock…')
+    : product.has_variants && product.available_stock <= 0 ? text('Hết hàng ở các biến thể đang hiển thị. Liên hệ để hỏi về sản phẩm.', 'Out of stock across listed variants. Contact us to ask about this item.')
     : !state.complete ? text('Chọn một phân loại để xem giá, SKU và tồn kho.', 'Select an option to confirm price, SKU and stock.')
     : state.stock <= 0 ? text('Hết hàng. Bạn có thể liên hệ để hỏi về sản phẩm.', 'Out of stock. Contact us to ask about this item.')
     : text(`Còn ${state.stock} · Có thể thêm ${state.remaining}`, `${state.stock} in stock · ${state.remaining} available to add`);

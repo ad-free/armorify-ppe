@@ -156,11 +156,8 @@ class ProductVariant(BaseMixin, Base):
 # Correlated expressions keep list filtering/sorting and serialization authoritative
 # without loading variants or counting the legacy base balance twice.
 
-_active_variants = (
-    select(ProductVariant.id)
-    .where(ProductVariant.product_id == Product.id, ProductVariant.is_active.is_(True))
-    .correlate_except(ProductVariant)
-    .exists()
+_has_variants = (
+    select(ProductVariant.id).where(ProductVariant.product_id == Product.id).correlate_except(ProductVariant).exists()
 )
 _variant_stock = (
     select(func.coalesce(func.sum(cast(ProductVariant.stock, BigInteger)), 0))
@@ -168,8 +165,8 @@ _variant_stock = (
     .correlate_except(ProductVariant)
     .scalar_subquery()
 )
-Product.has_variants = column_property(_active_variants)
-_available_stock = case((_active_variants, _variant_stock), else_=cast(Product.stock, BigInteger))
+Product.has_variants = column_property(_has_variants)
+_available_stock = case((_has_variants, _variant_stock), else_=cast(Product.stock, BigInteger))
 Product.available_stock = column_property(_available_stock)
 Product.stock_status = column_property(
     case(

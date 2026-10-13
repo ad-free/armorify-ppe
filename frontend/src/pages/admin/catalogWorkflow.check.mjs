@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 // Run from frontend: node src/pages/admin/catalogWorkflow.check.mjs
 const workflow = readFileSync(new URL('./catalogWorkflow.ts', import.meta.url), 'utf8');
@@ -31,4 +33,33 @@ for (const value of ['[]', 'null', '{"a":{}}', '{"a":[]}', '{"a":" "}', '{" A ":
 
 assert.equal(JSON.stringify(specificationPayload([{ key: ' QA note ', value: ' Administrator fact ' }, { key: 'count', value: 0 }])), '{"QA note":"Administrator fact","count":0}');
 for (const rows of [[{ key: ' Fact ', value: 'one' }, { key: 'fact', value: 'two' }], [{ key: '', value: 'Missing key' }], [{ key: 'fact', value: '' }], Array.from({ length: 33 }, (_, i) => ({ key: String(i), value: 'value' }))]) assert.throws(() => specificationPayload(rows));
-console.log('Catalog URL state, bounded specification rows/JSON and conflict classification checks passed');
+// Render the editor's real inventory section so inactive variants cannot unlock base adjustments.
+const operationsSource = readFileSync(new URL('./ProductOperations.tsx', import.meta.url), 'utf8');
+const operationsAst = ts.createSourceFile('ProductOperations.tsx', operationsSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+let inventorySection;
+function findInventory(node) {
+  if (ts.isJsxElement(node) && node.openingElement.attributes.properties.some((attribute) =>
+    ts.isJsxAttribute(attribute) && attribute.name.getText(operationsAst) === 'aria-labelledby' &&
+    attribute.initializer && ts.isStringLiteral(attribute.initializer) && attribute.initializer.text === 'inventory-title')) inventorySection = node;
+  ts.forEachChild(node, findInventory);
+}
+findInventory(operationsAst);
+assert.ok(inventorySection, 'The check must exercise the actual inventory editor');
+const inventoryCode = ts.transpileModule(`const section = (${inventorySection.getText(operationsAst)});`, { compilerOptions: { target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.React } }).outputText;
+const renderInventory = new Function('React', 'Button', 'product', 'owner', 'busy', 'delta', 'reason', 'attrs', 'fieldError', `${inventoryCode}; return section;`);
+const Button = ({ children, loading: _loading, ...props }) => React.createElement('button', props, children);
+const inactiveVariant = { id: 'inactive', sku: 'HIDDEN', stock: 8, is_active: false };
+const hiddenProduct = { name: 'Hidden options', stock: 999, available_stock: 0, has_variants: true, variants: [inactiveVariant] };
+const markup = (product, owner = '') => renderToStaticMarkup(renderInventory(React, Button, product, owner, false, '1', 'Restock', () => ({}), () => null));
+for (const product of [hiddenProduct, { ...hiddenProduct, variants: [] }]) {
+  const html = markup(product);
+  assert.match(html, /<select[^>]*required=""/);
+  assert.match(html, /<option value="" disabled=""/);
+  assert.match(html, /<button[^>]*disabled=""/);
+}
+assert.match(markup(hiddenProduct), /<option value="inactive"/, 'Inactive inventory remains adjustable by its own owner');
+assert.doesNotMatch(markup(hiddenProduct, 'inactive'), /<button[^>]*disabled=/);
+const baseMarkup = markup({ ...hiddenProduct, has_variants: false, available_stock: 9, variants: [] });
+assert.doesNotMatch(baseMarkup, /<select[^>]*required=/);
+assert.doesNotMatch(baseMarkup, /<button[^>]*disabled=/);
+console.log('Catalog URL state, bounded specifications/JSON, conflicts and inventory ownership checks passed');

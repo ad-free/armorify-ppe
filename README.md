@@ -439,11 +439,14 @@ to the catalog. Listing URLs retain `q`, category/brand IDs, `is_active`,
 `is_featured`, `is_new`, `variant_mode`, `low_stock`, `sort_by`, `page`, and `limit`.
 The dashboard low-stock card links to `/admin/products?low_stock=true`.
 
-Inventory is server-authoritative: active variants own their balances; their sum
-is `available_stock`. Without active variants, `Product.stock` owns the balance.
-`has_variants` and `stock_status` accompany product responses. Inactive variants
-retain their stored balances but report no sellable stock. Listing cards never
-purchase directly; customers select options on the product page.
+Inventory is server-authoritative: once a product has any variant row,
+variants own the balances; `available_stock` is the sum of active variants
+only. `has_variants` stays true while any variant row exists, and the
+historical `Product.stock` never becomes sellable again — even when every
+variant is hidden (`available_stock` 0, `out_of_stock`). Base-level
+adjustments on a variant-owned product return 409; staff adjust the owning
+variant. Listing cards never purchase directly; customers select options
+on the product page.
 
 Stock is not editable through metadata forms. Staff use
 `POST /api/v1/admin/catalog/products/{id}/inventory-adjustments` with optional

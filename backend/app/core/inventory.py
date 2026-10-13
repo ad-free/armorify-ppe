@@ -73,11 +73,7 @@ async def adjust_inventory(
     if source_type != "cancellation" and variant_id is None:
         # A separate statement sees variant changes committed while the product lock waited.
         has_variants = await db.scalar(
-            select(
-                select(ProductVariant.id)
-                .where(ProductVariant.product_id == product_id, ProductVariant.is_active.is_(True))
-                .exists()
-            )
+            select(select(ProductVariant.id).where(ProductVariant.product_id == product_id).exists())
         )
         if has_variants:
             raise inventory_error(409, "variant_id", "Select a variant to adjust inventory.", "inventory_owner_invalid")

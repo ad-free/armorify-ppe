@@ -13,10 +13,10 @@ const variants = [
   { id: 'inactive', product_id: 'p', stock: 5, available_stock: 5, is_active: false },
   { id: 'foreign', product_id: 'other', stock: 5, available_stock: 5, is_active: true },
 ];
-const state = (options, id = '', quantity = 1, inCart = 0) => purchaseState({ ...product, has_variants: !!options?.length }, options, id, quantity, inCart, 0);
+const state = (options, id = '', quantity = 1, inCart = 0) => purchaseState({ ...product, has_variants: true }, options, id, quantity, inCart, 0);
 for (const id of ['', 'missing', 'inactive', 'foreign', 'l-red']) assert.equal(state(variants, id).canPurchase, false, `Reject ${id || 'incomplete'} selection`);
 assert.equal(state(undefined).canPurchase, false, 'Do not treat unknown options as a variant-free product');
-assert.equal(state([]).canPurchase, true, 'Variant-free product remains purchasable');
+assert.equal(purchaseState(product, [], '', 1, 0, 0).canPurchase, true, 'Variant-free product remains purchasable');
 assert.equal(state(variants, 'm-blue').price, 120);
 assert.equal(state(variants, 'm-blue').stock, 3);
 assert.equal(state(variants, 'm-blue').variant.sku, 'M-BLUE');
@@ -26,6 +26,14 @@ assert.equal(state(variants, 'm-blue', 1, 3).canPurchase, false, 'Repeated addit
 assert.equal(state(variants, 'm-blue', 1, 2).canPurchase, true);
 assert.equal(purchaseState({ ...product, available_stock: 0 }, [], '', 1, 0, 0).canPurchase, false);
 assert.equal(purchaseState({ ...product, has_variants: true }, [], '', 1, 0, 0).canPurchase, false, 'An empty or stale variant response must not sell base stock');
+const hiddenVariantsProduct = { ...product, has_variants: true, available_stock: 0 };
+for (const options of [[], [variants[2]], undefined]) {
+  const hidden = purchaseState(hiddenVariantsProduct, options, '', 1, 0, 0);
+  assert.equal(hidden.complete, false, 'No active option must not become a base-managed purchase');
+  assert.equal(hidden.stock, 0, 'Historical base stock remains hidden');
+  assert.equal(hidden.canPurchase, false);
+}
+assert.equal(purchaseState(hiddenVariantsProduct, [variants[2]], 'inactive', 1, 0, 0).canPurchase, false);
 assert.equal(purchaseState(product, [], 'stale-selection', 1, 0, 0).canPurchase, false);
 assert.equal(purchaseState({ ...product, has_variants: true }, [{ ...variants[0], price_override: '-1' }], 'm-blue', 1, 0, 0).canPurchase, false);
 assert.equal(purchaseState({ ...product, has_variants: true }, [{ ...variants[0], price_override: '0' }], 'm-blue', 1, 0, 0).price, 0);

@@ -55,13 +55,34 @@ async def test_public_stock_transitions_and_historical_cover(catalog_public_clie
     assert active.json()["available_stock"] == 0
     assert active.json()["stock_status"] == "out_of_stock"
     assert active.json()["cover_image_url"] == legacy_cover
-    await db.change(ProductVariant, db.variant_id, is_active=False)
+    await db.change(ProductVariant, db.variant_id, stock=6, is_active=False)
     inactive = await catalog_public_client.get(path)
-    assert inactive.json()["has_variants"] is False
-    assert inactive.json()["available_stock"] == 17
-    assert inactive.json()["stock_status"] == "in_stock"
+    assert inactive.status_code == 200, inactive.text
+    listing = await catalog_public_client.get("/api/v1/catalog/products")
+    assert listing.status_code == 200, listing.text
+    listed = next(row for row in listing.json()["items"] if row["id"] == str(db.variant_product_id))
+    for product in [inactive.json(), listed]:
+        assert product["has_variants"] is True
+        assert product["available_stock"] == 0
+        assert product["stock_status"] == "out_of_stock"
     images = await catalog_public_client.get(path + "/images")
+    assert images.status_code == 200, images.text
     assert images.json() == []
+    await db.change(ProductVariant, db.variant_id, is_active=True)
+    reactivated = await catalog_public_client.get(path)
+    assert reactivated.status_code == 200, reactivated.text
+    listing = await catalog_public_client.get("/api/v1/catalog/products")
+    assert listing.status_code == 200, listing.text
+    listed = next(row for row in listing.json()["items"] if row["id"] == str(db.variant_product_id))
+    for product in [reactivated.json(), listed]:
+        assert product["has_variants"] is True
+        assert product["available_stock"] == 6
+        assert product["stock_status"] == "low_stock"
+    async with db.sessions() as session:
+        product = await session.get(Product, db.variant_product_id)
+        variant = await session.get(ProductVariant, db.variant_id)
+        assert product.stock == 17
+        assert variant.stock == 6
 
 
 async def test_public_search_matches_slug_and_only_active_variant_sku(catalog_public_client, checkout_db):

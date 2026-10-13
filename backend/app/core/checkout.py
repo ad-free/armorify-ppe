@@ -96,7 +96,7 @@ def _evaluate(payload, products, variants, sales, promos) -> CheckoutQuote:
     ):
         promotions.setdefault(promo.product_id, promo)
     by_id = {v.id: v for v in variants}
-    variant_products = {v.product_id for v in variants if v.is_active}
+    variant_products = {v.product_id for v in variants}
     quantities: Counter[tuple[UUID, UUID | None]] = Counter()
     for item in payload.items:
         quantities[(item.product_id, item.variant_id)] += item.quantity
