@@ -87,11 +87,9 @@ async def sync_cover(db: AsyncSession, product: Product, selected: ProductImage 
         ).all()
     )
     active = [image for image in images if image.is_active]
-    cover = (
-        selected
-        if selected is not None and selected.is_active
-        else next((image for image in active if image.is_cover), active[0] if active else None)
-    )
+    cover = selected if selected is not None and selected.is_active else None
+    if cover is None and active:
+        cover = next((image for image in active if image.is_cover), active[0])
     # Clear the previous cover before selecting its replacement (partial unique index).
     for image in images:
         image.is_cover = False
@@ -160,6 +158,8 @@ async def update_image(db: AsyncSession, image_id: UUID, changes: dict) -> Produ
         raise HTTPException(404, "Image not found")
     product = await locked_product(db, product_id)
     image = await db.get(ProductImage, image_id, populate_existing=True)
+    if image is None:
+        raise HTTPException(404, "Image not found")
     if changes.get("is_cover") and not changes.get("is_active", image.is_active):
         raise HTTPException(422, "A cover image must be active")
     select_cover = changes.pop("is_cover", None)

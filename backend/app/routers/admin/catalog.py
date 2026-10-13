@@ -124,16 +124,20 @@ async def list_products(
             Product.name.ilike(f"%{term}%", escape="\\") | Product.slug.ilike(f"%{term}%", escape="\\") | active_sku
         )
     if variant_mode:
-        filters.append(Product.has_variants == (variant_mode == "with"))
+        filters.append(Product.has_variants == (variant_mode == "with"))  # type: ignore[attr-defined]
     if low_stock is not None:
-        filters.append((Product.available_stock < 10) if low_stock else (Product.available_stock >= 10))
+        filters.append(
+            (Product.available_stock < 10)  # type: ignore[attr-defined]
+            if low_stock
+            else (Product.available_stock >= 10)  # type: ignore[attr-defined]
+        )
     sorts = {
         "newest": Product.created_at.desc(),
         "name_asc": Product.name.asc(),
         "name_desc": Product.name.desc(),
         "price_asc": Product.price.asc(),
         "price_desc": Product.price.desc(),
-        "stock_asc": Product.available_stock.asc(),
+        "stock_asc": Product.available_stock.asc(),  # type: ignore[attr-defined]
     }
     total = await db.scalar(select(func.count()).select_from(Product).where(*filters))
     items = (

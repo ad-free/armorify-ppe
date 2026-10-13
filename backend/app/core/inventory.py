@@ -52,9 +52,9 @@ async def adjust_inventory(
     ).scalar_one_or_none()
     if product is None:
         raise inventory_error(409, "product_id", "Product is unavailable.", "inventory_owner_invalid")
-    target = product
+    target: Product | ProductVariant = product
     if variant_id is not None:
-        target = (
+        variant = (
             await db.execute(
                 select(ProductVariant)
                 .where(ProductVariant.id == variant_id, ProductVariant.product_id == product_id)
@@ -62,10 +62,11 @@ async def adjust_inventory(
                 .execution_options(populate_existing=True)
             )
         ).scalar_one_or_none()
-        if target is None or target.product_id != product_id:
+        if variant is None or variant.product_id != product_id:
             raise inventory_error(
                 409, "variant_id", "Variant does not belong to this product.", "inventory_owner_invalid"
             )
+        target = variant
     if source_type == "checkout" and (not product.is_active or (variant_id is not None and not target.is_active)):
         raise inventory_error(
             409, "variant_id" if variant_id else "product_id", "Inventory is unavailable.", "inventory_owner_invalid"
